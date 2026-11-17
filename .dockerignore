@@ -1,0 +1,7 @@
+node_modules
+references
+.tools
+.dev-data
+packages/web/dist
+packages/web/.astro
+*.log

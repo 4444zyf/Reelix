@@ -1,0 +1,14 @@
+{
+  "name": "@reelix/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "reelix": "./src/main.ts"
+  },
+  "dependencies": {
+    "@reelix/core": "*",
+    "@reelix/server": "*"
+  }
+}

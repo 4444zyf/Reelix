@@ -1,0 +1,20 @@
+{
+  "name": "reelix",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "workspaces": ["packages/*"],
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test --test-concurrency=1 'packages/*/test/**/*.test.ts'",
+    "reelix": "node packages/cli/src/main.ts",
+    "server": "node packages/server/src/main.ts",
+    "web:build": "npm -w @reelix/web run build",
+    "web:dev": "npm -w @reelix/web run dev"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "typescript": "^5.9.0"
+  }
+}

@@ -1,0 +1,14 @@
+# Example only: use the values the pre-flight check printed (preflight/reelix-preflight.sh).
+services:
+  reelix:
+    build: .
+    image: reelix:latest
+    container_name: reelix
+    restart: unless-stopped
+    user: "1026:100"            # qBittorrent's PUID:PGID — required for hard links (decision D)
+    ports:
+      - "7878:7878"
+    volumes:
+      - /volume1/data:/media     # ONE mount: the common parent of downloads and library
+      - /volume1/docker/reelix:/data
+    shm_size: "512m"            # Chromium

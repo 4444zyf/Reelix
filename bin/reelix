@@ -1,0 +1,4 @@
+#!/bin/sh
+# Wrapper so the agent's shell and the owner can type `reelix …`.
+HERE="$(cd "$(dirname "$0")/.." && pwd)"
+exec node --no-warnings "$HERE/packages/cli/src/main.ts" "$@"
