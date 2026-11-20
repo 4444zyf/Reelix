@@ -1,0 +1,160 @@
+{
+	"chat": {
+		"photo": "(photo)",
+		"secretInWeb": "Passwords and keys are entered in the web app's secret field: please answer this in the web app.",
+		"error": "Error: {{message}}",
+		"hiddenBy": "hidden by {{plugins}}"
+	},
+	"watcher": {
+		"downloaderUnreachableTitle": "{{name}} is unreachable",
+		"downloaderUnreachableBody": "For over an hour: {{error}}",
+		"downloaderBack": "{{name}} is reachable again.",
+		"removedTitle": "A download was removed outside Reelix",
+		"removedBody": "{{name}} was removed from {{downloader}} before it was filed."
+	},
+	"jobs": {
+		"capTitle": "Background spending cap reached",
+		"capBody": "Today's background model budget is used up (${{usd}} / {{tokens}} tokens). Waiting jobs continue tomorrow; downloads are still watched and routine ones filed."
+	},
+	"adopt": {
+		"title_one": "Adopt {{count}} existing download",
+		"title_other": "Adopt {{count}} existing downloads",
+		"body": "{{confident}} can be filed now; {{unsure}} need a decision. Review the table.",
+		"approveAll": "Approve all confident",
+		"reviewInChat": "Review in chat",
+		"reviewThread": "Adopt existing downloads ({{date}})",
+		"reviewPrompt": "Let's review adoption scan {{scan}} together. Show me the uncertain rows (reelix adopt show) and help me settle them."
+	},
+	"nightly": {
+		"title": "Morning summary {{date}}",
+		"backedUp": "Backed up the database and settings.",
+		"backupFailed": "Backup failed: {{error}}",
+		"trash_one": "Emptied {{count}} expired trash item ({{size}}).",
+		"trash_other": "Emptied {{count}} expired trash items ({{size}}).",
+		"notFiled": "{{name}}: complete for over 6 hours but not filed",
+		"lowSpace": "Only {{size}} free in the download folder.",
+		"downloaderFailing": "The downloader is not working: {{error}}",
+		"indexerFailing": "Indexer {{name}} is failing: {{error}}",
+		"indexerCheckFailed": "Indexer check failed: {{error}}",
+		"agentSkipped": "(The agent did not look into these: {{error}})",
+		"added": "Added: {{names}}",
+		"filed": "Filed: {{names}}",
+		"problems": "Problems found:",
+		"noProblems": "No problems found.",
+		"waiting_one": "{{count}} item is waiting for you in the Inbox.",
+		"waiting_other": "{{count}} items are waiting for you in the Inbox."
+	},
+	"ask": {
+		"yes": "Yes",
+		"no": "No"
+	},
+	"jobTitles": {
+		"follow": "Follow: {{name}} {{episode}}",
+		"nightly": "Nightly tidy-up",
+		"fileDownload": "File a finished download",
+		"stalled": "Stalled download"
+	},
+	"translate": {
+		"jobTitle": "Translate subtitles: {{name}} → {{target}}",
+		"sampleTitle": "{{target}} subtitles: the first episode is ready",
+		"sampleBody": "{{file}} is next to the video as a sample. The other {{rest}} are being translated now; stop it from Activity or tell me if it is not right.",
+		"doneTitle": "{{target}} subtitles are ready: {{name}}",
+		"failedTitle": "{{target}} subtitles could not be made: {{name}}",
+		"pausedTitle": "Subtitle translation is paused",
+		"pausedBody": "{{reason}}\nIt will try again at {{time}}. Everything finished so far is kept."
+	},
+	"approval": {
+		"approve": "Approve",
+		"decline": "Decline"
+	},
+	"magpie": {
+		"approvalTitle": "Change magpie? {{summary}}",
+		"approvalBody": "{{reasons}}\n\nIt is checked afterwards and put back if a role's model stops answering."
+	},
+	"plugins": {
+		"waitingNext": "It is switched on and waits for: {{seams}}. It starts by itself when one is available.",
+		"dependents": "{{names}} need {{id}}: they require it, or it is the last provider of a seam they need. Switch them off together?",
+		"enabled": "It is running now.",
+		"alreadyOn": "It was already on.",
+		"disabled": "It is off and stays off after a restart. Switch it on again in Settings → Plugins.",
+		"alreadyOff": "It was already off.",
+		"failedNext": "Nothing is running for it. Fix the error shown in Settings → Plugins, then switch it on again.",
+		"autoOffTitle": "Plugin {{id}} was switched off",
+		"autoOffBody": "{{registration}} failed {{times}} times within 10 minutes. Last error: {{error}}\nSwitch it back on in Settings → Plugins once the cause is fixed.",
+		"jobCancelled": "Cancelled: the plugin was switched off.",
+		"configured": "The new settings are in use.",
+		"configuredOff": "Saved. They are used when the plugin is switched on.",
+		"invalidSettings": "Nothing was saved: some values are not valid.",
+		"noSettings": "This plugin has no settings.",
+		"settingsLater": "Its settings appear once it has been switched on.",
+		"trialOn": "Its hooks now run in trial: Reelix records what they would change and applies nothing.",
+		"trialOff": "Its hooks apply again.",
+		"toolsOn": "Its typed tools are offered to the assistant from the next conversation.",
+		"toolsOff": "Its typed tools are no longer offered; its operations stay reachable through the reelix tool.",
+		"orderSaved": "The new order applies from the next decision.",
+		"approveFirst": "It is installed but not approved: review what it declares and approve it in Settings → Plugins.",
+		"reapprove": "Its files changed since you approved them, so it is not loaded. Review it again in Settings → Plugins.",
+		"restartButton": "Saved. The code is loaded when Reelix restarts: use Restart in Settings → Plugins.",
+		"restartManual": "Saved. The code is loaded when Reelix restarts: run `docker compose restart reelix`, or stop `reelix serve` and start it again.",
+		"incompatibleTitle": "Plugin {{id}} cannot run on this Reelix",
+		"incompatibleBody": "{{id}} is not loaded: {{why}}. Reelix is now {{version}}. Update the plugin, or uninstall it, in Settings → Plugins.",
+		"changedTitle": "Plugin {{id}} changed: approve it again",
+		"changedBody": "The files of {{id}} are not what you approved, so it is not loaded. Review it in Settings → Plugins and approve it again if the change is yours.",
+		"uninstalledKept": "Its code is removed. Its settings, secrets and stored data are kept and come back if you install it again.",
+		"uninstalledAll": "Its code, settings, secrets and stored data are removed.",
+		"jobPromptOn": "Its prompt sections now reach background jobs too, from the next job.",
+		"jobPromptOff": "Its prompt sections no longer reach background jobs.",
+		"modelSet": "Its model use is set: budget ${{usd}} a day, roles {{roles}}.",
+		"modelSetUnmetered": "Its model use is set: no daily budget, roles {{roles}}.",
+		"budgetReached": "{{id}} has used its model budget for today (${{usd}}); it resets at midnight. The owner can raise it on the plugin's page.",
+		"roleRefused": "{{id}} may not use the model role \"{{role}}\"; the owner can allow it on the plugin's page.",
+		"cycle": "Refused: the plugins it requires go round in a circle ({{cycle}}), so none of them can start first. Remove the requirement from one of them.",
+		"proposedTitle": "A plugin to review: {{id}} {{version}}",
+		"proposedBody": "Proposed by {{by}}. Nothing is installed or run until you approve it: review what it declares, its files and the difference.",
+		"proposalDeclined": "Declined: {{id}} is not installed.",
+		"runtimeRefused": "It cannot run in a process of its own: it has a raw pi extension or compiled dependencies.",
+		"processChoiceLost": "You chose to run {{id}} in a process of its own, but this version cannot run there (it has a raw pi extension or compiled dependencies). It stays off until you choose to run it inside Reelix on its page.",
+		"runtimeProcess": "It now runs in a process of its own, with only its context: Node keeps it from Reelix's files and from starting programs, and Reelix's code there keeps its network to Reelix's fetch. A hostile plugin may get past that second part (docs/plugins.md §11.7).",
+		"runtimeInProcess": "It now runs inside Reelix, where its code can do anything Reelix can.",
+		"screenOff": "{{id}} is not running; switch it on in Settings → Plugins to open its screen.",
+		"processEnded": "Its process ended ({{error}}); it starts again in {{seconds}} s."
+	},
+	"hooks": {
+		"guardAlarmTitle": "The plugin {{plugin}} is hiding nearly every release",
+		"guardAlarmBody": "{{plugin}} hid {{hidden}} of {{total}} releases over its last {{calls}} searches. Check its settings, or switch it off under Settings → Plugins."
+	},
+	"follow": {
+		"filteredTitle": "Nothing for {{name}} {{episode}}: plugins hid every candidate",
+		"filteredBody_one": "{{count}} candidate was hidden by {{plugins}}. Open the release list and use \"Show hidden\", or change the plugin's settings.",
+		"filteredBody_other": "{{count}} candidates were hidden by {{plugins}}. Open the release list and use \"Show hidden\", or change the plugin's settings."
+	},
+	"notify": {
+		"editedBy": "Edited by {{plugins}}"
+	},
+	"hiddenRelease": {
+		"approvalTitle": "Download a hidden release?",
+		"approvalBody": "{{name}} is hidden by a plugin ({{why}}). Download it anyway?"
+	},
+	"setting": {
+		"approvalTitle": "Change this setting?",
+		"approvalBody": "The assistant wants to change {{path}}. This is yours to decide: it is where Reelix connects, or one of the assistant's own limits.\n\nNow: {{before}}\nNew: {{after}}"
+	},
+	"proposal": {
+		"summary_one": "{{plugin}} proposes {{count}} step: {{totals}}",
+		"summary_other": "{{plugin}} proposes {{count}} steps: {{totals}}",
+		"noTotals": "nothing to count",
+		"downloads_one": "{{count}} download",
+		"downloads_other": "{{count}} downloads",
+		"titles_one": "{{count}} title",
+		"titles_other": "{{count}} titles",
+		"files_one": "{{count}} file",
+		"files_other": "{{count}} files",
+		"bytes": "{{size}} of files",
+		"quoted": "From the plugin {{plugin}}:",
+		"openToDecide": "Open the Inbox in Reelix to untick steps and approve or decline.",
+		"declined": "Declined",
+		"approved_one": "Approved: {{done}} of {{count}} step done",
+		"approved_other": "Approved: {{done}} of {{count}} steps done",
+		"changed": "Skipped: this changed after the proposal was made. Now: {{now}}"
+	}
+}

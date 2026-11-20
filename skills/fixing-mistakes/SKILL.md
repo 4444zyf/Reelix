@@ -13,7 +13,7 @@ First work out which of two things is wrong.
 
 **Removal levels** (`library remove`):
 - `entry` — library links only. Restorable (`reelix library removed`, `reelix library restore`) while the download exists.
-- `torrent` — also remove the torrent from qBittorrent; the data stays on disk.
+- `torrent` — also remove the torrent from the downloader; the data stays on disk.
 - `data` — also delete the downloaded data. Gone immediately.
 A last remaining copy (data already gone) goes to a 14-day trash instead of vanishing.
 

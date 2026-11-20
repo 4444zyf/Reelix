@@ -1,0 +1,11 @@
+{
+	"title": "Apparence",
+	"description": "Une seule langue pour Reelix, sur tous les appareils. Le thème est conservé dans ce navigateur.",
+	"theme": "Thème",
+	"matchDevice": "Suivre l’appareil",
+	"matchDeviceDescription": "{{dark}} quand l’appareil est sombre, {{light}} quand il est clair.",
+	"language": "Langue",
+	"languageHint": "Tout le suit : pages, dates et nombres, titres et résumés de TMDB, messages de l’agent, notifications et Telegram. L’agent répond toujours dans la langue dans laquelle vous lui écrivez.",
+	"installed": "installé",
+	"makeYourOwn": "Les thèmes sont des dossiers dans {{dir}} : copiez-en un avec « reelix theme new », ou demandez à l’agent d’en créer un."
+}

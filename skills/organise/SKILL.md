@@ -1,6 +1,6 @@
 ---
 name: organise
-description: Filing downloads into the Jellyfin library by hard link — layout, naming, extras, disc folders, multi-part and multi-episode files, sidecar subtitles and audio, odd structures. Use when a download needs filing that code could not plan, or the owner asks to re-file something.
+description: Filing downloads into the library by hard link, in Jellyfin's naming — layout, naming, extras, disc folders, multi-part and multi-episode files, sidecar subtitles and audio, odd structures. Use when a download needs filing that code could not plan, or the owner asks to re-file something.
 ---
 # Organising into the library
 
@@ -22,6 +22,6 @@ Shows/…/Season 01/Name (Year) S01E01-E02.mkv     two episodes in one file
 3. Write your own plan items and apply: `organise mode=apply items=[{source, dest, kind, episodes, reason}]`. Apply only hard-links inside the library, never replaces, and is safe to repeat. Use exact absolute paths.
 4. Things that cannot be linked: RAR parts (ask before unpacking; the unpacked copy costs the space again), files on another mount (the doctor explains). Never copy instead of linking without the owner's say-so.
 5. Subtitles and separate audio shipped next to a video follow it under the video's new name; samples, NFO, screenshots, `@eaDir`, `#recycle` are skipped.
-6. Afterwards Jellyfin is told automatically; check `reelix title show` for the result.
+6. Afterwards the media server (Jellyfin) is told automatically; check `reelix title show` for the result.
 
 Never rename, move or edit anything inside the download folder: it breaks seeding.

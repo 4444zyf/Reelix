@@ -1,6 +1,6 @@
 /** Real-browser pass over the web UI (run against a running server). */
 import { chromium } from "playwright-core";
-import { findChromium } from "../src/browser.ts";
+import { findChromium } from "../../../plugins/browser/src/chromium.ts";
 const base = process.env.REELIX_URL ?? "http://localhost:7979";
 const pw = process.env.REELIX_PASSWORD ?? "testpass123";
 const out = process.env.SHOTS ?? "/tmp/uishots";

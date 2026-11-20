@@ -1,0 +1,159 @@
+{
+	"welcome": {
+		"title": "Que regarde-t-on ?",
+		"subtitle": "Demandez un film ou une série, une correction dans la bibliothèque, ou n’importe quoi sur votre installation.",
+		"suggestions": {
+			"downloading": "Qu’est-ce qui se télécharge en ce moment ?",
+			"newSeason": "Trouvez la dernière saison d’une série que je suis",
+			"doctor": "Vérifiez que tout est bien configuré (diagnostic)",
+			"lastNight": "Qu’avez-vous fait la nuit dernière ?"
+		}
+	},
+	"pane": {
+		"conversations": "Conversations",
+		"conversation": "Conversation",
+		"newChat": "Nouvelle conversation",
+		"working": "en cours",
+		"actions": "Actions de la conversation",
+		"rename": "Renommer",
+		"close": "Fermer la conversation",
+		"noMessages": "Aucun message pour l’instant.",
+		"thinking": "réflexion en cours"
+	},
+	"threads": {
+		"renameTitle": "Renommer la conversation",
+		"archive": "Archiver",
+		"waiting": "en attente d’une réponse",
+		"running": "en cours",
+		"empty": "Aucune conversation pour l’instant."
+	},
+	"ask": {
+		"answerPlaceholder": "Votre réponse",
+		"secret": "secret",
+		"send": "Envoyer",
+		"skip": "Passer",
+		"secretNote": "Enregistré dans le fichier de secrets du serveur sous {{key}}. L’agent sait seulement qu’il a été fourni.",
+		"orType": "Ou saisissez une réponse ci-dessous."
+	},
+	"composer": {
+		"pastedImage": "image collée",
+		"imageTooLarge": "Image trop volumineuse",
+		"imageTooLargeDetail": "{{name}} : {{size}} (limite {{limit}})",
+		"droppedFile": "J’ai déposé un fichier dans {{path}} ({{name}}, {{size}}).",
+		"uploadFailed": "Échec de l’envoi : {{name}}",
+		"dropHint": "Déposez pour envoyer et prévenir l’agent",
+		"removeImage": "Retirer l’image",
+		"uploading": "Envoi…",
+		"attach": "Joindre des fichiers",
+		"placeholderRunning": "Ajoutez quelque chose ; ce sera transmis après l’étape en cours",
+		"placeholderAnswer": "Saisissez une réponse…",
+		"placeholder": "Demandez à Reelix…",
+		"stop": "Arrêter",
+		"send": "Envoyer"
+	},
+	"message": {
+		"from": "via {{source}}",
+		"images_one": "{{count}} image",
+		"images_many": "{{count}} d’images",
+		"images_other": "{{count}} images",
+		"queued": "transmis après l’étape en cours",
+		"answered": "Réponse : {{text}}"
+	},
+	"tools": {
+		"earlier_one": "{{count}} étape précédente",
+		"earlier_many": "{{count}} d’étapes précédentes",
+		"earlier_other": "{{count}} étapes précédentes"
+	},
+	"notices": {
+		"stopped": "Arrêté.",
+		"failed": "Une erreur s’est produite.",
+		"messageNotSent": "Message non envoyé",
+		"noteFailed": "Impossible de prévenir l’agent",
+		"answerFailed": "Réponse non prise en compte",
+		"stopFailed": "Impossible d’arrêter",
+		"problem": "Problème",
+		"notice": "Information"
+	},
+	"cards": {
+		"candidates": {
+			"none": "Aucune correspondance",
+			"count_one": "{{count}} correspondance possible",
+			"count_many": "{{count}} de correspondances possibles",
+			"count_other": "{{count}} correspondances possibles",
+			"tv": "Série",
+			"movie": "Film",
+			"chosen": "Choisi",
+			"pick": "Celui-ci"
+		},
+		"agent": {
+			"candidate": "C’est {{name}}, {{id}}.",
+			"candidateYear": "C’est {{name}} ({{year}}), {{id}}.",
+			"downloaded": "J’ai téléchargé la version {{handle}} (« {{title}} ») depuis la liste. Hash {{hash}}.",
+			"downloadedAdopted": "J’ai téléchargé la version {{handle}} (« {{title}} ») depuis la liste (elle était déjà dans le client de téléchargement et a été adoptée). Hash {{hash}}.",
+			"planApplied": "J’ai approuvé le plan et il a été appliqué :\n{{text}}",
+			"planEdit": "À propos du plan ci-dessus, modifiez ceci : ",
+			"subtitle": "Utilisez le sous-titre {{ref}}.",
+			"subtitleTitled": "Utilisez le sous-titre {{ref}} (« {{title}} »).",
+			"pressed": "J’ai appuyé sur « {{label}} » sur la carte de {{plugin}} : {{text}}"
+		},
+		"subtitles": {
+			"title": "Sous-titres",
+			"titleFor": "Sous-titres pour {{title}}",
+			"use": "Utiliser celui-ci"
+		},
+		"downloads": {
+			"none": "Aucun téléchargement."
+		},
+		"image": {
+			"alt": "image envoyée par l’agent"
+		},
+		"verification": {
+			"title": "Vérification requise",
+			"alt": "vérification",
+			"code": "Code",
+			"codeSent": "Code envoyé. Un autre ?",
+			"send": "Envoyer",
+			"liveView": "Ouvrir la vue en direct"
+		},
+		"plan": {
+			"title_one": "Plan : {{count}} élément",
+			"title_many": "Plan : {{count}} d’éléments",
+			"title_other": "Plan : {{count}} éléments",
+			"titleApplied_one": "Plan : {{count}} élément (appliqué)",
+			"titleApplied_many": "Plan : {{count}} d’éléments (appliqué)",
+			"titleApplied_other": "Plan : {{count}} éléments (appliqué)",
+			"applied": "Plan appliqué",
+			"notApplied": "Plan non appliqué",
+			"approve": "Approuver"
+		},
+		"progress": {
+			"checking": "Vérification du téléchargement…",
+			"unknown": "Ce téléchargement est inconnu (il a peut-être été supprimé)."
+		},
+		"releases": {
+			"count_one": "{{count}} version",
+			"count_many": "{{count}} de versions",
+			"count_other": "{{count}} versions",
+			"countOf_one": "{{count}} version sur {{total}}",
+			"countOf_many": "{{count}} de versions sur {{total}}",
+			"countOf_other": "{{count}} versions sur {{total}}",
+			"pick": "Choix :",
+			"pickHandle": "Choix {{handle}} :",
+			"showFewer": "Afficher moins",
+			"showAll": "Tout afficher ({{n}})"
+		},
+		"title": {
+			"inLibrary_one": "dans la bibliothèque · {{count}} fichier",
+			"inLibrary_many": "dans la bibliothèque · {{count}} de fichiers",
+			"inLibrary_other": "dans la bibliothèque · {{count}} fichiers",
+			"followed": "suivi",
+			"releases": "Versions"
+		},
+		"plugin": {
+			"from": "De l’extension {{plugin}}",
+			"more_one": "et {{count}} autre",
+			"more_many": "et {{count}} d’autres",
+			"more_other": "et {{count}} autres"
+		}
+	}
+}

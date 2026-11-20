@@ -1,8 +1,12 @@
 import { existsSync, linkSync, lstatSync, mkdirSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
 import type { Reelix } from "./app.ts";
-import { type MediaClass, type TitleLike, episodeRelPath, folderName, mediaClassOf, movieRelPath, subtitlePathFor } from "./naming.ts";
+import { type MediaClass, type TitleLike, episodeRelPath, folderName, libraryPathProblem, mediaClassOf, movieRelPath, subtitlePathFor } from "./naming.ts";
+import { outsideLine } from "@reelix/plugin";
 import { parseReleaseName } from "./parser.ts";
+import { type ReasonInput, replaceReasons } from "./reasons.ts";
+import { parsedFacts } from "./releases.ts";
+import type { Title } from "./titles.ts";
 import { AUDIO_EXT, SUB_EXT, VIDEO_EXT, isDiscStructure } from "./torrent.ts";
 import { ReelixError, nowIso } from "./util.ts";
 
@@ -60,14 +64,14 @@ export function explainLinkError(e: NodeJS.ErrnoException, source: string, dest:
 			return `Cannot hard-link across mounts or shared folders: "${source}" and "${dest}" are on different mounted filesystems (or different Synology shared folders/btrfs subvolumes). Downloads and library must be under one mount. Run \`reelix doctor\`.`;
 		case "EPERM":
 		case "EACCES":
-			return `Permission refused linking "${source}". Linux only lets a user hard-link a file it owns or can write (fs.protected_hardlinks). Run Reelix with the same user and group IDs as qBittorrent.`;
+			return `Permission refused linking "${source}". Linux only lets a user hard-link a file it owns or can write (fs.protected_hardlinks). Run Reelix with the same user and group IDs as the downloader.`;
 		case "EMLINK":
 			return `"${source}" already has the maximum number of hard links this filesystem allows.`;
 		case "ENOTSUP":
 		case "EOPNOTSUPP":
 			return `This filesystem does not support hard links (${dest}).`;
 		case "ENOENT":
-			return `Source file is missing: "${source}". It may have been moved by qBittorrent or deleted.`;
+			return `Source file is missing: "${source}". It may have been moved by the downloader or deleted.`;
 		case "EROFS":
 			return `The library is mounted read-only (${dest}).`;
 		case "ENOSPC":
@@ -354,6 +358,52 @@ export function autoPlan(
 	}
 	if (!plan.items.some((i) => i.kind === "video")) problems.push("Nothing to file.");
 	return { plan, problems };
+}
+
+type PlanOptions = Parameters<typeof autoPlan>[3];
+
+/** The plan Reelix makes itself, after the plugins of `organise.name` had their say (docs/plugins.md §8). */
+export async function plannedByReelix(app: Reelix, title: Title, contentPath: string, opts: PlanOptions = {}): Promise<AutoPlanResult> {
+	const result = autoPlan(app, title, contentPath, opts);
+	const { plan } = result;
+	if (!plan.items.length || !app.hooks.has("organise.name@1")) return result;
+	const root = libraryRootFor(app, mediaClassOf(title));
+	const reasons: ReasonInput[] = [];
+	const named = await app.hooks.pipeline(
+		"organise.name@1",
+		{
+			title: { id: title.id, name: title.name, kind: title.kind, mediaClass: title.media_class, year: title.year ?? undefined, tmdbId: title.tmdb_id ?? undefined },
+			items: plan.items.map((i) => ({ source: i.source, path: relative(root, i.dest), kind: i.kind, parsed: parsedFacts(parseReleaseName(basename(i.source))) })),
+		},
+		(value, item, plugin) => {
+			const changed = new Map(item.items.map((c) => [c.source, c.path]));
+			for (const i of value.items) if (changed.has(i.source) && changed.get(i.source) !== i.path) reasons.push({ kind: "renamed", plugin, reason: item.reason, detail: { from: i.path, to: changed.get(i.source) } });
+			return { ...value, items: value.items.map((i) => ({ ...i, path: changed.get(i.source) ?? i.path })) };
+		},
+	);
+	plan.items.forEach((item, n) => {
+		const path = named.items[n]!.path;
+		const by = reasons.filter((r) => r.detail!.to === path);
+		item.dest = join(root, path);
+		if (by.length) item.reason = [item.reason, ...by.map((r) => `named by ${r.plugin}: ${outsideLine(r.reason, 200)}`)].filter(Boolean).join("; ");
+	});
+	replaceReasons(app, `plan:${opts.hash ?? title.id}`, reasons);
+	return result;
+}
+
+/** Items the agent wrote are held to the limits of `organise.name`, without passing through it. */
+export function checkWrittenItems(app: Reelix, title: (TitleLike & { library_folder?: string | null }) | undefined, items: PlanItem[]): void {
+	const roots = title ? [libraryRootFor(app, mediaClassOf(title))] : Object.values(libraryRoots(app)).filter((r): r is string => !!r);
+	const fileDepth = title?.kind === "movie" ? 2 : 3;
+	const depths: Record<PlanItem["kind"], number[]> = { video: title ? [fileDepth] : [2, 3], subtitle: title ? [fileDepth] : [2, 3], audio: title ? [fileDepth] : [2, 3], extra: [fileDepth, fileDepth + 1], disc: [1] };
+	const titleFolders = title ? [folderName(title), ...(title.library_folder ? [basename(title.library_folder)] : [])] : undefined;
+	const problems = items.flatMap((item) => {
+		const root = roots.find((r) => within(resolve(item.dest), r) && resolve(item.dest) !== r);
+		if (!root) return [`${item.dest}: it must be inside the library${title ? ` folder ${roots[0]}` : ""}`];
+		const problem = libraryPathProblem(relative(root, resolve(item.dest)), { titleFolders, depths: depths[item.kind], extension: item.kind === "disc" ? undefined : extname(item.source) });
+		return problem ? [`${item.dest}: ${problem}`] : [];
+	});
+	if (problems.length) throw new ReelixError("invalid_plan", `These plan items break the library's limits:\n- ${problems.join("\n- ")}`);
 }
 
 /** Render a plan for people and the model. */

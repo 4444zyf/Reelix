@@ -1,0 +1,9 @@
+{
+	"description": "The assistant's own Chromium, with a saved profile so logins persist: ten browser tools in every conversation, and the live view where you watch and take over the page.",
+	"settings": {
+		"chromium": "Chromium program",
+		"chromium_help": "Leave empty to use the system's Chromium or Playwright's.",
+		"headed": "Show the window",
+		"headed_help": "For a desktop machine; in a container there is no screen."
+	}
+}

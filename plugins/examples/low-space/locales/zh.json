@@ -1,0 +1,12 @@
+{
+	"description": "示例：每小时检查可用空间，空间不足时添加一条通知。",
+	"title": "仅剩 {{free}} GB 可用",
+	"body": "下载目录还剩 {{free}} GB；你设置的下限是 {{min}} GB。",
+	"enough": "可用 {{free}} GB。",
+	"told": "可用 {{free}} GB：已通知。",
+	"held": "可用 {{free}} GB：通知已太多。",
+	"unknown": "无法得知可用空间。",
+	"settings": {
+		"min_free_gb": "低于此值时提醒（剩余 GB）"
+	}
+}

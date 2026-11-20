@@ -1,0 +1,14 @@
+{
+	"description": "Tells Jellyfin about new and removed files, and reads what you watched there for suggestions and play links.",
+	"settings": {
+		"url": "Jellyfin address",
+		"url_help": "For example http://jellyfin:8096. How its folders look to Reelix is the path map under Settings → Media server.",
+		"public_url": "Jellyfin address for your devices",
+		"public_url_help": "The address your phone and browser use for Jellyfin, if different from the one above (for example when it is a Docker name). Used for “Open in Jellyfin”.",
+		"watch_users": "Whose watch history shapes suggestions",
+		"watch_users_help": "Jellyfin user names. Empty: the only user, or else the administrators."
+	},
+	"secrets": {
+		"api_key": "API key (Jellyfin → Dashboard → API keys)"
+	}
+}

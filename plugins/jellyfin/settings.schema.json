@@ -1,0 +1,21 @@
+{
+	"type": "object",
+	"required": [
+		"watch_users"
+	],
+	"properties": {
+		"url": {
+			"type": "string"
+		},
+		"public_url": {
+			"type": "string"
+		},
+		"watch_users": {
+			"type": "array",
+			"items": {
+				"type": "string"
+			},
+			"default": []
+		}
+	}
+}

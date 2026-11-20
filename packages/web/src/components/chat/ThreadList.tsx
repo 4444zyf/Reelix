@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, Briefcase, CircleHelp, MessageSquare, MoreHorizontal, Pencil, Plus, Send } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { endpoints } from "../../lib/api";
 import { useChat } from "../../lib/chat";
 import type { Thread } from "../../lib/types";
@@ -15,12 +16,13 @@ export function useThreads() {
 }
 
 function KindIcon({ kind }: { kind: string }) {
-	if (kind === "telegram") return <Send className="h-3.5 w-3.5" />;
+	if (kind === "channel") return <Send className="h-3.5 w-3.5" />;
 	if (kind === "job") return <Briefcase className="h-3.5 w-3.5" />;
 	return <MessageSquare className="h-3.5 w-3.5" />;
 }
 
 export function RenameThreadDialog({ thread, open, onOpenChange }: { thread: Thread; open: boolean; onOpenChange: (o: boolean) => void }) {
+	const { t } = useTranslation("chat");
 	const qc = useQueryClient();
 	const [name, setName] = useState(thread.name);
 	return (
@@ -30,8 +32,8 @@ export function RenameThreadDialog({ thread, open, onOpenChange }: { thread: Thr
 				if (o) setName(thread.name);
 				onOpenChange(o);
 			}}
-			title="Rename conversation"
-			confirmLabel="Rename"
+			title={t("threads.renameTitle")}
+			confirmLabel={t("pane.rename")}
 			disabled={!name.trim()}
 			onConfirm={async () => {
 				await endpoints.patchThread(thread.id, { name: name.trim() });
@@ -44,6 +46,7 @@ export function RenameThreadDialog({ thread, open, onOpenChange }: { thread: Thr
 }
 
 function ThreadRow({ t, active, onOpen }: { t: Thread; active: boolean; onOpen: () => void }) {
+	const { t: tr } = useTranslation("chat");
 	const qc = useQueryClient();
 	const { activeId, newChat } = useChat();
 	const [rename, setRename] = useState(false);
@@ -57,18 +60,18 @@ function ThreadRow({ t, active, onOpen }: { t: Thread; active: boolean; onOpen: 
 					<span className={cn("block truncate text-sm", active ? "text-foreground" : "text-muted-foreground")}>{t.name}</span>
 					<span className="block text-[11px] text-muted-foreground/70">{timeAgo(t.updated_at)}</span>
 				</span>
-				{t.pending_question && <CircleHelp className="h-3.5 w-3.5 shrink-0 text-warning" aria-label="waiting for an answer" />}
-				{t.running && <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-primary" aria-label="running" />}
+				{t.pending_question && <CircleHelp className="h-3.5 w-3.5 shrink-0 text-warning" aria-label={tr("threads.waiting")} />}
+				{t.running && <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-primary" aria-label={tr("threads.running")} />}
 			</button>
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
-					<Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground" aria-label="Conversation actions">
+					<Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground" aria-label={tr("pane.actions")}>
 						<MoreHorizontal />
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
 					<DropdownMenuItem onClick={() => setRename(true)}>
-						<Pencil className="mr-2 h-4 w-4" /> Rename
+						<Pencil className="mr-2 h-4 w-4" /> {tr("pane.rename")}
 					</DropdownMenuItem>
 					<DropdownMenuItem
 						onClick={async () => {
@@ -77,7 +80,7 @@ function ThreadRow({ t, active, onOpen }: { t: Thread; active: boolean; onOpen: 
 							qc.invalidateQueries({ queryKey: ["threads"] });
 						}}
 					>
-						<Archive className="mr-2 h-4 w-4" /> Archive
+						<Archive className="mr-2 h-4 w-4" /> {tr("threads.archive")}
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
@@ -87,6 +90,7 @@ function ThreadRow({ t, active, onOpen }: { t: Thread; active: boolean; onOpen: 
 }
 
 export function ThreadList({ onOpen, className }: { onOpen?: (id: string | null) => void; className?: string }) {
+	const { t } = useTranslation(["chat", "common"]);
 	const { data, isLoading } = useThreads();
 	const { activeId, setActive } = useChat();
 	const open = (id: string | null) => {
@@ -96,11 +100,11 @@ export function ThreadList({ onOpen, className }: { onOpen?: (id: string | null)
 	return (
 		<div className={cn("flex min-h-0 flex-col", className)}>
 			<Button variant="outline" size="sm" className="mx-2 mb-2 justify-start gap-2" onClick={() => open(null)}>
-				<Plus /> New chat
+				<Plus /> {t("pane.newChat")}
 			</Button>
 			<div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2">
-				{isLoading && <p className="px-3 py-2 text-xs text-muted-foreground">Loading…</p>}
-				{data?.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">No conversations yet.</p>}
+				{isLoading && <p className="px-3 py-2 text-xs text-muted-foreground">{t("common:loading")}</p>}
+				{data?.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">{t("threads.empty")}</p>}
 				{data?.map((t) => (
 					<ThreadRow key={t.id} t={t} active={t.id === activeId} onOpen={() => open(t.id)} />
 				))}

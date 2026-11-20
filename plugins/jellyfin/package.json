@@ -1,0 +1,39 @@
+{
+  "name": "reelix-plugin-jellyfin",
+  "version": "0.1.0",
+  "description": "Tells Jellyfin about new and removed files, and reads what you watched there for suggestions and play links.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "reelix-plugin"
+  ],
+  "peerDependencies": {
+    "@reelix/plugin": "*"
+  },
+  "reelix": {
+    "api": 0,
+    "id": "jellyfin",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "settings": "./settings.schema.json",
+    "env": {
+      "REELIX_DEFAULT_JELLYFIN_URL": "url"
+    },
+    "describe": "at {url} (api key {secret:api_key})",
+    "uses": {
+      "provides": [
+        "reelix:media.server@1"
+      ],
+      "operations": {
+        "refresh": "write"
+      },
+      "network": [
+        "config:url"
+      ],
+      "secrets": [
+        "api_key"
+      ]
+    }
+  }
+}

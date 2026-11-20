@@ -6,7 +6,8 @@ import { ChatScreen } from "../screens/ChatScreen";
 import { DownloadsScreen } from "../screens/DownloadsScreen";
 import { InboxScreen } from "../screens/InboxScreen";
 import { LibraryScreen } from "../screens/LibraryScreen";
-import { SearchScreen } from "../screens/SearchScreen";
+import { PluginScreen } from "../screens/PluginScreen";
+import { TrendsScreen } from "../screens/SearchScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
 import { TitleScreen } from "../screens/TitleScreen";
 import { Layout } from "./Layout";
@@ -23,11 +24,13 @@ export function AppRoutes() {
 				<Route path="library" element={<LibraryScreen />} />
 				<Route path="library/adopt" element={<AdoptScreen />} />
 				<Route path="library/:titleId" element={<TitleScreen />} />
-				<Route path="search" element={<SearchScreen />} />
+				<Route path="trends" element={<TrendsScreen />} />
+				<Route path="search" element={<TrendsScreen />} />
 				<Route path="downloads" element={<DownloadsScreen />} />
 				<Route path="activity" element={<ActivityScreen />} />
 				<Route path="browser" element={<BrowserScreen />} />
 				<Route path="settings" element={<SettingsScreen />} />
+				<Route path="plugins/:id" element={<PluginScreen />} />
 				<Route path="*" element={<Navigate to="/chat" replace />} />
 			</Route>
 		</Routes>

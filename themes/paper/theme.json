@@ -1,0 +1,24 @@
+{
+	"id": "paper",
+	"name": {
+		"en": "Paper",
+		"zh": "纸页",
+		"fr": "Papier",
+		"ru": "Бумага"
+	},
+	"description": {
+		"en": "Light and editorial: off-white paper, ink, one vermilion accent, serif reading type.",
+		"zh": "明亮、编辑风：米白纸张、墨色文字、一抹朱红、衬线正文。",
+		"fr": "Clair et éditorial : papier crème, encre, une touche de vermillon, texte à empattement.",
+		"ru": "Светлая, журнальная: бумага цвета слоновой кости, чернила, киноварь, текст с засечками."
+	},
+	"scheme": "light",
+	"swatches": [
+		"#f5f1ea",
+		"#fffdf9",
+		"#c8432b",
+		"#1d1b18"
+	],
+	"author": "Reelix",
+	"version": "1.0.0"
+}

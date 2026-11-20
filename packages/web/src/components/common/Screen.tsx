@@ -33,12 +33,12 @@ export function Screen({
 	}, []);
 	return (
 		<div ref={ref} className="h-full overflow-y-auto">
-			<div className={cn("sticky top-0 z-20 bg-background/95 backdrop-blur-sm transition-all duration-300 px-4 md:px-6", scrolled ? "py-3 border-b border-border/50" : "py-4 md:py-6")}>
+			<div className={cn("sticky top-0 z-20 transition-all duration-300 px-4 md:px-6", scrolled ? "bg-background/85 backdrop-blur-md py-3 border-b border-line" : "py-4 md:py-6")}>
 				<div className="flex items-center justify-between gap-3">
 					<div className="flex min-w-0 items-center gap-2">
 						{back}
 						<div className="min-w-0">
-							<h1 className={cn("truncate font-bold tracking-tight transition-all duration-300", scrolled ? "text-xl" : "text-2xl md:text-3xl")}>{title}</h1>
+							<h1 className={cn("display truncate transition-all duration-300", scrolled ? "text-xl" : "text-3xl md:text-4xl")}>{title}</h1>
 							{subtitle && <div className={cn("overflow-hidden text-muted-foreground transition-all duration-300", scrolled ? "h-0 opacity-0" : "h-auto opacity-100")}>{subtitle}</div>}
 						</div>
 					</div>

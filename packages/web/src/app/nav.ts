@@ -1,17 +1,19 @@
-import { Activity, Download, Inbox, Library, MessageSquare, MonitorPlay, Search, Settings } from "lucide-react";
+import { Activity, Download, Inbox, Library, MessageSquare, MonitorPlay, Settings, TrendingUp } from "lucide-react";
 import type { ElementType } from "react";
 
-export type NavItem = { title: string; href: string; icon: ElementType; badge?: "inbox" };
+export type NavKey = "chat" | "inbox" | "library" | "trends" | "downloads" | "activity" | "browser" | "settings";
+/** `key` names the label in locales/<lang>/nav.json (items.<key>). */
+export type NavItem = { key: NavKey; href: string; icon: ElementType; badge?: "inbox" };
 
 export const NAV: NavItem[] = [
-	{ title: "Chat", href: "/chat", icon: MessageSquare },
-	{ title: "Inbox", href: "/inbox", icon: Inbox, badge: "inbox" },
-	{ title: "Library", href: "/library", icon: Library },
-	{ title: "Search", href: "/search", icon: Search },
-	{ title: "Downloads", href: "/downloads", icon: Download },
-	{ title: "Activity", href: "/activity", icon: Activity },
-	{ title: "Browser", href: "/browser", icon: MonitorPlay },
-	{ title: "Settings", href: "/settings", icon: Settings },
+	{ key: "chat", href: "/chat", icon: MessageSquare },
+	{ key: "inbox", href: "/inbox", icon: Inbox, badge: "inbox" },
+	{ key: "library", href: "/library", icon: Library },
+	{ key: "trends", href: "/trends", icon: TrendingUp },
+	{ key: "downloads", href: "/downloads", icon: Download },
+	{ key: "activity", href: "/activity", icon: Activity },
+	{ key: "browser", href: "/browser", icon: MonitorPlay },
+	{ key: "settings", href: "/settings", icon: Settings },
 ];
 
 export function isActive(pathname: string, href: string): boolean {

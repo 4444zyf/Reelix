@@ -1,0 +1,39 @@
+{
+	"items": {
+		"chat": "Chat",
+		"inbox": "Inbox",
+		"library": "Library",
+		"trends": "Trends",
+		"downloads": "Downloads",
+		"activity": "Activity",
+		"browser": "Browser",
+		"settings": "Settings"
+	},
+	"more": "More",
+	"conversations": "Conversations",
+	"owner": "Owner",
+	"signOut": "Sign out",
+	"theme": "Theme",
+	"language": "Language",
+	"expandSidebar": "Expand sidebar",
+	"collapseSidebar": "Collapse sidebar",
+	"openChat": "Open chat",
+	"spendCap": "Background spending cap reached for today.",
+	"connecting": "Connecting to Reelix…",
+	"unreachable": "Reelix is not reachable.",
+	"login": {
+		"firstRun": "Choose a password for this Reelix. You will use it to sign in from any device.",
+		"signInToContinue": "Sign in to continue.",
+		"newPassword": "New password",
+		"password": "Password",
+		"repeat": "Repeat it",
+		"tooShort": "Use at least 8 characters.",
+		"differ": "The two passwords differ.",
+		"setPassword": "Set password",
+		"signIn": "Sign in"
+	},
+	"devPlugin": "Plugin development: {{folder}} is loaded without approval or file checks. Fake services, temporary data.",
+	"plugins": "Plugins",
+	"screenFailed": "The screen of {{id}} could not be shown.",
+	"screenTitle": "{{title}} — a screen of the plugin {{id}}"
+}

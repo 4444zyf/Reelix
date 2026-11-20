@@ -2,69 +2,13 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { crc32, deflateRawSync } from "node:zlib";
 import { applyPlan, autoPlan } from "../src/organiser.ts";
-import { parseSubhdSearch } from "../src/subtitles/sources.ts";
 import { decodeSubtitle, detectLanguage, lastTimestamp, unpackSubtitles } from "../src/subtitles/text.ts";
 import { processLocalSubtitle } from "../src/subtitles/pipeline.ts";
 import { getTitle } from "../src/titles.ts";
+import { encodeGbk, makeZip } from "./fakes/zip.ts";
 import { insertTitle, tempApp, touch } from "./helpers.ts";
 
-/** Minimal zip writer (deflate), names in GBK unless utf8 is set — like old Chinese archives. */
-function makeZip(entries: { name: string; data: Buffer; gbkName?: boolean }[]): Buffer {
-	const locals: Buffer[] = [];
-	const centrals: Buffer[] = [];
-	let offset = 0;
-	for (const e of entries) {
-		const name = e.gbkName ? encodeGbk(e.name) : Buffer.from(e.name, "utf8");
-		const comp = deflateRawSync(e.data);
-		const crc = crc32(e.data);
-		const flags = e.gbkName ? 0 : 0x800;
-		const local = Buffer.alloc(30);
-		local.writeUInt32LE(0x04034b50, 0);
-		local.writeUInt16LE(20, 4);
-		local.writeUInt16LE(flags, 6);
-		local.writeUInt16LE(8, 8);
-		local.writeUInt32LE(crc, 14);
-		local.writeUInt32LE(comp.length, 18);
-		local.writeUInt32LE(e.data.length, 22);
-		local.writeUInt16LE(name.length, 26);
-		locals.push(local, name, comp);
-		const c = Buffer.alloc(46);
-		c.writeUInt32LE(0x02014b50, 0);
-		c.writeUInt16LE(20, 4);
-		c.writeUInt16LE(20, 6);
-		c.writeUInt16LE(flags, 8);
-		c.writeUInt16LE(8, 10);
-		c.writeUInt32LE(crc, 16);
-		c.writeUInt32LE(comp.length, 20);
-		c.writeUInt32LE(e.data.length, 24);
-		c.writeUInt16LE(name.length, 28);
-		c.writeUInt32LE(offset, 42);
-		centrals.push(c, name);
-		offset += 30 + name.length + comp.length;
-	}
-	const cd = Buffer.concat(centrals);
-	const end = Buffer.alloc(22);
-	end.writeUInt32LE(0x06054b50, 0);
-	end.writeUInt16LE(entries.length, 8);
-	end.writeUInt16LE(entries.length, 10);
-	end.writeUInt32LE(cd.length, 12);
-	end.writeUInt32LE(offset, 16);
-	return Buffer.concat([...locals, cd, end]);
-}
-
-// A tiny GBK encoder for the handful of characters used in the tests.
-const GBK: Record<string, number[]> = { 简: [0xbc, 0xf2], 体: [0xcc, 0xe5], 繁: [0xb7, 0xb1], 中: [0xd6, 0xd0], 文: [0xce, 0xc4], 们: [0xc3, 0xc7], 这: [0xd5, 0xe2], 说: [0xcb, 0xb5], 个: [0xb8, 0xf6], 来: [0xc0, 0xb4], 时: [0xca, 0xb1], 我: [0xce, 0xd2], 的: [0xb5, 0xc4], 你: [0xc4, 0xe3], 是: [0xca, 0xc7], 好: [0xba, 0xc3], 了: [0xc1, 0xcb], 完: [0xcd, 0xea] };
-function encodeGbk(s: string): Buffer {
-	const out: number[] = [];
-	for (const ch of s) {
-		if (ch.charCodeAt(0) < 128) out.push(ch.charCodeAt(0));
-		else if (GBK[ch]) out.push(...GBK[ch]!);
-		else throw new Error(`no gbk for ${ch}`);
-	}
-	return Buffer.from(out);
-}
 
 function srt(lines: string[], endMin = 44): string {
 	return lines.map((l, i) => `${i + 1}\n00:${String(Math.min(i, 59)).padStart(2, "0")}:01,000 --> 00:${String(Math.min(i, 59)).padStart(2, "0")}:03,000\n${l}\n`).join("\n") + `\n${lines.length + 1}\n00:${endMin}:00,000 --> 00:${endMin}:02,000\n完\n`;
@@ -133,26 +77,4 @@ test("season pack: files attributed to episodes, bilingual preferred, placed wit
 	assert.ok(again.results.every((r) => r.warnings.includes("already in place")));
 	assert.equal(readdirSync(join(library, "Shows", "Severance (2022) [tmdbid-95396]", "Season 01")).filter((n) => /\.(srt|ass)$/.test(n)).length, 2);
 	app.close();
-});
-
-test("subhd search page parsing (hand-written fixture in subhd's structure)", () => {
-	const html = `<html><div class="bg-white shadow-sm rounded-3 mb-4"><div class="row"><div class="col-2"><a href='/d/1234567'><img alt="示例 Example"></a></div>
-	<div class="col-lg-10"><div class="clearfix"><div class="float-start f16 fw-bold"> <a class="link-dark" href='/a/AbC123'>示例电影</a> </div>
-	<div class="view-text text-secondary"> <a href='/a/AbC123'> Example.2023.1080p.WEB-DL.H264-GRP </a> </div>
-	<div class="text-truncate py-2 f11"> <span class="rounded p-1 me-1 text-white">官方字幕</span> <span class="p-1 fw-bold">简体 双语</span> <span class="p-1 text-secondary">ASS</span> </div>
-	<div class="pt-2 text-secondary f12"><span class='align-text-top me-3'>120k</span><span class="align-text-top me-3">88</span><time datetime="2024-01-02T03:04:05.000Z"></time></div>
-	<div class="pt-1 f12 text-secondary"> 发布人 <a class="fw-bold text-dark" href='/u/x'>someone</a> </div></div></div></div></html>`;
-	const r = parseSubhdSearch(html);
-	assert.equal(r.length, 1);
-	assert.deepEqual({ ref: r[0]!.ref, doubanId: r[0]!.doubanId, title: r[0]!.title, release: r[0]!.release, languages: r[0]!.languages, formats: r[0]!.formats, tags: r[0]!.tags, downloads: r[0]!.downloads, uploader: r[0]!.uploader }, {
-		ref: "subhd:AbC123",
-		doubanId: "1234567",
-		title: "示例电影",
-		release: "Example.2023.1080p.WEB-DL.H264-GRP",
-		languages: ["简体", "双语"],
-		formats: ["ASS"],
-		tags: ["官方字幕"],
-		downloads: 88,
-		uploader: "someone",
-	});
 });

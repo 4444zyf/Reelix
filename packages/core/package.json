@@ -9,6 +9,7 @@
     "./*": "./src/*"
   },
   "dependencies": {
+    "@reelix/plugin": "*",
     "typebox": "1.3.27",
     "yaml": "^2.9.0",
     "undici": "^8.12.3"

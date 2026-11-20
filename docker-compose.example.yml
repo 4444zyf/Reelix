@@ -5,10 +5,13 @@ services:
     image: reelix:latest
     container_name: reelix
     restart: unless-stopped
-    user: "1026:100"            # qBittorrent's PUID:PGID — required for hard links (decision D)
     ports:
       - "7878:7878"
     volumes:
       - /volume1/data:/media     # ONE mount: the common parent of downloads and library
       - /volume1/docker/reelix:/data
+    environment:
+      PUID: "1026"              # qBittorrent's PUID:PGID — required for hard links (decision D); not `user:`,
+      PGID: "100"               # the image switches to them itself (docs/deployment.md "Users and files")
+      REELIX_RESTART: "exit"    # restart: unless-stopped starts it again, so Settings may offer "Restart"
     shm_size: "512m"            # Chromium

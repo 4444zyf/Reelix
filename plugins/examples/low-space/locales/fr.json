@@ -1,0 +1,12 @@
+{
+	"description": "Exemple : vérifie l'espace libre chaque heure et ajoute un avis quand il manque.",
+	"title": "Plus que {{free}} Go libres",
+	"body": "Le dossier de téléchargement a {{free}} Go libres ; votre limite est de {{min}} Go.",
+	"enough": "{{free}} Go libres.",
+	"told": "{{free}} Go libres : le propriétaire est prévenu.",
+	"held": "{{free}} Go libres : déjà trop d'avis.",
+	"unknown": "Espace libre inconnu.",
+	"settings": {
+		"min_free_gb": "Avertir en dessous de (Go libres)"
+	}
+}

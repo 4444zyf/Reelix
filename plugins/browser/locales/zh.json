@@ -1,0 +1,9 @@
+{
+	"description": "助手自己的 Chromium，配置文件会保存，登录状态不丢失：每个对话里都有十个浏览器工具，还有实时画面，你可以观看并接手页面。",
+	"settings": {
+		"chromium": "Chromium 程序",
+		"chromium_help": "留空则使用系统的 Chromium 或 Playwright 的。",
+		"headed": "显示窗口",
+		"headed_help": "适用于桌面电脑；容器里没有屏幕。"
+	}
+}

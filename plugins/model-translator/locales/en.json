@@ -1,0 +1,4 @@
+{
+	"description": "Translates subtitle lines with your own models, in the translate role. It runs without a daily budget unless you set one here.",
+	"label": "Your models"
+}

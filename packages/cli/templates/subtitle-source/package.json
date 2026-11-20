@@ -1,0 +1,21 @@
+{
+  "name": "reelix-plugin-example-subtitles",
+  "version": "0.1.0",
+  "description": "A subtitle source: finds and downloads subtitles from one site.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["reelix-plugin"],
+  "peerDependencies": {
+    "@reelix/plugin": "*"
+  },
+  "reelix": {
+    "api": 0,
+    "id": "example-subtitles",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "uses": {
+      "provides": ["reelix:subtitle.source@1"],
+      "network": ["subtitles.example.org"]
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "name": "reelix-plugin-telegram",
+  "version": "0.1.0",
+  "description": "Telegram: notices with buttons and pictures, and chat with the agent.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "reelix-plugin"
+  ],
+  "peerDependencies": {
+    "@reelix/plugin": "*"
+  },
+  "reelix": {
+    "api": 0,
+    "id": "telegram",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "settings": "./settings.schema.json",
+    "describe": "bot token {secret:bot_token} (`reelix channel list` says whether it is linked)",
+    "uses": {
+      "provides": [
+        "reelix:notifier@1",
+        "reelix:chat.channel@1"
+      ],
+      "hooks": [
+        "agent.prompt@1"
+      ],
+      "operations": {
+        "link": "admin",
+        "test": "write",
+        "status": "read"
+      },
+      "network": [
+        "api.telegram.org",
+        "config:api_url"
+      ],
+      "secrets": [
+        "bot_token"
+      ]
+    }
+  }
+}

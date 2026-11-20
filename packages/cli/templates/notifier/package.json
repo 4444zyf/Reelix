@@ -1,0 +1,23 @@
+{
+  "name": "reelix-plugin-example-notifier",
+  "version": "0.1.0",
+  "description": "A notifier: sends Reelix's notices to a web address of your choice.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["reelix-plugin"],
+  "peerDependencies": {
+    "@reelix/plugin": "*"
+  },
+  "reelix": {
+    "api": 0,
+    "id": "example-notifier",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "settings": "./settings.schema.json",
+    "uses": {
+      "provides": ["reelix:notifier@1"],
+      "network": ["config:url"],
+      "secrets": ["token"]
+    }
+  }
+}

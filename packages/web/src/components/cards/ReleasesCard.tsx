@@ -1,5 +1,6 @@
 import { ListVideo } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { IndexerOutcome, Release } from "../../lib/types";
 import { Button } from "../ui/button";
 import { IndexerLine, ReleaseList, type AddResult } from "../media/ReleaseList";
@@ -22,16 +23,19 @@ export function ReleasesCard({
 	indexers?: IndexerOutcome[];
 	onDownloaded?: (r: Release, out: AddResult) => void;
 }) {
+	const { t } = useTranslation("chat");
 	const [all, setAll] = useState(false);
 	const list = releases ?? [];
 	// The recommended release first.
-	const sorted = pick ? [...list.filter((r) => r.handle === pick), ...list.filter((r) => r.handle !== pick)] : list;
-	const shown = all ? sorted : sorted.slice(0, FIRST);
+	const open = list.filter((r) => !r.hidden?.length);
+	const hidden = list.filter((r) => r.hidden?.length);
+	const sorted = pick ? [...open.filter((r) => r.handle === pick), ...open.filter((r) => r.handle !== pick)] : open;
+	const shown = [...(all ? sorted : sorted.slice(0, FIRST)), ...hidden];
 	return (
-		<CardShell icon={<ListVideo />} title={`${list.length} release${list.length === 1 ? "" : "s"}${total && total > list.length ? ` of ${total}` : ""}`}>
+		<CardShell icon={<ListVideo />} title={total && total > open.length ? t("cards.releases.countOf", { count: open.length, total }) : t("cards.releases.count", { count: open.length })}>
 			{reason && (
 				<p className="mb-2 rounded-md bg-primary/10 px-3 py-2 text-xs text-foreground/90">
-					<span className="font-semibold text-primary">Pick{pick ? ` ${pick}` : ""}: </span>
+					<span className="font-semibold text-primary">{pick ? t("cards.releases.pickHandle", { handle: pick }) : t("cards.releases.pick")} </span>
 					{reason}
 				</p>
 			)}
@@ -41,7 +45,7 @@ export function ReleasesCard({
 			</div>
 			{sorted.length > FIRST && (
 				<Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => setAll((a) => !a)}>
-					{all ? "Show fewer" : `Show all ${sorted.length}`}
+					{all ? t("cards.releases.showFewer") : t("cards.releases.showAll", { n: sorted.length })}
 				</Button>
 			)}
 		</CardShell>

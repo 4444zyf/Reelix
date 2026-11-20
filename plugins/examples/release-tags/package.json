@@ -1,0 +1,78 @@
+{
+  "name": "reelix-plugin-release-tags",
+  "version": "0.1.0",
+  "description": "Reference plugin: asks tagger plugins what a release name says (HDR, Atmos, …) and shows the tags beside each release.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "reelix-plugin"
+  ],
+  "exports": {
+    "./contract": "./src/contract.ts"
+  },
+  "peerDependencies": {
+    "@reelix/plugin": "*"
+  },
+  "reelix": {
+    "api": 0,
+    "id": "release-tags",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "owns": {
+      "seams": {
+        "release-tags:tagger@1": {
+          "summary": "Reads tags from release names: one call per search, every release at once.",
+          "methods": {
+            "tag": {
+              "limitMs": 5000,
+              "result": {
+                "type": "array",
+                "maxItems": 500,
+                "items": {
+                  "type": "object",
+                  "required": ["ref", "tags"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ref": { "type": "string", "minLength": 1 },
+                    "tags": { "type": "array", "maxItems": 10, "items": { "type": "string", "minLength": 1, "maxLength": 40 } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "events": {
+        "release-tags:tagged": {
+          "summary": "A search found releases with tags: the title searched for, if any, and each tagged release with its tags.",
+          "payload": {
+            "type": "object",
+            "required": ["releases"],
+            "additionalProperties": false,
+            "properties": {
+              "title": {
+                "type": "object",
+                "required": ["id", "name"],
+                "properties": { "id": { "type": "string" }, "name": { "type": "string" } }
+              },
+              "releases": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["ref", "name", "tags"],
+                  "properties": { "ref": { "type": "string" }, "name": { "type": "string" }, "tags": { "type": "array", "items": { "type": "string" } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "uses": {
+      "hooks": [
+        "release.rank@1"
+      ]
+    }
+  }
+}

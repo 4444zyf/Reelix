@@ -1,0 +1,24 @@
+{
+	"id": "marquee",
+	"name": {
+		"en": "Marquee",
+		"zh": "影院",
+		"fr": "Marquee",
+		"ru": "Афиша"
+	},
+	"description": {
+		"en": "Warm and cinematic: near-black, amber, a serif for titles.",
+		"zh": "温暖、有电影感：近黑底色、琥珀色点缀、标题用衬线字体。",
+		"fr": "Chaleureux et cinématographique : presque noir, ambre, un empattement pour les titres.",
+		"ru": "Тёплая, кинематографичная: почти чёрный фон, янтарь, заголовки с засечками."
+	},
+	"scheme": "dark",
+	"swatches": [
+		"#0c0a08",
+		"#2a2219",
+		"#f2b84b",
+		"#efe7dc"
+	],
+	"author": "Reelix",
+	"version": "1.0.0"
+}

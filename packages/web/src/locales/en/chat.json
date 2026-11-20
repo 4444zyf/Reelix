@@ -1,0 +1,150 @@
+{
+	"welcome": {
+		"title": "What shall we watch?",
+		"subtitle": "Ask for a film or a show, a fix in the library, or anything about your setup.",
+		"suggestions": {
+			"downloading": "What is downloading right now?",
+			"newSeason": "Find the newest season of a show I follow",
+			"doctor": "Check that everything is set up (doctor)",
+			"lastNight": "What did you do last night?"
+		}
+	},
+	"pane": {
+		"conversations": "Conversations",
+		"conversation": "Conversation",
+		"newChat": "New chat",
+		"working": "working",
+		"actions": "Conversation actions",
+		"rename": "Rename",
+		"close": "Close chat",
+		"noMessages": "No messages yet.",
+		"thinking": "thinking"
+	},
+	"threads": {
+		"renameTitle": "Rename conversation",
+		"archive": "Archive",
+		"waiting": "waiting for an answer",
+		"running": "running",
+		"empty": "No conversations yet."
+	},
+	"ask": {
+		"answerPlaceholder": "Your answer",
+		"secret": "secret",
+		"send": "Send",
+		"skip": "Skip",
+		"secretNote": "Stored in the server's secrets file as {{key}}. The agent only learns that it was provided.",
+		"orType": "Or type an answer below."
+	},
+	"composer": {
+		"pastedImage": "pasted image",
+		"imageTooLarge": "Image too large",
+		"imageTooLargeDetail": "{{name}}: {{size}} (limit {{limit}})",
+		"droppedFile": "I dropped a file at {{path}} ({{name}}, {{size}}).",
+		"uploadFailed": "Upload failed: {{name}}",
+		"dropHint": "Drop to upload and tell the agent",
+		"removeImage": "Remove image",
+		"uploading": "Uploading…",
+		"attach": "Attach files",
+		"placeholderRunning": "Add something; it is delivered after the current step",
+		"placeholderAnswer": "Type an answer…",
+		"placeholder": "Ask Reelix…",
+		"stop": "Stop",
+		"send": "Send"
+	},
+	"message": {
+		"from": "from {{source}}",
+		"images_one": "{{count}} image",
+		"images_other": "{{count}} images",
+		"queued": "delivered after the current step",
+		"answered": "Answered: {{text}}"
+	},
+	"tools": {
+		"earlier_one": "{{count}} earlier step",
+		"earlier_other": "{{count}} earlier steps"
+	},
+	"notices": {
+		"stopped": "Stopped.",
+		"failed": "Something went wrong.",
+		"messageNotSent": "Message not sent",
+		"noteFailed": "Could not tell the agent",
+		"answerFailed": "Answer not taken",
+		"stopFailed": "Could not stop",
+		"problem": "Problem",
+		"notice": "Notice"
+	},
+	"cards": {
+		"candidates": {
+			"none": "No matches found",
+			"count_one": "{{count}} possible match",
+			"count_other": "{{count}} possible matches",
+			"tv": "TV",
+			"movie": "Film",
+			"chosen": "Chosen",
+			"pick": "This one"
+		},
+		"agent": {
+			"candidate": "It is {{name}}, {{id}}.",
+			"candidateYear": "It is {{name}} ({{year}}), {{id}}.",
+			"downloaded": "I downloaded release {{handle}} (\"{{title}}\") from the list. Hash {{hash}}.",
+			"downloadedAdopted": "I downloaded release {{handle}} (\"{{title}}\") from the list (it was already in the downloader and was adopted). Hash {{hash}}.",
+			"planApplied": "I approved the plan and it was applied:\n{{text}}",
+			"planEdit": "About the plan above, change this: ",
+			"subtitle": "Use subtitle {{ref}}.",
+			"subtitleTitled": "Use subtitle {{ref}} (\"{{title}}\").",
+			"pressed": "I pressed \"{{label}}\" on the {{plugin}} card: {{text}}"
+		},
+		"subtitles": {
+			"title": "Subtitles",
+			"titleFor": "Subtitles for {{title}}",
+			"use": "Use this"
+		},
+		"downloads": {
+			"none": "No downloads."
+		},
+		"image": {
+			"alt": "image from the agent"
+		},
+		"verification": {
+			"title": "Verification needed",
+			"alt": "verification",
+			"code": "Code",
+			"codeSent": "Code sent. Another one?",
+			"send": "Send",
+			"liveView": "Open live view"
+		},
+		"plan": {
+			"title_one": "Plan: {{count}} item",
+			"title_other": "Plan: {{count}} items",
+			"titleApplied_one": "Plan: {{count}} item (applied)",
+			"titleApplied_other": "Plan: {{count}} items (applied)",
+			"applied": "Plan applied",
+			"notApplied": "Plan not applied",
+			"approve": "Approve"
+		},
+		"progress": {
+			"checking": "Checking the download…",
+			"unknown": "This download is not known (it may have been removed)."
+		},
+		"releases": {
+			"count_one": "{{count}} release",
+			"count_other": "{{count}} releases",
+			"countOf_one": "{{count}} release of {{total}}",
+			"countOf_other": "{{count}} releases of {{total}}",
+			"pick": "Pick:",
+			"pickHandle": "Pick {{handle}}:",
+			"showFewer": "Show fewer",
+			"showAll": "Show all {{n}}"
+		},
+		"title": {
+			"inLibrary_one": "in library · {{count}} file",
+			"inLibrary_other": "in library · {{count}} files",
+			"followed": "followed",
+			"releases": "Releases"
+		},
+		"plugin": {
+			"from": "From the plugin {{plugin}}",
+			"more_one": "and {{count}} more",
+			"more_other": "and {{count}} more"
+		}
+	}
+}

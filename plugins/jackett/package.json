@@ -1,0 +1,43 @@
+{
+  "name": "reelix-plugin-jackett",
+  "version": "0.1.0",
+  "description": "Finds releases through one or more Jackett servers.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "reelix-plugin"
+  ],
+  "peerDependencies": {
+    "@reelix/plugin": "*"
+  },
+  "reelix": {
+    "api": 0,
+    "id": "jackett",
+    "entry": "./src/index.ts",
+    "runtime": "process",
+    "settings": "./settings.schema.json",
+    "env": {
+      "REELIX_DEFAULT_JACKETT_URL": "servers.0.url"
+    },
+    "describe": "at {servers.*.url} (api key {secret:api_key})",
+    "uses": {
+      "provides": [
+        "reelix:indexer@1"
+      ],
+      "operations": {
+        "indexers": "read"
+      },
+      "network": [
+        "config:servers",
+        "*"
+      ],
+      "secrets": [
+        "api_key",
+        "api_key_2",
+        "api_key_3"
+      ],
+      "skills": true
+    }
+  }
+}

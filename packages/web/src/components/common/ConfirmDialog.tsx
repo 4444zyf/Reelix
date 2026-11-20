@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Spinner } from "./States";
@@ -10,7 +11,7 @@ export function ConfirmDialog({
 	title,
 	description,
 	children,
-	confirmLabel = "Confirm",
+	confirmLabel,
 	destructive,
 	onConfirm,
 	disabled,
@@ -25,6 +26,7 @@ export function ConfirmDialog({
 	onConfirm: () => Promise<unknown> | unknown;
 	disabled?: boolean;
 }) {
+	const { t } = useTranslation();
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string>();
 	return (
@@ -37,7 +39,7 @@ export function ConfirmDialog({
 				}
 			}}
 		>
-			<DialogContent className="glass-card max-w-md rounded-xl">
+			<DialogContent className="surface-card max-w-md rounded-xl">
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>
 					{description && <DialogDescription>{description}</DialogDescription>}
@@ -46,7 +48,7 @@ export function ConfirmDialog({
 				{error && <p className="text-sm text-destructive-foreground">{error}</p>}
 				<DialogFooter className="gap-2">
 					<Button variant="ghost" disabled={busy} onClick={() => onOpenChange(false)}>
-						Cancel
+						{t("actions.cancel")}
 					</Button>
 					<Button
 						variant={destructive ? "destructive" : "default"}
@@ -65,7 +67,7 @@ export function ConfirmDialog({
 						}}
 					>
 						{busy && <Spinner />}
-						{confirmLabel}
+						{confirmLabel ?? t("actions.confirm")}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

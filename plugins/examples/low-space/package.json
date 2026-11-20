@@ -1,0 +1,18 @@
+{
+  "name": "reelix-plugin-low-space",
+  "version": "0.1.0",
+  "description": "Reference plugin: an hourly job that adds one notice when free space runs low.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["reelix-plugin"],
+  "peerDependencies": { "@reelix/plugin": "*" },
+  "reelix": {
+    "api": 0,
+    "id": "low-space",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "settings": "./settings.schema.json",
+    "uses": { "jobs": ["check"], "inbox": true }
+  }
+}

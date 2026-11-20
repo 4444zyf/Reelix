@@ -1,4 +1,4 @@
-import { type Reelix, addInbox, errorMessage, getInbox, json, newId, nowIso } from "@reelix/core";
+import { type Reelix, addInbox, answeredByOwner, errorMessage, json, newId, nextMidnight, nowIso, spendDay, tr } from "@reelix/core";
 import type { AgentHost, ThreadRow } from "./agent/host.ts";
 
 export type JobRun = { id: string; job_id: string | null; kind: string; payload_json: string; state: string; lease_until: string | null; session_file: string | null; attempts: number; summary: string | null; created_at: string; started_at: string | null; finished_at: string | null };
@@ -19,8 +19,18 @@ export type JobHandler = (ctx: JobContext) => Promise<JobResult>;
 
 export class CapReached extends Error {}
 
+/** Not a failure: run this job again at the given time (a model that cannot answer for now). */
+export class Postpone extends Error {
+	until: Date;
+	constructor(message: string, until: Date) {
+		super(message);
+		this.until = until;
+	}
+}
+
 const LEASE_MS = 30 * 60_000;
 const MAX_AGENT_RUNS = 2;
+const STARTED_AT_ONCE = 10;
 
 /**
  * Background work (§4.5): scheduled and one-off jobs, each run on a lease so a crashed run is
@@ -35,6 +45,9 @@ export class JobRunner {
 	private firstTick?: NodeJS.Timeout;
 	private stopped = false;
 	private active = new Set<string>();
+	/** Job kinds that do not count against the two agent slots. */
+	unmetered = new Set<string>();
+	private activeUnmetered = new Set<string>();
 	private ticking = false;
 
 	constructor(app: Reelix, host: AgentHost) {
@@ -45,7 +58,7 @@ export class JobRunner {
 			return r.parkedOn ? { state: "parked", summary: r.text } : { state: r.state === "done" ? "succeeded" : "failed", summary: r.text };
 		});
 		app.events.on("event", (e: any) => {
-			if (e.type === "inbox" && e.status === "answered" && e.item?.job_run_id) void this.resume(e.item.job_run_id, e.item.answer ?? "", e.item.title);
+			if (e.type === "inbox" && e.status === "answered" && e.item?.job_run_id && answeredByOwner(e.by)) void this.resume(e.item.job_run_id, e.item.answer ?? "", e.item.title);
 		});
 	}
 
@@ -53,11 +66,30 @@ export class JobRunner {
 		this.handlers.set(kind, handler);
 	}
 
+	unregister(kind: string): void {
+		this.handlers.delete(kind);
+	}
+
+	/** End the queued runs of a kind nothing will handle any more. */
+	cancelQueued(kind: string, summary: string): void {
+		const rows = this.app.db.prepare("UPDATE job_runs SET state = 'interrupted', summary = ?, finished_at = ? WHERE kind = ? AND state = 'queued' RETURNING id").all(summary, nowIso(), kind) as { id: string }[];
+		for (const r of rows) this.app.emit({ type: "job", id: r.id, state: "interrupted", kind });
+	}
+
+	/** A plugin's job (`<plugin>.<job>`) with no handler now: the plugin is restarting or waiting, and the run waits for it. */
+	private waitsForPlugin(kind: string): boolean {
+		return kind.includes(".") && !this.handlers.has(kind);
+	}
+
 	/** Ensure a scheduled job exists (idempotent). */
 	schedule(id: string, kind: string, schedule: string, payload: unknown = {}): void {
 		const exists = this.app.db.prepare("SELECT id FROM jobs WHERE id = ?").get(id);
 		if (exists) this.app.db.prepare("UPDATE jobs SET schedule = ?, kind = ? WHERE id = ?").run(schedule, kind, id);
 		else this.app.db.prepare("INSERT INTO jobs (id, kind, schedule, payload_json, next_run_at, created_at) VALUES (?, ?, ?, ?, ?, ?)").run(id, kind, schedule, JSON.stringify(payload), nextRunAt(schedule), nowIso());
+	}
+
+	unschedule(id: string): void {
+		this.app.db.prepare("DELETE FROM jobs WHERE id = ?").run(id);
 	}
 
 	/** Queue a one-off run. A dedupe key prevents queuing the same thing twice. */
@@ -92,7 +124,8 @@ export class JobRunner {
 	}
 
 	async tick(): Promise<void> {
-		if (this.ticking || (this.stopped && this.timer)) return;
+		// A stopped runner never touches the database again, started or only ticked by hand (tests).
+		if (this.ticking || this.stopped) return;
 		this.ticking = true;
 		try {
 			// Scheduled jobs that are due (missed ones run on the next start).
@@ -101,10 +134,11 @@ export class JobRunner {
 				this.app.db.prepare("UPDATE jobs SET next_run_at = ? WHERE id = ?").run(j.schedule ? nextRunAt(j.schedule) : null, j.id);
 				this.enqueue(j.kind, json(j.payload_json, {}), { jobId: j.id, dedupe: `sched:${j.id}` });
 			}
-			const queued = this.app.db.prepare("SELECT * FROM job_runs WHERE state = 'queued' AND (lease_until IS NULL OR lease_until <= ?) ORDER BY created_at LIMIT 10").all(nowIso()) as JobRun[];
-			for (const r of queued) {
-				if (this.active.size >= MAX_AGENT_RUNS) break;
+			const queued = this.app.db.prepare("SELECT * FROM job_runs WHERE state = 'queued' AND (lease_until IS NULL OR lease_until <= ?) ORDER BY created_at").all(nowIso()) as JobRun[];
+			for (const r of queued.filter((q) => !this.waitsForPlugin(q.kind)).slice(0, STARTED_AT_ONCE)) {
 				if (this.active.has(r.id)) continue;
+				// Long direct-model jobs (translation) queue among themselves and do not hold an agent slot.
+				if (!this.unmetered.has(r.kind) && [...this.active].filter((id) => !this.activeUnmetered.has(id)).length >= MAX_AGENT_RUNS) continue;
 				void this.execute(r);
 			}
 		} finally {
@@ -121,6 +155,7 @@ export class JobRunner {
 	private async execute(r: JobRun, resumeText?: string): Promise<void> {
 		if (!resumeText && !this.claim(r)) return;
 		this.active.add(r.id);
+		if (this.unmetered.has(r.kind)) this.activeUnmetered.add(r.id);
 		this.app.emit({ type: "job", id: r.id, state: "running", kind: r.kind });
 		const handler = this.handlers.get(r.kind);
 		const renew = setInterval(() => this.app.db.prepare("UPDATE job_runs SET lease_until = ? WHERE id = ?").run(new Date(Date.now() + LEASE_MS).toISOString(), r.id), LEASE_MS / 3);
@@ -134,23 +169,32 @@ export class JobRunner {
 		};
 		let result: JobResult;
 		try {
-			if (!handler) throw new Error(`no handler for job kind ${r.kind}`);
-			result = resumeText ? await this.handlers.get("agent")!({ ...ctx, payload: { prompt: resumeText } }) : await handler(ctx);
+			if (!resumeText && !handler) throw new Error(`no handler for job kind ${r.kind}`);
+			result = resumeText ? await this.handlers.get("agent")!({ ...ctx, payload: { prompt: resumeText } }) : await handler!(ctx);
 		} catch (e) {
 			if (e instanceof CapReached) {
-				// Waiting jobs queue for the next day; one Inbox notice says so (§4.5).
-				const tomorrow = new Date();
-				tomorrow.setUTCHours(24, 5, 0, 0);
+				// Waiting jobs queue for the next day, which starts at local midnight; one Inbox notice says so (§4.5).
+				const tomorrow = new Date(nextMidnight().getTime() + 5 * 60_000);
 				this.app.db.prepare("UPDATE job_runs SET state = 'queued', lease_until = ?, attempts = attempts - 1 WHERE id = ?").run(tomorrow.toISOString(), r.id);
-				addInbox(this.app, { kind: "notice", title: "Background spending cap reached", body: `Today's background model budget is used up ($${this.app.config.limits.background_daily_usd} / ${this.app.config.limits.background_daily_tokens} tokens). Waiting jobs continue tomorrow; downloads are still watched and routine ones filed.`, dedupeKey: `cap:${nowIso().slice(0, 10)}` });
+				addInbox(this.app, { kind: "notice", title: tr(this.app, "jobs.capTitle"), body: tr(this.app, "jobs.capBody", { usd: this.app.config.limits.background_daily_usd, tokens: this.app.config.limits.background_daily_tokens }), dedupeKey: `cap:${spendDay()}` });
 				clearInterval(renew);
 				this.active.delete(r.id);
+				this.activeUnmetered.delete(r.id);
+				return;
+			}
+			if (e instanceof Postpone) {
+				this.app.db.prepare("UPDATE job_runs SET state = 'queued', lease_until = ?, attempts = attempts - 1, summary = ? WHERE id = ?").run(e.until.toISOString(), this.app.redact(e.message).slice(0, 4000), r.id);
+				clearInterval(renew);
+				this.active.delete(r.id);
+				this.activeUnmetered.delete(r.id);
+				this.app.emit({ type: "job", id: r.id, state: "queued", kind: r.kind });
 				return;
 			}
 			result = { state: "failed", summary: errorMessage(e) };
 		}
 		clearInterval(renew);
 		this.active.delete(r.id);
+		this.activeUnmetered.delete(r.id);
 		this.app.db.prepare("UPDATE job_runs SET state = ?, summary = ?, lease_until = NULL, finished_at = CASE WHEN ? = 'parked' THEN NULL ELSE ? END WHERE id = ?").run(result.state, this.app.redact(result.summary).slice(0, 4000), result.state, nowIso(), r.id);
 		this.app.emit({ type: "job", id: r.id, state: result.state, kind: r.kind });
 		setImmediate(() => void this.tick());
@@ -208,10 +252,6 @@ export class JobRunner {
 	summary(): { queued: number; running: number; parked: number } {
 		const c = (s: string) => (this.app.db.prepare("SELECT COUNT(*) n FROM job_runs WHERE state = ?").get(s) as { n: number }).n;
 		return { queued: c("queued"), running: c("running"), parked: c("parked") };
-	}
-
-	inboxFor(id: string) {
-		return getInbox(this.app, id);
 	}
 }
 

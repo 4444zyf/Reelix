@@ -1,0 +1,4 @@
+{
+	"description": "Example: background jobs may not run anything that deletes; they ask you in the Inbox instead.",
+	"reason": "background jobs may not run {{operation}}; post it to the owner's Inbox with notify and let them decide"
+}

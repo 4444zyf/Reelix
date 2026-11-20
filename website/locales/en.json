@@ -1,0 +1,276 @@
+{
+	"meta": {
+		"title": "Reelix: an agent-native copilot for your film, TV and anime collection",
+		"description": "Self-hosted and open source. You say the title; Reelix finds it, picks a release, downloads it, files it into your Jellyfin library by hard link and fetches the subtitles."
+	},
+	"nav": {
+		"loop": "The loop",
+		"agent": "Agent-native",
+		"screens": "Screens",
+		"plugins": "Plugins",
+		"start": "Get started",
+		"theme": "Switch theme",
+		"language": "Language"
+	},
+	"hero": {
+		"eyebrow": "Self-hosted · Open source · MIT",
+		"line1": "Say the title.",
+		"line2": "Reelix does the rest.",
+		"lead": "An agent-native copilot for your film, TV and anime collection. It finds the title, picks a release, downloads it, files it into your library and fetches the subtitles, on your own NAS, with the tools you already run.",
+		"primary": "Get started",
+		"secondary": "View on GitHub",
+		"note": "Works with qBittorrent, Jackett and Jellyfin. Runs on your own NAS."
+	},
+	"demo": {
+		"label": "An illustration of a real conversation",
+		"user": "Get me Sintel, the 2010 Blender film.",
+		"steps": [
+			"Identified the title on TMDB",
+			"Searched 3 indexers: 4 releases",
+			"Looked inside the 1080p BluRay: one film, one Chinese subtitle",
+			"Added it to qBittorrent",
+			"Filed by hard link into Movies/Sintel (2010)"
+		],
+		"kind": "Film",
+		"minutes": "15 min",
+		"overview": "A young woman searches far and wide for a small dragon she once looked after.",
+		"picked": "Picked",
+		"skipped": "Skipped",
+		"reason": "1080p BluRay, well seeded, subtitle inside.",
+		"skipReason": "A camera recording.",
+		"answer": "Sintel is in your library, with a Chinese subtitle beside it. It keeps seeding from where it was downloaded.",
+		"inLibrary": "in library",
+		"replay": "Play again",
+		"placeholder": "Ask Reelix…"
+	},
+	"ticker": [
+		"Identify",
+		"Search",
+		"Download",
+		"Organise",
+		"Subtitle",
+		"Follow"
+	],
+	"loop": {
+		"title": "One sentence in, a filed film out",
+		"lead": "The whole path from a name to a title you can play, done by one agent that can see every step.",
+		"steps": [
+			{
+				"name": "Identify",
+				"text": "From anything: a name, a TMDB or Douban link, a magnet, a photo of a poster."
+			},
+			{
+				"name": "Search",
+				"text": "Every indexer at once. Reelix looks inside a release before trusting its name."
+			},
+			{
+				"name": "Download",
+				"text": "With qBittorrent. Why this release was chosen is written down when it is added."
+			},
+			{
+				"name": "Organise",
+				"text": "Hard links into a Jellyfin-standard library. Nothing is copied; seeding goes on."
+			},
+			{
+				"name": "Subtitle",
+				"text": "Found, checked against the video, cleaned and placed. Or translated when none exists."
+			},
+			{
+				"name": "Follow",
+				"text": "A standing instruction in your own words. New episodes arrive as they air."
+			}
+		]
+	},
+	"agent": {
+		"title": "The agent is the product",
+		"lead": "Most tools in this space are rule systems with a chat box added. Reelix is the other way round.",
+		"points": [
+			{
+				"title": "It works on the real system",
+				"text": "The agent has a shell and file access inside its container. It can look at a messy download and fix it, without anyone having written a tool for that case."
+			},
+			{
+				"title": "Judgement, not rule tables",
+				"text": "Reading an odd release name or choosing between releases goes to the model, guided by a plain note of your taste. Exact code stays where a mistake costs something."
+			},
+			{
+				"title": "It asks only on a real tie",
+				"text": "And remembers the answer. Questions, plans and notices wait in one Inbox, on the web, as a push notification or in Telegram."
+			}
+		]
+	},
+	"features": {
+		"title": "Everything around the film, too",
+		"lead": "Finding and filing is the core. These come with it.",
+		"items": [
+			{
+				"title": "Chat from anywhere",
+				"text": "On the web, in the terminal and in Telegram. The same agent, with the same note of your taste."
+			},
+			{
+				"title": "Subtitles in any language",
+				"text": "When none exists, Reelix translates one with your own models into a separate file. The video is never touched."
+			},
+			{
+				"title": "Trends and suggestions",
+				"text": "What is trending, the anime airing now, and picks based on what you watched in Jellyfin."
+			},
+			{
+				"title": "An Inbox that reaches you",
+				"text": "Questions and plans arrive as a notification on your phone or in Telegram. Answer from wherever you are."
+			},
+			{
+				"title": "Adopts what you already have",
+				"text": "Existing downloads are scanned and filed into the library, once you approve the plan."
+			},
+			{
+				"title": "Yours to shape",
+				"text": "Two themes and your own, four languages, and any model provider you like."
+			}
+		]
+	},
+	"screens": {
+		"title": "See it",
+		"lead": "Real screens from a demo instance: fake services, a real agent.",
+		"tabs": [
+			{
+				"id": "chat",
+				"name": "Chat",
+				"caption": "Each step the agent takes is shown and can be opened."
+			},
+			{
+				"id": "trends",
+				"name": "Trends",
+				"caption": "What is trending, anime airing now, and suggestions from what you watched."
+			},
+			{
+				"id": "title",
+				"name": "Title",
+				"caption": "A title with its releases, from every indexer."
+			},
+			{
+				"id": "downloads",
+				"name": "Downloads",
+				"caption": "Every download knows which title it is for."
+			},
+			{
+				"id": "inbox",
+				"name": "Inbox",
+				"caption": "Questions, plans and notices wait for you in one place."
+			},
+			{
+				"id": "plugins",
+				"name": "Plugins",
+				"caption": "Switch plugins on and off, review what each one declares."
+			},
+			{
+				"id": "paper",
+				"name": "Paper theme",
+				"caption": "A second built-in theme. A theme is a folder; make your own."
+			}
+		]
+	},
+	"plugins": {
+		"title": "Built to be extended",
+		"lead": "Almost everything that talks to an outside service is a plugin. Switch them on and off in Settings, install new ones, or ask Reelix to write one for you.",
+		"seamsTitle": "Fill a seam",
+		"seamsText": "Be the thing Reelix calls.",
+		"seams": [
+			"Indexer",
+			"Subtitle source",
+			"Downloader",
+			"Media server",
+			"Notifier",
+			"Chat channel",
+			"Metadata source",
+			"Translator",
+			"Player",
+			"Trends source"
+		],
+		"hooksTitle": "Join a hook",
+		"hooksText": "Change a decision as it is made.",
+		"hooks": [
+			"Filter releases",
+			"Rank releases",
+			"Name files",
+			"Guard a download",
+			"Pick a subtitle",
+			"Shape a notice",
+			"Add to the prompt",
+			"Give the agent a tool"
+		],
+		"moreTitle": "Add your own",
+		"moreText": "Operations with a declared effect, a screen in the web UI, a pack of skills for the agent.",
+		"ask": "Want to build one?",
+		"guide": "Read the plugin guide"
+	},
+	"safety": {
+		"title": "Soft limits, hard invariants",
+		"lead": "In conversation the agent does what you ask. A few things are fixed in code, because they are about correctness and cost, not permission.",
+		"items": [
+			{
+				"title": "A yes is used once",
+				"text": "Destructive actions need your approval. An approval is tied to the exact request and cannot be replayed."
+			},
+			{
+				"title": "Outside text is data",
+				"text": "Release names, web pages and subtitle contents are marked as outside text and never treated as instructions."
+			},
+			{
+				"title": "Everything is written down",
+				"text": "Every operation, whoever ran it, leaves one record in the ledger: what, by whom, with what result."
+			},
+			{
+				"title": "Removal can be undone",
+				"text": "Removing a title removes a link. A last remaining copy goes to a trash that is kept for 14 days."
+			},
+			{
+				"title": "Secrets stay out of chat",
+				"text": "Keys and passwords are typed into a secret field. They never reach the model or a saved conversation."
+			},
+			{
+				"title": "Spending has a cap",
+				"text": "Background work stops at a daily limit you set, and each plugin that uses your models has a budget of its own."
+			}
+		]
+	},
+	"works": {
+		"title": "Works with what you already run"
+	},
+	"start": {
+		"title": "Get started",
+		"lead": "Reelix runs in one container beside your existing services. A pre-flight script checks your NAS first.",
+		"tabs": [
+			"On a NAS",
+			"From source",
+			"Try the demo"
+		],
+		"comments": {
+			"preflight": "finds your services, tests hard links, prints a .env",
+			"env": "then put in what the pre-flight printed",
+			"up": "Reelix is at http://<nas>:7878",
+			"pi": "sign in to a model provider",
+			"build": "the web UI",
+			"serve": "the first visit sets the password",
+			"demo": "fake services, a real agent"
+		},
+		"copy": "Copy",
+		"copied": "Copied",
+		"status": "Reelix is pre-release software. It has not yet had a long run on a NAS, and the plugin API is still version 0. Expect changes."
+	},
+	"footer": {
+		"tagline": "An agent-native copilot for your film, TV and anime collection.",
+		"docs": "Documentation",
+		"design": "Design",
+		"deployment": "Deployment",
+		"guide": "Plugin guide",
+		"reference": "Plugin reference",
+		"project": "Project",
+		"source": "Source code",
+		"licence": "MIT licence",
+		"themes": [
+			"Marquee",
+			"Paper"
+		]
+	}
+}

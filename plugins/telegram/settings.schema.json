@@ -1,0 +1,17 @@
+{
+	"type": "object",
+	"required": [
+		"api_url"
+	],
+	"properties": {
+		"api_url": {
+			"type": "string",
+			"default": "https://api.telegram.org"
+		}
+	},
+	"x-reelix-buttons": [
+		"status",
+		"link",
+		"test"
+	]
+}

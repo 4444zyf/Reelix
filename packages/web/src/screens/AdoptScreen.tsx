@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, FolderInput, RefreshCw, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { AskAbout } from "../components/common/AskAbout";
 import { Badge, StateBadge } from "../components/common/Badge";
@@ -12,8 +13,10 @@ import { Input } from "../components/ui/input";
 import { ApiError, endpoints, runOp } from "../lib/api";
 import type { AdoptRow, AdoptScan } from "../lib/types";
 import { cn } from "../lib/utils";
+import { useShortPath } from "../lib/paths";
 
 function SetTitle({ scan, row }: { scan: AdoptScan; row: AdoptRow }) {
+	const { t } = useTranslation("library");
 	const qc = useQueryClient();
 	const [id, setId] = useState("");
 	const [busy, setBusy] = useState(false);
@@ -29,29 +32,31 @@ function SetTitle({ scan, row }: { scan: AdoptScan; row: AdoptRow }) {
 					setId("");
 					await qc.invalidateQueries({ queryKey: ["adopt"] });
 				} catch (err) {
-					toast({ title: "Not set", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+					toast({ title: t("adopt.notSet"), description: err instanceof Error ? err.message : String(err), variant: "destructive" });
 				} finally {
 					setBusy(false);
 				}
 			}}
 		>
-			<Input value={id} onChange={(e) => setId(e.target.value)} placeholder="Title id, e.g. tv:1399 or movie:603" className="h-8 text-xs" />
+			<Input value={id} onChange={(e) => setId(e.target.value)} placeholder={t("adopt.titleIdPlaceholder")} className="h-8 text-xs" />
 			<Button type="submit" size="sm" variant="outline" className="h-8" disabled={busy || !id.trim()}>
 				{busy && <Spinner />}
-				Set title
+				{t("adopt.setTitle")}
 			</Button>
 		</form>
 	);
 }
 
 function Row({ scan, row, checked, onToggle }: { scan: AdoptScan; row: AdoptRow; checked: boolean; onToggle: () => void }) {
+	const { t } = useTranslation("library");
+	const short = useShortPath();
 	const [open, setOpen] = useState(false);
 	const pending = row.status === "pending";
 	const videos = row.plan?.items.filter((i) => i.kind === "video" || i.kind === "disc").length ?? 0;
 	return (
-		<div className={cn("rounded-lg border px-3 py-2", row.confident ? "border-white/5 bg-white/[0.02]" : "border-warning/30 bg-warning/5")}>
+		<div className={cn("rounded-lg border px-3 py-2", row.confident ? "border-line bg-surface" : "border-warning/30 bg-warning/5")}>
 			<div className="flex items-start gap-3">
-				<input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--color-primary)]" checked={checked} disabled={!pending || !row.plan} onChange={onToggle} aria-label={`Adopt row ${row.n}`} />
+				<input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--color-primary)]" checked={checked} disabled={!pending || !row.plan} onChange={onToggle} aria-label={t("adopt.rowAria", { n: row.n })} />
 				<div className="min-w-0 flex-1">
 					<div className="flex flex-wrap items-center gap-2">
 						<span className="font-mono text-xs text-muted-foreground">#{row.n}</span>
@@ -63,11 +68,11 @@ function Row({ scan, row, checked, onToggle }: { scan: AdoptScan; row: AdoptRow;
 								{row.title ?? row.title_id}
 							</Link>
 						) : (
-							<span className="text-muted-foreground">title unknown</span>
+							<span className="text-muted-foreground">{t("adopt.titleUnknown")}</span>
 						)}
-						{row.confident ? <Badge tone="success">confident</Badge> : <Badge tone="warning">uncertain</Badge>}
-						{!row.complete && <Badge tone="muted">incomplete</Badge>}
-						{videos > 0 && <Badge tone="muted">{videos} videos</Badge>}
+						{row.confident ? <Badge tone="success">{t("adopt.confident")}</Badge> : <Badge tone="warning">{t("adopt.uncertain")}</Badge>}
+						{!row.complete && <Badge tone="muted">{t("adopt.incomplete")}</Badge>}
+						{videos > 0 && <Badge tone="muted">{t("adopt.videos", { count: videos })}</Badge>}
 						{row.status !== "pending" && <StateBadge state={row.status} />}
 					</div>
 					{row.why && !row.confident && <p className="mt-1 text-xs text-muted-foreground">{row.why}</p>}
@@ -81,17 +86,17 @@ function Row({ scan, row, checked, onToggle }: { scan: AdoptScan; row: AdoptRow;
 					<div className="mt-1 flex flex-wrap items-center gap-1">
 						{row.plan?.items.length ? (
 							<Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setOpen((o) => !o)}>
-								{open ? "Hide plan" : "Show plan"}
+								{open ? t("adopt.hidePlan") : t("adopt.showPlan")}
 							</Button>
 						) : null}
-						<AskAbout className="ml-auto h-7" text={`About adoption row #${row.n} "${row.name}" (scan ${scan.id}): `} />
+						<AskAbout className="ml-auto h-7" text={t("adopt.rowPrompt", { n: row.n, name: row.name, scan: scan.id })} />
 					</div>
 					{open && row.plan && (
 						<div className="mt-1 space-y-1 text-[11px]">
 							{row.plan.items.map((it, i) => (
-								<div key={i} className="rounded bg-black/20 px-2 py-1">
-									<p className="break-all text-muted-foreground">{it.source}</p>
-									<p className="break-all">→ {it.dest}</p>
+								<div key={i} className="rounded bg-well px-2 py-1">
+									<p className="break-all text-muted-foreground">{short(it.source)}</p>
+									<p className="break-all">→ {short(it.dest)}</p>
 								</div>
 							))}
 						</div>
@@ -103,8 +108,9 @@ function Row({ scan, row, checked, onToggle }: { scan: AdoptScan; row: AdoptRow;
 	);
 }
 
-/** One review table for torrents that were in qBittorrent before Reelix: confident rows ticked, one Approve. */
+/** One review table for torrents that were in the downloader before Reelix: confident rows ticked, one Approve. */
 export function AdoptScreen() {
+	const { t } = useTranslation("library");
 	const qc = useQueryClient();
 	const scan = useQuery({ queryKey: ["adopt"], queryFn: endpoints.adoptShow, retry: false });
 	const [picked, setPicked] = useState<Set<number>>(new Set());
@@ -121,7 +127,7 @@ export function AdoptScreen() {
 			const r = await runOp<AdoptScan>("adopt.scan", { notify: false });
 			qc.setQueryData(["adopt"], r.output);
 		} catch (e) {
-			toast({ title: "Scan failed", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+			toast({ title: t("adopt.scanFailed"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });
 		} finally {
 			setBusy(undefined);
 		}
@@ -132,12 +138,12 @@ export function AdoptScreen() {
 		setBusy("apply");
 		try {
 			const r = await runOp("adopt.apply", { id: scan.data.id, rows: [...picked].sort((a, b) => a - b) });
-			toast({ title: "Adopted", description: r.text.slice(0, 400) });
+			toast({ title: t("adopt.adopted"), description: r.text.slice(0, 400) });
 			await qc.invalidateQueries({ queryKey: ["adopt"] });
 			qc.invalidateQueries({ queryKey: ["library"] });
 			qc.invalidateQueries({ queryKey: ["downloads"] });
 		} catch (e) {
-			toast({ title: "Not adopted", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+			toast({ title: t("adopt.notAdopted"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });
 		} finally {
 			setBusy(undefined);
 		}
@@ -146,11 +152,11 @@ export function AdoptScreen() {
 	const rows = scan.data?.rows ?? [];
 	return (
 		<Screen
-			title="Adopt existing downloads"
-			subtitle="Torrents already in qBittorrent, matched and planned. Nothing is linked until you approve."
+			title={t("adopt.title")}
+			subtitle={t("adopt.subtitle")}
 			back={
 				<Button asChild variant="ghost" size="icon" className="shrink-0">
-					<Link to="/library" aria-label="Back to library">
+					<Link to="/library" aria-label={t("title.backToLibrary")}>
 						<ArrowLeft />
 					</Link>
 				</Button>
@@ -159,12 +165,12 @@ export function AdoptScreen() {
 				<>
 					<Button variant="outline" size={scrolled ? "sm" : "default"} disabled={!!busy} onClick={runScan}>
 						{busy === "scan" ? <Spinner /> : <RefreshCw />}
-						<span className="hidden sm:inline">{scan.data ? "Scan again" : "Scan"}</span>
+						<span className="hidden sm:inline">{scan.data ? t("adopt.scanAgain") : t("adopt.scan")}</span>
 					</Button>
 					{rows.length > 0 && (
 						<Button size={scrolled ? "sm" : "default"} disabled={!!busy || !picked.size} onClick={approve}>
 							{busy === "apply" ? <Spinner /> : <Check />}
-							Approve {picked.size}
+							{t("adopt.approve", { n: picked.size })}
 						</Button>
 					)}
 				</>
@@ -174,11 +180,11 @@ export function AdoptScreen() {
 				{scan.isLoading ? (
 					<Loading />
 				) : noScan || (!scan.error && !rows.length) ? (
-					<Empty icon={<FolderInput />} title={scan.data ? "Nothing to adopt" : "No scan yet"}>
-						<p>Scan qBittorrent for torrents Reelix does not track yet. It can take a while for a large client.</p>
+					<Empty icon={<FolderInput />} title={scan.data ? t("adopt.nothing") : t("adopt.noScan")}>
+						<p>{t("adopt.scanHint")}</p>
 						<Button className="mt-3" disabled={!!busy} onClick={runScan}>
 							{busy === "scan" ? <Spinner /> : <RefreshCw />}
-							Scan now
+							{t("adopt.scanNow")}
 						</Button>
 					</Empty>
 				) : scan.error ? (
@@ -186,7 +192,7 @@ export function AdoptScreen() {
 				) : (
 					<>
 						<p className="text-xs text-muted-foreground">
-							{rows.filter((r) => r.confident).length} confident (ticked), {rows.filter((r) => !r.confident).length} uncertain, {rows.filter((r) => r.status === "applied").length} applied. Uncertain rows need a title before they can be ticked.
+							{t("adopt.summary", { confident: rows.filter((r) => r.confident).length, uncertain: rows.filter((r) => !r.confident).length, applied: rows.filter((r) => r.status === "applied").length })}
 						</p>
 						{rows.map((r) => (
 							<Row

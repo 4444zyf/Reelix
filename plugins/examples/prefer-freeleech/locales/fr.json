@@ -1,0 +1,5 @@
+{
+	"description": "Exemple : place les versions freeleech en premier.",
+	"note": "Freeleech : le téléchargement ne compte pas dans votre ratio.",
+	"reason": "Les versions freeleech passent en premier"
+}

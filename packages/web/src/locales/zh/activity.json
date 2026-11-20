@@ -1,0 +1,113 @@
+{
+	"screen": {
+		"title": "活动",
+		"subtitle": "做了什么、谁做的、结果如何",
+		"ledger": "记录",
+		"jobs": "任务"
+	},
+	"ledger": {
+		"all": "全部",
+		"failed": "失败",
+		"unsettled": "未确定",
+		"empty": "暂无记录",
+		"showMore": "显示更多",
+		"input": "输入",
+		"askAbout": "关于记录 #{{id}}（{{actor}} 执行的 {{op}}，{{status}}，{{at}}）：",
+		"askAboutWithError": "关于记录 #{{id}}（{{actor}} 执行的 {{op}}，{{status}}：{{error}}，{{at}}）："
+	},
+	"jobs": {
+		"scheduled": "计划任务",
+		"noScheduled": "没有计划任务。",
+		"once": "一次性",
+		"next": "下次 {{time}}",
+		"started": "已启动",
+		"notStarted": "未能启动",
+		"runNow": "立即运行",
+		"recentRuns": "最近运行",
+		"noRuns": "还没有任务运行过。",
+		"openConversation": "打开对话",
+		"askAbout": "关于任务运行 {{id}}（{{kind}}，{{state}}）：",
+		"stopTranslation": "停止",
+		"translationStopped": "翻译已停止；已完成的剧集会保留",
+		"notStopped": "未能停止"
+	},
+	"inbox": {
+		"title": "收件箱",
+		"subtitle": "后台任务发来的问题、待批准的计划、验证和摘要",
+		"tabs": {
+			"open": "待处理",
+			"answered": "已回答",
+			"dismissed": "已忽略",
+			"all": "全部"
+		},
+		"kind": {
+			"question": "问题",
+			"plan": "计划",
+			"verification": "验证",
+			"summary": "摘要",
+			"notice": "通知",
+			"proposal": "提议"
+		},
+		"from": "来自 {{source}}",
+		"answer": "回答：{{answer}}",
+		"answered": "已回答",
+		"dismissed": "已忽略",
+		"failed": "操作失败",
+		"code": "验证码",
+		"yourAnswer": "你的回答",
+		"send": "发送",
+		"continueInChat": "在对话中继续",
+		"done": "完成",
+		"askAbout": "关于收件箱条目“{{title}}”（{{id}}，{{kind}}）：",
+		"emptyOpen": "没有等你处理的事",
+		"empty": "这里什么都没有",
+		"emptyOpenHint": "后台任务需要你做决定时会显示在这里（如已绑定，也会发到 Telegram）。"
+	},
+	"browser": {
+		"title": "浏览器",
+		"subtitle": "Reelix 用于访问没有 API 的网站；需要你点击验证时可以接手操作",
+		"go": "前往",
+		"liveViewAlt": "服务器浏览器的实时画面",
+		"waitingFrame": "正在等待第一帧…",
+		"connecting": "正在连接…",
+		"hint": "点击画面即可点击页面，在画面上滚动即可滚动页面。画面获得焦点时，键盘输入会发送到页面。",
+		"typePlaceholder": "输入到当前焦点所在的输入框",
+		"type": "输入",
+		"enter": "回车",
+		"scrollUp": "向上滚动",
+		"scrollDown": "向下滚动",
+		"inputNotDelivered": "输入未送达",
+		"couldNotOpen": "无法打开",
+		"yours": "你的",
+		"thisConversation": "本对话",
+		"watching_other": "{{count}} 人在看",
+		"chat": "对话",
+		"openPlaceholder": "打开网页…",
+		"noPages": "没有打开的网页",
+		"noPagesHint": "助手使用浏览器时，它的网页会显示在这里。"
+	},
+	"proposal": {
+		"from": "来自插件 {{plugin}}：",
+		"approve": "批准",
+		"approveDestructive_other": "批准（{{count}} 个破坏性步骤）",
+		"decline": "拒绝",
+		"destructive": "破坏性",
+		"expires": "有效期至 {{when}}",
+		"approved": "已批准",
+		"declined": "已拒绝",
+		"result": {
+			"succeeded": "已完成",
+			"failed": "失败",
+			"skipped": "已跳过",
+			"not_approved": "未批准",
+			"declined": "已拒绝",
+			"expired": "已过期"
+		},
+		"status": {
+			"approved": "已批准。每一步的结果见上方。",
+			"declined": "已拒绝。什么也没有执行。",
+			"expired": "在决定之前已过期。什么也没有执行。",
+			"replaced": "已被同一插件的新提议取代。"
+		}
+	}
+}

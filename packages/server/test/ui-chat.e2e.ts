@@ -1,5 +1,5 @@
 import { chromium } from "playwright-core";
-import { findChromium } from "../src/browser.ts";
+import { findChromium } from "../../../plugins/browser/src/chromium.ts";
 const base = "http://localhost:7979";
 const b = await chromium.launch({ executablePath: findChromium(), headless: true });
 const page = await b.newPage({ viewport: { width: 1360, height: 900 } });

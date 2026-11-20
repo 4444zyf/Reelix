@@ -1,0 +1,8 @@
+{
+	"description": "Re-reads titles, overviews and posters from TMDB when the owner's language changes.",
+	"jobTitle": "Re-read titles in the new language",
+	"refreshed_one": "{{count}} title re-read in {{locale}}.",
+	"refreshed_other": "{{count}} titles re-read in {{locale}}.",
+	"failed_one": "{{count}} failed.",
+	"failed_other": "{{count}} failed."
+}

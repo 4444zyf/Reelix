@@ -1,0 +1,115 @@
+{
+	"screen": {
+		"title": "Activity",
+		"subtitle": "What was done, by whom, and with what result",
+		"ledger": "Ledger",
+		"jobs": "Jobs"
+	},
+	"ledger": {
+		"all": "All",
+		"failed": "Failed",
+		"unsettled": "Unsettled",
+		"empty": "Nothing recorded yet",
+		"showMore": "Show more",
+		"input": "Input",
+		"askAbout": "About ledger entry #{{id}} ({{op}} by {{actor}}, {{status}}, {{at}}): ",
+		"askAboutWithError": "About ledger entry #{{id}} ({{op}} by {{actor}}, {{status}}: {{error}}, {{at}}): "
+	},
+	"jobs": {
+		"scheduled": "Scheduled",
+		"noScheduled": "No scheduled jobs.",
+		"once": "once",
+		"next": "next {{time}}",
+		"started": "Started",
+		"notStarted": "Not started",
+		"runNow": "Run now",
+		"recentRuns": "Recent runs",
+		"noRuns": "No job has run yet.",
+		"openConversation": "Open conversation",
+		"askAbout": "About job run {{id}} ({{kind}}, {{state}}): ",
+		"stopTranslation": "Stop",
+		"translationStopped": "Translation stopped; finished episodes are kept",
+		"notStopped": "Not stopped"
+	},
+	"inbox": {
+		"title": "Inbox",
+		"subtitle": "Questions, plans to approve, verification and summaries from background work",
+		"tabs": {
+			"open": "Open",
+			"answered": "Answered",
+			"dismissed": "Dismissed",
+			"all": "All"
+		},
+		"kind": {
+			"question": "question",
+			"plan": "plan",
+			"verification": "verification",
+			"summary": "summary",
+			"notice": "notice",
+			"proposal": "proposal"
+		},
+		"from": "from {{source}}",
+		"answer": "Answer: {{answer}}",
+		"answered": "Answered",
+		"dismissed": "Dismissed",
+		"failed": "Failed",
+		"code": "Code",
+		"yourAnswer": "Your answer",
+		"send": "Send",
+		"continueInChat": "Continue in chat",
+		"done": "Done",
+		"askAbout": "About the inbox item \"{{title}}\" ({{id}}, {{kind}}): ",
+		"emptyOpen": "Nothing waiting for you",
+		"empty": "Nothing here",
+		"emptyOpenHint": "When background work needs a decision, it shows up here (and on Telegram, if linked)."
+	},
+	"browser": {
+		"title": "Browser",
+		"subtitle": "The browser Reelix uses for sites without an API; take over when a check needs your clicks",
+		"go": "Go",
+		"liveViewAlt": "Live view of the server's browser",
+		"waitingFrame": "Waiting for the first frame…",
+		"connecting": "Connecting…",
+		"hint": "Click the picture to click the page; scroll over it to scroll. With the picture focused, typing goes to the page.",
+		"typePlaceholder": "Type into the focused field",
+		"type": "Type",
+		"enter": "Enter",
+		"scrollUp": "Scroll up",
+		"scrollDown": "Scroll down",
+		"inputNotDelivered": "Input not delivered",
+		"couldNotOpen": "Could not open",
+		"yours": "yours",
+		"thisConversation": "this conversation",
+		"watching_one": "{{count}} watching",
+		"watching_other": "{{count}} watching",
+		"chat": "chat",
+		"openPlaceholder": "Open a page…",
+		"noPages": "No open pages",
+		"noPagesHint": "When the agent uses the browser, its page appears here."
+	},
+	"proposal": {
+		"from": "From the plugin {{plugin}}:",
+		"approve": "Approve",
+		"approveDestructive_one": "Approve ({{count}} destructive step)",
+		"approveDestructive_other": "Approve ({{count}} destructive steps)",
+		"decline": "Decline",
+		"destructive": "destructive",
+		"expires": "Open until {{when}}",
+		"approved": "Approved",
+		"declined": "Declined",
+		"result": {
+			"succeeded": "done",
+			"failed": "failed",
+			"skipped": "skipped",
+			"not_approved": "not approved",
+			"declined": "declined",
+			"expired": "expired"
+		},
+		"status": {
+			"approved": "Approved. The result of each step is shown above.",
+			"declined": "Declined. Nothing was run.",
+			"expired": "Expired before it was decided. Nothing was run.",
+			"replaced": "Replaced by a newer proposal from the same plugin."
+		}
+	}
+}

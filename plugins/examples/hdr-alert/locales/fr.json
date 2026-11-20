@@ -1,0 +1,4 @@
+{
+	"description": "Exemple : vous prévient une fois par titre, dans la boîte de réception, quand une recherche trouve une sortie HDR ou Dolby Vision.",
+	"title": "Une sortie HDR de {{name}} est apparue"
+}

@@ -1,0 +1,8 @@
+{
+	"description": "Exemple : refuse un téléchargement plus grand qu'une taille que vous fixez.",
+	"reason": "{{size}} Go à télécharger, plus que la limite de {{max}} Go",
+	"settings": {
+		"max_gb": "Plus gros téléchargement (Go)",
+		"max_gb_help": "Ne compte que les fichiers qui seront téléchargés."
+	}
+}

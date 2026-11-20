@@ -1,0 +1,4 @@
+{
+	"description": "A subtitle source: finds and downloads subtitles from one site.",
+	"httpError": "The site answered HTTP {{status}}"
+}

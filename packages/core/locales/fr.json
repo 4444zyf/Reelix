@@ -1,0 +1,169 @@
+{
+	"chat": {
+		"photo": "(photo)",
+		"secretInWeb": "Les mots de passe et les clés se saisissent dans le champ secret de l’application web : répondez-y dans l’application web.",
+		"error": "Erreur : {{message}}",
+		"hiddenBy": "masquée par {{plugins}}"
+	},
+	"watcher": {
+		"downloaderUnreachableTitle": "{{name}} est injoignable",
+		"downloaderUnreachableBody": "Depuis plus d’une heure : {{error}}",
+		"downloaderBack": "{{name}} est de nouveau joignable.",
+		"removedTitle": "Un téléchargement a été supprimé hors de Reelix",
+		"removedBody": "{{name}} a été supprimé de {{downloader}} avant d’être classé."
+	},
+	"jobs": {
+		"capTitle": "Plafond de dépenses en arrière-plan atteint",
+		"capBody": "Le budget du modèle d’arrière-plan est épuisé pour aujourd’hui (${{usd}} / {{tokens}} jetons). Les tâches en attente reprendront demain ; les téléchargements restent surveillés et les cas courants classés."
+	},
+	"adopt": {
+		"title_one": "Adopter {{count}} téléchargement existant",
+		"title_many": "Adopter {{count}} de téléchargements existants",
+		"title_other": "Adopter {{count}} téléchargements existants",
+		"body": "{{confident}} peuvent être classés maintenant ; {{unsure}} demandent une décision. Consultez le tableau.",
+		"approveAll": "Approuver tous les cas sûrs",
+		"reviewInChat": "Voir dans la discussion",
+		"reviewThread": "Adopter des téléchargements existants ({{date}})",
+		"reviewPrompt": "Passons en revue ensemble l’analyse d’adoption {{scan}} : montrez-moi les lignes incertaines (reelix adopt show) et aidez-moi à trancher."
+	},
+	"nightly": {
+		"title": "Résumé du matin {{date}}",
+		"backedUp": "Base de données et réglages sauvegardés.",
+		"backupFailed": "Échec de la sauvegarde : {{error}}",
+		"trash_one": "{{count}} élément expiré vidé de la corbeille ({{size}}).",
+		"trash_many": "{{count}} d’éléments expirés vidés de la corbeille ({{size}}).",
+		"trash_other": "{{count}} éléments expirés vidés de la corbeille ({{size}}).",
+		"notFiled": "{{name}} : terminé depuis plus de 6 heures mais pas classé",
+		"lowSpace": "Plus que {{size}} libres dans le dossier de téléchargement.",
+		"downloaderFailing": "Le client de téléchargement ne fonctionne pas : {{error}}",
+		"indexerFailing": "L’indexeur {{name}} échoue : {{error}}",
+		"indexerCheckFailed": "Échec de la vérification des indexeurs : {{error}}",
+		"agentSkipped": "(L’agent n’a pas examiné ces points : {{error}})",
+		"added": "Ajoutés : {{names}}",
+		"filed": "Classés : {{names}}",
+		"problems": "Problèmes détectés :",
+		"noProblems": "Aucun problème détecté.",
+		"waiting_one": "{{count}} élément vous attend dans la boîte de réception.",
+		"waiting_many": "{{count}} d’éléments vous attendent dans la boîte de réception.",
+		"waiting_other": "{{count}} éléments vous attendent dans la boîte de réception."
+	},
+	"ask": {
+		"yes": "Oui",
+		"no": "Non"
+	},
+	"jobTitles": {
+		"follow": "Suivi : {{name}} {{episode}}",
+		"nightly": "Rangement nocturne",
+		"fileDownload": "Classer un téléchargement terminé",
+		"stalled": "Téléchargement bloqué"
+	},
+	"translate": {
+		"jobTitle": "Traduire les sous-titres : {{name}} → {{target}}",
+		"sampleTitle": "Sous-titres {{target}} : le premier épisode est prêt",
+		"sampleBody": "{{file}} est à côté de la vidéo, à titre d’échantillon. Les {{rest}} autres sont en cours de traduction ; arrêtez depuis Activité ou dites-moi si cela ne convient pas.",
+		"doneTitle": "Les sous-titres {{target}} sont prêts : {{name}}",
+		"failedTitle": "Les sous-titres {{target}} n’ont pas pu être créés : {{name}}",
+		"pausedTitle": "La traduction des sous-titres est en pause",
+		"pausedBody": "{{reason}}\nNouvel essai à {{time}}. Tout ce qui est terminé est conservé."
+	},
+	"approval": {
+		"approve": "Approuver",
+		"decline": "Refuser"
+	},
+	"magpie": {
+		"approvalTitle": "Modifier magpie ? {{summary}}",
+		"approvalBody": "{{reasons}}\n\nLe changement est vérifié ensuite et annulé si le modèle d'un rôle ne répond plus."
+	},
+	"plugins": {
+		"waitingNext": "Il est activé et attend : {{seams}}. Il démarrera dès que ce sera disponible.",
+		"dependents": "{{names}} ont besoin de {{id}} : ils l'exigent, ou c'est le dernier fournisseur d'une interface dont ils ont besoin. Les désactiver ensemble ?",
+		"enabled": "Il fonctionne maintenant.",
+		"alreadyOn": "Il était déjà activé.",
+		"disabled": "Il est désactivé et le restera après un redémarrage. Réactivez-le dans Réglages → Plugins.",
+		"alreadyOff": "Il était déjà désactivé.",
+		"failedNext": "Il ne fonctionne pas. Corrigez l’erreur affichée dans Réglages → Plugins, puis réactivez-le.",
+		"autoOffTitle": "Le plugin {{id}} a été désactivé",
+		"autoOffBody": "{{registration}} a échoué {{times}} fois en 10 minutes. Dernière erreur : {{error}}\nRéactivez-le dans Réglages → Plugins une fois la cause corrigée.",
+		"jobCancelled": "Annulé : le plugin a été désactivé.",
+		"configured": "Les nouveaux réglages sont en service.",
+		"configuredOff": "Enregistré. Ils serviront quand l'extension sera activée.",
+		"invalidSettings": "Rien n'a été enregistré : certaines valeurs ne sont pas valides.",
+		"noSettings": "Cette extension n'a pas de réglages.",
+		"settingsLater": "Ses réglages apparaissent une fois qu'elle a été activée.",
+		"trialOn": "Ses hooks tournent maintenant à l'essai : Reelix note ce qu'ils changeraient et n'applique rien.",
+		"trialOff": "Ses hooks s'appliquent de nouveau.",
+		"toolsOn": "Ses outils dédiés sont proposés à l'assistant dès la prochaine conversation.",
+		"toolsOff": "Ses outils dédiés ne sont plus proposés ; ses opérations restent accessibles par l'outil reelix.",
+		"orderSaved": "Le nouvel ordre s'applique dès la prochaine décision.",
+		"approveFirst": "Il est installé mais pas approuvé : examinez ce qu'il déclare et approuvez-le dans Réglages → Plugins.",
+		"reapprove": "Ses fichiers ont changé depuis votre approbation ; il n'est donc pas chargé. Examinez-le à nouveau dans Réglages → Plugins.",
+		"restartButton": "Enregistré. Le code est chargé au redémarrage de Reelix : utilisez Redémarrer dans Réglages → Plugins.",
+		"restartManual": "Enregistré. Le code est chargé au redémarrage de Reelix : lancez `docker compose restart reelix`, ou arrêtez `reelix serve` puis relancez-le.",
+		"incompatibleTitle": "Le plugin {{id}} ne peut pas fonctionner avec ce Reelix",
+		"incompatibleBody": "{{id}} n'est pas chargé : {{why}}. Reelix est maintenant en version {{version}}. Mettez le plugin à jour ou désinstallez-le dans Réglages → Plugins.",
+		"changedTitle": "Le plugin {{id}} a changé : approuvez-le à nouveau",
+		"changedBody": "Les fichiers de {{id}} ne sont pas ceux que vous avez approuvés ; il n'est donc pas chargé. Examinez-le dans Réglages → Plugins et approuvez-le à nouveau si la modification vient de vous.",
+		"uninstalledKept": "Son code est supprimé. Ses réglages, secrets et données sont conservés et reviennent si vous le réinstallez.",
+		"uninstalledAll": "Son code, ses réglages, ses secrets et ses données sont supprimés.",
+		"jobPromptOn": "Ses sections de prompt atteignent aussi les tâches de fond, dès la prochaine tâche.",
+		"jobPromptOff": "Ses sections de prompt n'atteignent plus les tâches de fond.",
+		"modelSet": "Son usage des modèles est réglé : budget de {{usd}} $ par jour, rôles {{roles}}.",
+		"modelSetUnmetered": "Son usage des modèles est réglé : sans budget quotidien, rôles {{roles}}.",
+		"budgetReached": "{{id}} a épuisé son budget de modèle du jour ({{usd}} $) ; il repart à minuit. Le propriétaire peut l'augmenter sur la page de l'extension.",
+		"roleRefused": "{{id}} n'a pas droit au rôle de modèle « {{role}} » ; le propriétaire peut l'autoriser sur la page de l'extension.",
+		"cycle": "Refusé : les plugins qu'il exige tournent en rond ({{cycle}}), aucun ne peut donc démarrer en premier. Retirez l'exigence de l'un d'eux.",
+		"proposedTitle": "Un plugin à examiner : {{id}} {{version}}",
+		"proposedBody": "Proposé par {{by}}. Rien n'est installé ni exécuté avant votre approbation : examinez ce qu'il déclare, ses fichiers et la différence.",
+		"proposalDeclined": "Refusé : {{id}} n'est pas installé.",
+		"runtimeRefused": "Il ne peut pas tourner dans un processus à lui : il a une extension pi brute ou des dépendances compilées.",
+		"processChoiceLost": "Vous avez choisi de faire tourner {{id}} dans un processus à lui, mais cette version ne le peut pas (elle a une extension pi brute ou des dépendances compilées). Il reste arrêté jusqu’à ce que vous choisissiez de le faire tourner dans Reelix, sur sa page.",
+		"runtimeProcess": "Il tourne maintenant dans un processus à lui, avec son seul contexte : Node l'empêche d'accéder aux fichiers de Reelix et de lancer des programmes, et le code de Reelix y limite son réseau au fetch de Reelix. Un plugin hostile peut contourner cette seconde partie (docs/plugins.md §11.7).",
+		"runtimeInProcess": "Il tourne maintenant dans Reelix, où son code peut faire tout ce que Reelix peut faire.",
+		"screenOff": "{{id}} ne tourne pas ; activez-le dans Réglages → Plugins pour ouvrir son écran.",
+		"processEnded": "Son processus s’est arrêté ({{error}}) ; il redémarre dans {{seconds}} s."
+	},
+	"hooks": {
+		"guardAlarmTitle": "Le plugin {{plugin}} masque presque toutes les versions",
+		"guardAlarmBody": "{{plugin}} a masqué {{hidden}} versions sur {{total}} lors de ses {{calls}} dernières recherches. Vérifiez ses réglages ou désactivez-le dans Réglages → Plugins."
+	},
+	"follow": {
+		"filteredTitle": "Rien pour {{name}} {{episode}} : des plugins ont masqué tous les candidats",
+		"filteredBody_one": "{{count}} candidat a été masqué par {{plugins}}. Ouvrez la liste des versions et utilisez « Afficher les masquées », ou modifiez les réglages du plugin.",
+		"filteredBody_many": "{{count}} candidats ont été masqués par {{plugins}}. Ouvrez la liste des versions et utilisez « Afficher les masquées », ou modifiez les réglages du plugin.",
+		"filteredBody_other": "{{count}} candidats ont été masqués par {{plugins}}. Ouvrez la liste des versions et utilisez « Afficher les masquées », ou modifiez les réglages du plugin."
+	},
+	"notify": {
+		"editedBy": "Modifié par {{plugins}}"
+	},
+	"hiddenRelease": {
+		"approvalTitle": "Télécharger une version masquée ?",
+		"approvalBody": "{{name}} est masquée par un plugin ({{why}}). La télécharger quand même ?"
+	},
+	"setting": {
+		"approvalTitle": "Modifier ce réglage ?",
+		"approvalBody": "L'assistant veut modifier {{path}}. C'est à vous de décider : ce réglage décide où Reelix se connecte, ou c'est une des limites de l'assistant lui-même.\n\nActuel : {{before}}\nNouveau : {{after}}"
+	},
+	"proposal": {
+		"summary_one": "{{plugin}} propose {{count}} étape : {{totals}}",
+		"summary_many": "{{plugin}} propose {{count}} d'étapes : {{totals}}",
+		"summary_other": "{{plugin}} propose {{count}} étapes : {{totals}}",
+		"noTotals": "rien à compter",
+		"downloads_one": "{{count}} téléchargement",
+		"downloads_many": "{{count}} de téléchargements",
+		"downloads_other": "{{count}} téléchargements",
+		"titles_one": "{{count}} titre",
+		"titles_many": "{{count}} de titres",
+		"titles_other": "{{count}} titres",
+		"files_one": "{{count}} fichier",
+		"files_many": "{{count}} de fichiers",
+		"files_other": "{{count}} fichiers",
+		"bytes": "{{size}} de fichiers",
+		"quoted": "De la part de l'extension {{plugin}} :",
+		"openToDecide": "Ouvrez la boîte de réception de Reelix pour décocher des étapes, puis approuver ou refuser.",
+		"declined": "Refusé",
+		"approved_one": "Approuvé : {{done}} étape faite sur {{count}}",
+		"approved_many": "Approuvé : {{done}} étapes faites sur {{count}}",
+		"approved_other": "Approuvé : {{done}} étapes faites sur {{count}}",
+		"changed": "Ignorée : cela a changé depuis la proposition. Maintenant : {{now}}"
+	}
+}

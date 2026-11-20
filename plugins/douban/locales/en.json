@@ -1,0 +1,5 @@
+{
+	"description": "Douban links and ratings, read from Douban's ordinary public pages.",
+	"label": "Douban",
+	"unreadable": "Could not read the Douban page (HTTP {{status}}); it may need the browser."
+}

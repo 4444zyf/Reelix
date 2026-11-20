@@ -1,0 +1,33 @@
+{
+  "name": "reelix-plugin-browser",
+  "version": "0.1.0",
+  "description": "The agent's own Chromium: browser tools in every conversation and your live view of the page.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "reelix-plugin"
+  ],
+  "peerDependencies": {
+    "@reelix/plugin": "*"
+  },
+  "dependencies": {
+    "playwright-core": "^1.65.1"
+  },
+  "reelix": {
+    "api": 0,
+    "id": "browser",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "settings": "./settings.schema.json",
+    "env": {
+      "REELIX_CHROMIUM": "chromium"
+    },
+    "uses": {
+      "events": [
+        "session.ended"
+      ],
+      "pi": true
+    }
+  }
+}

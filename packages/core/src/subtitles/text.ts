@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { basename, join, relative, resolve, sep } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 import { inflateRawSync } from "node:zlib";
 import { findBinary } from "../probe.ts";
@@ -47,7 +47,11 @@ const COMMON = new Set("的一是不了在人有我他这個个们們中来來�
 const HANS = "们这说个为来时会过还没对后么里国们发与东车长门问间见关业话应开从实当气让认动现给经学样书钱头电读写边听觉觉进远选专贝阳热简讯网页处难万儿号";
 const HANT = "們這說個為來時會過還沒對後麼裡國們發與東車長門問間見關業話應開從實當氣讓認動現給經學樣書錢頭電讀寫邊聽覺覺進遠選專貝陽熱簡訊網頁處難萬兒號";
 
-export type SubLanguage = "zh-bilingual" | "zh-Hans" | "zh-Hant" | "zh-mixed" | "en" | "ja" | "und";
+export type SubLanguage = "zh-bilingual" | "zh-Hans" | "zh-Hant" | "zh-mixed" | "en" | "fr" | "ru" | "ja" | "und";
+
+// Frequent short words that tell English from French in dialogue (accents alone are not enough).
+const EN_WORDS = new Set("the you and is it to of what that this are was have not don't i'm we he she they my your with for on just know".split(" "));
+const FR_WORDS = new Set("le la les des est et je tu vous pas que qui une un ne il elle nous on mais c'est ça pour dans avec mon ton sur".split(" "));
 
 /** Tell 简体 from 繁體 from bilingual by reading the content, not the file name (§5.5). */
 export function detectLanguage(text: string): { language: SubLanguage; hans: number; hant: number; cjkLines: number; latinLines: number; bilingualLines: number } {
@@ -58,10 +62,18 @@ export function detectLanguage(text: string): { language: SubLanguage; hans: num
 	let latinLines = 0;
 	let bilingualLines = 0;
 	let kana = 0;
+	let cyrillic = 0;
+	let en = 0;
+	let fr = 0;
 	for (const l of lines) {
 		const hasCjk = /[一-鿿]/.test(l);
 		const hasLatin = /[A-Za-z]{3,}\s+[A-Za-z]{2,}/.test(l);
 		if (/[぀-ヿ]/.test(l)) kana++;
+		if (/[А-яЁё]{3,}/.test(l)) cyrillic++;
+		for (const w of l.toLowerCase().split(/[^a-zàâçéèêëîïôûùüÿœæ']+/)) {
+			if (EN_WORDS.has(w)) en++;
+			else if (FR_WORDS.has(w)) fr++;
+		}
 		if (hasCjk) cjkLines++;
 		if (hasLatin) latinLines++;
 		if (hasCjk && hasLatin) bilingualLines++;
@@ -79,7 +91,8 @@ export function detectLanguage(text: string): { language: SubLanguage; hans: num
 		if (bilingualLines > cjkLines * 0.4 || (latinLines > n * 0.3 && cjkLines > n * 0.3 && Math.abs(latinLines - cjkLines) < n * 0.5)) language = "zh-bilingual";
 		else language = script as SubLanguage;
 		if (language === "zh-bilingual" && hant > hans * 3) language = "zh-bilingual"; // traditional bilingual still reported bilingual; script in hant/hans counts
-	} else if (latinLines > n * 0.3) language = "en";
+	} else if (cyrillic > n * 0.3) language = "ru";
+	else if (latinLines > n * 0.3) language = fr > en * 1.2 && fr >= 5 ? "fr" : en > fr && en >= 5 ? "en" : fr + en < 5 ? "en" : "und";
 	return { language, hans, hant, cjkLines, latinLines, bilingualLines };
 }
 
@@ -234,8 +247,4 @@ export async function unpackSubtitles(file: string, scratch: string, depth = 0):
 function looksLikeSubtitle(buf: Buffer): boolean {
 	const t = buf.subarray(0, 4000).toString("latin1");
 	return /-->/.test(t) || /\[Script Info\]/i.test(t);
-}
-
-export function relName(file: string, root: string): string {
-	return relative(root, file) || basename(file);
 }

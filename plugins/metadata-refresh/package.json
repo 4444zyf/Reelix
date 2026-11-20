@@ -1,0 +1,21 @@
+{
+  "name": "reelix-plugin-metadata-refresh",
+  "version": "0.1.0",
+  "description": "Re-reads titles, overviews and posters from TMDB when the owner's language changes.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["reelix-plugin"],
+  "peerDependencies": { "@reelix/plugin": "*" },
+  "reelix": {
+    "api": 0,
+    "id": "metadata-refresh",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "uses": {
+      "jobs": ["refresh"],
+      "events": ["config.changed"],
+      "runs": ["title.refresh_metadata"]
+    }
+  }
+}

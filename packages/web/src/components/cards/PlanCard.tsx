@@ -1,5 +1,6 @@
 import { ArrowRight, Check, ClipboardList, Pencil } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { runOp } from "../../lib/api";
 import type { PlanItem } from "../../lib/types";
 import { episodeLabel } from "../../lib/utils";
@@ -29,6 +30,7 @@ export function PlanCard({
 	onApplied?: (out: ApplyOutput, text: string) => void;
 	onEdit?: () => void;
 }) {
+	const { t } = useTranslation(["chat", "common"]);
 	const [busy, setBusy] = useState(false);
 	const [applied, setApplied] = useState<{ out: ApplyOutput; text: string }>();
 	const alreadyApplied = mode === "apply" || !!results;
@@ -37,21 +39,21 @@ export function PlanCard({
 		try {
 			const r = await runOp<ApplyOutput>("organise", { mode: "apply", items });
 			setApplied({ out: r.output, text: r.text });
-			toast({ title: "Plan applied", description: r.text.slice(0, 200) });
+			toast({ title: t("cards.plan.applied"), description: r.text.slice(0, 200) });
 			onApplied?.(r.output, r.text);
 		} catch (e) {
-			toast({ title: "Plan not applied", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+			toast({ title: t("cards.plan.notApplied"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });
 		} finally {
 			setBusy(false);
 		}
 	};
 	const allProblems = [...(problems ?? []), ...(applied?.out.problems ?? [])];
 	return (
-		<CardShell icon={<ClipboardList />} title={`Plan: ${items?.length ?? 0} item${items?.length === 1 ? "" : "s"}${alreadyApplied ? " (applied)" : ""}`}>
+		<CardShell icon={<ClipboardList />} title={t(alreadyApplied ? "cards.plan.titleApplied" : "cards.plan.title", { count: items?.length ?? 0 })}>
 			{reason && <p className="mb-2 text-xs text-muted-foreground">{reason}</p>}
 			<div className="space-y-1.5">
 				{(items ?? []).map((it, i) => (
-					<div key={i} className="rounded-md bg-white/[0.03] px-2.5 py-2 text-xs">
+					<div key={i} className="rounded-md bg-surface px-2.5 py-2 text-xs">
 						<div className="flex flex-wrap items-center gap-1">
 							{it.kind && <Badge tone="muted">{it.kind}</Badge>}
 							{it.episodes?.length ? <Badge tone="info">{episodeLabel(it.episodes)}</Badge> : null}
@@ -77,12 +79,12 @@ export function PlanCard({
 				<div className="mt-3 flex flex-wrap gap-2">
 					<Button size="sm" disabled={busy || !items?.length} onClick={approve}>
 						{busy ? <Spinner /> : <Check />}
-						Approve
+						{t("cards.plan.approve")}
 					</Button>
 					{onEdit && (
 						<Button size="sm" variant="outline" disabled={busy} onClick={onEdit}>
 							<Pencil />
-							Edit
+							{t("common:actions.edit")}
 						</Button>
 					)}
 				</div>

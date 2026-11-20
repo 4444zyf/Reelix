@@ -1,0 +1,4 @@
+{
+	"description": "Exemple : dans une archive de sous-titres, prend le SRT plutôt que l'ASS dans la même langue, pour les lecteurs qui affichent mal les styles ASS.",
+	"reason": "SRT préféré à l'ASS dans la même langue"
+}

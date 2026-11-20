@@ -1,7 +1,9 @@
 import { existsSync, linkSync, lstatSync, mkdirSync, readdirSync, renameSync, rmSync, rmdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 import type { Reelix } from "./app.ts";
-import { notifyJellyfin } from "./downloads.ts";
+import { downloaderOf } from "./downloader.ts";
+import { getDownload } from "./downloads.ts";
+import { tellMediaServer } from "./media-server.ts";
 import { libraryRoots } from "./organiser.ts";
 import { type Title, requireTitle } from "./titles.ts";
 import { ReelixError, nowIso } from "./util.ts";
@@ -36,7 +38,7 @@ export type RemoveOutput = { unlinked: string[]; trashed: string[]; torrent?: st
 /**
  * Remove a title from the library at one of three explicit levels (§5.8):
  *   entry  — the library entry only;
- *   torrent — plus the torrent in qBittorrent (data stays on disk);
+ *   torrent — plus the torrent in the downloader (data stays on disk);
  *   data    — plus the downloaded data.
  * A link whose data still exists elsewhere is just unlinked (restorable by re-linking); a last
  * remaining copy moves to a 14-day trash inside the same library folder (decision E).
@@ -86,7 +88,7 @@ export async function removeFromLibrary(app: Reelix, input: { title_id: string; 
 	if (input.level !== "entry") {
 		for (const h of hashes) {
 			try {
-				await app.qb().delete([h], input.level === "data");
+				await downloaderOf(app, getDownload(app, h)).call("remove", [[h], { deleteFiles: input.level === "data" }]);
 				app.db.prepare("UPDATE downloads SET state = 'removed', note = ? WHERE hash = ?").run(input.level === "data" ? "removed with data" : "torrent removed, data kept", h);
 				out.torrent = h;
 			} catch (e) {
@@ -96,7 +98,7 @@ export async function removeFromLibrary(app: Reelix, input: { title_id: string; 
 		out.data_deleted = input.level === "data";
 	}
 	if (!files.length) out.notes.push("No library files matched.");
-	if (out.unlinked.length || out.trashed.length) await notifyJellyfin(app, [...out.unlinked, ...out.trashed], "Deleted").catch(() => {});
+	if (out.unlinked.length || out.trashed.length) await tellMediaServer(app, [...out.unlinked, ...out.trashed], "deleted").catch(() => {});
 	if (!titleFiles(app, title.id).length) app.db.prepare("UPDATE titles SET library_folder = NULL WHERE id = ?").run(title.id);
 	return out;
 }
@@ -170,16 +172,6 @@ export function emptyExpiredTrash(app: Reelix): { deleted: number; bytes: number
 	return { deleted: rows.length, bytes };
 }
 
-export function trashSize(app: Reelix): number {
-	let total = 0;
-	for (const r of app.db.prepare("SELECT trash_path FROM removed WHERE trash_path IS NOT NULL AND restored_at IS NULL").all() as { trash_path: string }[]) {
-		try {
-			total += statSync(r.trash_path).size;
-		} catch {}
-	}
-	return total;
-}
-
 /** Titles in the library: Reelix's records plus folders found on disk with a [tmdbid-N] tag. */
 export function libraryOverview(app: Reelix): { titles: (Title & { file_count: number })[]; untracked_folders: string[] } {
 	const titles = app.db.prepare("SELECT t.*, (SELECT COUNT(*) FROM files f WHERE f.title_id = t.id AND f.kind IN ('video','disc')) AS file_count FROM titles t WHERE t.library_folder IS NOT NULL OR EXISTS (SELECT 1 FROM files f WHERE f.title_id = t.id) ORDER BY t.updated_at DESC").all() as any[];
@@ -191,7 +183,7 @@ export function libraryOverview(app: Reelix): { titles: (Title & { file_count: n
 			if (e.isDirectory() && !e.name.startsWith(".") && !known.has(join(root, e.name))) untracked.push(join(root, e.name));
 		}
 	}
-	return { titles: titles.map((t) => ({ ...t, names: JSON.parse(t.names_json), bangumi_ids: JSON.parse(t.bangumi_ids_json), seasons: JSON.parse(t.seasons_json ?? "[]") })), untracked_folders: untracked.slice(0, 500) };
+	return { titles: titles.map((t) => ({ ...t, names: JSON.parse(t.names_json), bangumi_ids: JSON.parse(t.bangumi_ids_json), seasons: JSON.parse(t.seasons_json ?? "[]"), ratings: JSON.parse(t.ratings_json) })), untracked_folders: untracked.slice(0, 500) };
 }
 
 /** Does the library already have this title (and these episodes)? The folder with [tmdbid-N] is the truth (§5.2). */

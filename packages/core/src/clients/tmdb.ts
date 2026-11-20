@@ -38,6 +38,8 @@ export type TmdbDetails = {
 	origin_country?: string[];
 	imdb_id?: string;
 	names: string[];
+	/** The Simplified Chinese title, if TMDB has one (for Chinese subtitle sites). */
+	zh_title?: string;
 	seasons?: { season_number: number; episode_count: number; air_date?: string | null; name?: string }[];
 	status?: string;
 	next_episode_to_air?: { season_number: number; episode_number: number; air_date: string } | null;
@@ -86,6 +88,18 @@ export class TmdbClient {
 		return r.results.filter((x) => x.media_type === "movie" || x.media_type === "tv");
 	}
 
+	/** TMDB's trending list (films and shows only), in the client's language. */
+	async trending(kind: "all" | TmdbKind = "all", window: "day" | "week" = "week"): Promise<TmdbSearchItem[]> {
+		const r = await this.get<{ results: TmdbSearchItem[] }>(`/trending/${kind}/${window}`, { language: this.language });
+		return r.results.map((x) => (kind === "all" ? x : { ...x, media_type: kind })).filter((x) => x.media_type === "movie" || x.media_type === "tv");
+	}
+
+	/** Titles TMDB recommends for people who liked this one. */
+	async recommendations(kind: TmdbKind, id: number): Promise<TmdbSearchItem[]> {
+		const r = await this.get<{ results: TmdbSearchItem[] }>(`/${kind}/${id}/recommendations`, { language: this.language });
+		return r.results.map((x) => ({ ...x, media_type: x.media_type ?? kind })).filter((x) => x.media_type === "movie" || x.media_type === "tv");
+	}
+
 	async find(externalId: string, source: "imdb_id" | "tvdb_id"): Promise<{ kind: TmdbKind; id: number } | undefined> {
 		const r = await this.get<{ movie_results: { id: number }[]; tv_results: { id: number }[] }>(`/find/${encodeURIComponent(externalId)}`, { external_source: source });
 		if (r.movie_results[0]) return { kind: "movie", id: r.movie_results[0].id };
@@ -102,7 +116,13 @@ export class TmdbClient {
 		add(raw.original_title ?? raw.original_name);
 		for (const t of raw.alternative_titles?.titles ?? raw.alternative_titles?.results ?? []) add(t.title);
 		let english: string | undefined;
-		for (const t of raw.translations?.translations ?? []) {
+		const translations: any[] = raw.translations?.translations ?? [];
+		// The Simplified Chinese title goes first: Chinese subtitle sites search by it, whatever the owner's language.
+		const zh = translations.find((t) => t.iso_639_1 === "zh" && t.iso_3166_1 === "CN") ?? translations.find((t) => t.iso_639_1 === "zh");
+		const zhTitle: string | undefined = zh?.data?.title || zh?.data?.name || undefined;
+		const ordered = new Set<string>();
+		if (zhTitle) ordered.add(zhTitle.trim());
+		for (const t of translations) {
 			const tt = t.data?.title ?? t.data?.name;
 			add(tt);
 			if (t.iso_639_1 === "en" && tt) english = tt;
@@ -124,7 +144,8 @@ export class TmdbClient {
 			genres: (raw.genres ?? []).map((g: { name: string }) => g.name),
 			origin_country: raw.origin_country,
 			imdb_id: raw.external_ids?.imdb_id ?? raw.imdb_id ?? undefined,
-			names: [...names],
+			names: [...new Set([...ordered, ...names])],
+			zh_title: zhTitle,
 			seasons: raw.seasons?.map((s: any) => ({ season_number: s.season_number, episode_count: s.episode_count, air_date: s.air_date, name: s.name })),
 			status: raw.status,
 			next_episode_to_air: raw.next_episode_to_air,
@@ -140,8 +161,4 @@ export class TmdbClient {
 	async episodeGroup(groupId: string): Promise<{ groups: { name: string; order: number; episodes: { season_number: number; episode_number: number; order: number; air_date?: string }[] }[] }> {
 		return this.get(`/tv/episode_group/${groupId}`, { language: this.language });
 	}
-}
-
-export function posterUrl(imageBase: string, path: string | null | undefined, size = "w342"): string | undefined {
-	return path ? `${imageBase.replace(/\/+$/, "")}/${size}${path}` : undefined;
 }

@@ -15,8 +15,3 @@ export function benc(v: unknown): Buffer {
 export function makeTorrent(name: string, files: { path: string[]; length: number }[]): Buffer {
 	return benc({ announce: "http://t/a", info: { name, "piece length": 16384, pieces: Buffer.alloc(20), files } });
 }
-
-/** A single-file .torrent. */
-export function makeSingleFileTorrent(name: string, length: number): Buffer {
-	return benc({ announce: "http://t/a", info: { name, "piece length": 16384, pieces: Buffer.alloc(20), length } });
-}

@@ -1,0 +1,9 @@
+{
+	"description": "Le Chromium de l'assistant, avec un profil enregistré pour garder les connexions : dix outils de navigateur dans chaque conversation, et la vue en direct où vous regardez et reprenez la main.",
+	"settings": {
+		"chromium": "Programme Chromium",
+		"chromium_help": "Laissez vide pour utiliser le Chromium du système ou celui de Playwright.",
+		"headed": "Afficher la fenêtre",
+		"headed_help": "Pour un ordinateur de bureau ; un conteneur n'a pas d'écran."
+	}
+}

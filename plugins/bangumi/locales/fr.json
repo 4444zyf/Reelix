@@ -1,0 +1,8 @@
+{
+	"description": "Les faits d'anime de Bangumi : fiches, épisodes et dates de diffusion pour aligner les saisons, et ce qui est diffusé en ce moment.",
+	"perSeason": "Bangumi a une fiche par saison ; vérifiez à quelle saison de TMDB elle correspond.",
+	"settings": {
+		"base_url": "Adresse de l'API Bangumi",
+		"base_url_help": "https://api.bgm.tv, sauf si vous utilisez un miroir."
+	}
+}

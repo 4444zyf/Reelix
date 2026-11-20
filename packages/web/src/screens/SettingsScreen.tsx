@@ -1,27 +1,38 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Bot, CheckCircle2, CircleDashed, Cpu, FolderTree, Gauge, Globe, KeyRound, Lock, MessageSquare, Plug, Send, Stethoscope, Trash2, XCircle } from "lucide-react";
+import { AlertTriangle, Bell, Bot, CheckCircle2, CircleDashed, Cpu, Download, FolderTree, Gauge, Globe, KeyRound, Lock, MessageSquare, Plug, Puzzle, Send, Stethoscope, Trash2, Tv, XCircle } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { useStatus } from "../app/Sidebar";
 import { Badge } from "../components/common/Badge";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { Screen } from "../components/common/Screen";
+import { AppearanceSection } from "../components/common/ThemePicker";
+import { Plugins, SecretRow } from "../components/settings/Plugins";
 import { ErrorState, Loading, Spinner } from "../components/common/States";
 import { toast } from "../components/hooks/use-toast";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Switch } from "../components/ui/switch";
-import { endpoints, runOp } from "../lib/api";
+import { ApiError, endpoints, op, runOp } from "../lib/api";
 import { useChat } from "../lib/chat";
-import type { DoctorCheck, SecretInfo } from "../lib/types";
-import { cn } from "../lib/utils";
+import { disablePush, enablePush, isIos, pushState, testPush, type PushState } from "../lib/push";
+import { intlLocale } from "../lib/i18n";
+import type { DoctorCheck } from "../lib/types";
+import { cn, formatNumber, timeAgo } from "../lib/utils";
+
+/** A dollar amount in the UI language's format (magpie limits are in USD). */
+const usd = (x: number) => new Intl.NumberFormat(intlLocale(), { style: "currency", currency: "USD", maximumFractionDigits: x > 0 && x < 0.01 ? 4 : 2 }).format(x);
+
+/** The operation does not exist: its plugin is switched off. */
+const isPluginOff = (e: unknown) => e instanceof ApiError && e.code === "unknown_operation";
 
 function get(obj: unknown, path: string): unknown {
 	return path.split(".").reduce<unknown>((o, k) => (o && typeof o === "object" ? (o as Record<string, unknown>)[k] : undefined), obj);
 }
 
-function Section({ id, icon, title, description, children }: { id: string; icon: ReactNode; title: string; description?: string; children: ReactNode }) {
+export function Section({ id, icon, title, description, children }: { id: string; icon: ReactNode; title: string; description?: string; children: ReactNode }) {
 	return (
-		<section id={id} className="glass-card scroll-mt-28 rounded-xl p-4 md:p-6">
+		<section id={id} className="surface-card scroll-mt-28 rounded-xl p-4 md:p-6">
 			<div className="mb-4 flex items-start gap-3">
 				<span className="mt-0.5 text-primary [&_svg]:h-5 [&_svg]:w-5">{icon}</span>
 				<div>
@@ -56,6 +67,7 @@ function fromText(s: string, type: FieldType): unknown {
 
 /** One setting from config.yaml; saved with config.set (validated and recorded by the server). */
 function Field({ config, path, label, help, type = "text", options, placeholder }: { config: Record<string, unknown>; path: string; label: string; help?: string; type?: FieldType; options?: { value: string; label: string }[]; placeholder?: string }) {
+	const { t } = useTranslation(["settings", "common"]);
 	const qc = useQueryClient();
 	const current = get(config, path);
 	const [text, setText] = useState(toText(current, type));
@@ -69,7 +81,7 @@ function Field({ config, path, label, help, type = "text", options, placeholder 
 		setError(undefined);
 		try {
 			const r = await runOp("config.set", { path, value });
-			toast({ title: "Saved", description: r.text });
+			toast({ title: t("field.saved"), description: r.text });
 			await qc.invalidateQueries({ queryKey: ["config"] });
 			qc.invalidateQueries({ queryKey: ["status"] });
 		} catch (e) {
@@ -83,7 +95,7 @@ function Field({ config, path, label, help, type = "text", options, placeholder 
 		try {
 			void save(fromText(text, type));
 		} catch (e) {
-			setError(`Not valid JSON: ${e instanceof Error ? e.message : String(e)}`);
+			setError(t("field.invalidJson", { error: e instanceof Error ? e.message : String(e) }));
 		}
 	};
 
@@ -102,7 +114,7 @@ function Field({ config, path, label, help, type = "text", options, placeholder 
 					<div className="flex gap-2">
 						{type === "select" ? (
 							<select id={path} value={text} onChange={(e) => setText(e.target.value)} className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm">
-								<option value="">(not set)</option>
+								<option value="">{t("field.notSet")}</option>
 								{options?.map((o) => (
 									<option key={o.value} value={o.value}>
 										{o.label}
@@ -118,7 +130,7 @@ function Field({ config, path, label, help, type = "text", options, placeholder 
 						{dirty && (
 							<Button onClick={onSave} disabled={busy} className="shrink-0">
 								{busy && <Spinner />}
-								Save
+								{t("common:actions.save")}
 							</Button>
 						)}
 					</div>
@@ -130,64 +142,16 @@ function Field({ config, path, label, help, type = "text", options, placeholder 
 	);
 }
 
-function SecretRow({ s }: { s: SecretInfo }) {
-	const qc = useQueryClient();
-	const [value, setValue] = useState("");
-	const [busy, setBusy] = useState(false);
-	const store = async (v: string) => {
-		setBusy(true);
-		try {
-			await runOp("secret.set", { key: s.key, value: v });
-			setValue("");
-			toast({ title: v ? "Stored" : "Removed", description: s.key });
-			qc.invalidateQueries({ queryKey: ["secrets"] });
-			qc.invalidateQueries({ queryKey: ["status"] });
-		} catch (e) {
-			toast({ title: "Not stored", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
-		} finally {
-			setBusy(false);
-		}
-	};
-	return (
-		<div className="grid gap-1.5 md:grid-cols-[220px_1fr] md:gap-4">
-			<div>
-				<p className="flex items-center gap-2 text-sm font-medium">
-					<span className="font-mono text-xs">{s.key}</span>
-					{s.set ? <Badge tone="success">set</Badge> : <Badge tone="warning">missing</Badge>}
-				</p>
-				{s.what && <p className="text-xs text-muted-foreground">{s.what}</p>}
-			</div>
-			<form
-				className="flex gap-2"
-				onSubmit={(e) => {
-					e.preventDefault();
-					if (value) void store(value);
-				}}
-			>
-				<Input type="password" autoComplete="new-password" value={value} onChange={(e) => setValue(e.target.value)} placeholder={s.set ? "Enter a new value to replace it" : "Enter the value"} />
-				<Button type="submit" disabled={busy || !value} className="shrink-0">
-					{busy && <Spinner />}
-					Save
-				</Button>
-				{s.set && (
-					<Button type="button" variant="ghost" disabled={busy} className="shrink-0" onClick={() => store("")}>
-						Clear
-					</Button>
-				)}
-			</form>
-		</div>
-	);
-}
-
 function Secrets() {
+	const { t } = useTranslation("settings");
 	const { data, isLoading, error, refetch } = useQuery({ queryKey: ["secrets"], queryFn: endpoints.secrets });
 	if (isLoading) return <Spinner />;
 	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
-	// The web password has its own form below.
-	const list = (data ?? []).filter((s) => !s.key.startsWith("web."));
+	// The web password has its own form below; a plugin's secrets are on its own page under Plugins.
+	const list = (data ?? []).filter((s) => !s.key.startsWith("web.") && !s.key.startsWith("plugins."));
 	return (
 		<>
-			<p className="text-xs text-muted-foreground">Values go straight to the server's secrets file. They are never shown again, and the agent never sees them.</p>
+			<p className="text-xs text-muted-foreground">{t("secrets.intro")}</p>
 			{list.map((s) => (
 				<SecretRow key={s.key} s={s} />
 			))}
@@ -202,6 +166,7 @@ function CheckIcon({ ok }: { ok: boolean | null }) {
 }
 
 function Doctor() {
+	const { t } = useTranslation("settings");
 	const { askAbout } = useChat();
 	const [checks, setChecks] = useState<DoctorCheck[]>();
 	const [busy, setBusy] = useState(false);
@@ -223,14 +188,14 @@ function Doctor() {
 			<div className="flex flex-wrap gap-2">
 				<Button onClick={() => run(false)} disabled={busy}>
 					{busy ? <Spinner /> : <Stethoscope />}
-					Run all checks
+					{t("doctor.runAll")}
 				</Button>
 				<Button variant="outline" onClick={() => run(true)} disabled={busy}>
-					Quick check
+					{t("doctor.quick")}
 				</Button>
 				{failed.length > 0 && (
-					<Button variant="ghost" onClick={() => askAbout(`Doctor found ${failed.length} problem(s): ${failed.map((c) => `${c.name}: ${c.detail}`).join("; ")}. Please help me fix them.`)}>
-						<MessageSquare /> Ask the agent to fix
+					<Button variant="ghost" onClick={() => askAbout(t("doctor.askFixPrompt", { count: failed.length, list: failed.map((c) => `${c.name}: ${c.detail}`).join("; ") }))}>
+						<MessageSquare /> {t("doctor.askFix")}
 					</Button>
 				)}
 			</div>
@@ -238,12 +203,12 @@ function Doctor() {
 			{checks && (
 				<div className="space-y-1.5">
 					{checks.map((c, i) => (
-						<div key={`${c.name}${i}`} className={cn("flex items-start gap-2 rounded-md px-3 py-2 text-sm", c.ok === false ? "bg-destructive/15" : "bg-white/[0.03]")}>
+						<div key={`${c.name}${i}`} className={cn("flex items-start gap-2 rounded-md px-3 py-2 text-sm", c.ok === false ? "bg-destructive/15" : "bg-surface")}>
 							<CheckIcon ok={c.ok} />
 							<div className="min-w-0 flex-1">
 								<p className="font-medium">{c.name}</p>
 								<p className="break-words text-xs text-muted-foreground">{c.detail}</p>
-								{c.fix && c.ok === false && <p className="mt-0.5 text-xs text-warning">Fix: {c.fix}</p>}
+								{c.fix && c.ok === false && <p className="mt-0.5 text-xs text-warning">{t("doctor.fix", { fix: c.fix })}</p>}
 							</div>
 						</div>
 					))}
@@ -253,70 +218,129 @@ function Doctor() {
 	);
 }
 
-function Telegram() {
-	const { data: status } = useStatus();
-	const [code, setCode] = useState<string>();
+/** Native notifications on this device, and the other devices that have them (docs/web-app.md). */
+function Notifications() {
+	const { t } = useTranslation("settings");
+	const qc = useQueryClient();
+	const info = useQuery({ queryKey: ["push"], queryFn: endpoints.push, retry: false });
+	const [state, setState] = useState<PushState>();
 	const [busy, setBusy] = useState<string>();
-	const tg = status?.telegram;
+	const devices = info.data?.devices;
+	useEffect(() => {
+		if (devices) void pushState(devices).then(setState);
+	}, [devices]);
+	const run = async (key: string, fn: () => Promise<unknown>, done?: string) => {
+		setBusy(key);
+		try {
+			await fn();
+			if (done) toast({ title: done });
+			await qc.invalidateQueries({ queryKey: ["push"] });
+			setState(await pushState((await endpoints.push()).devices));
+		} catch (e) {
+			toast({ title: t("notifications.failed"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+		} finally {
+			setBusy(undefined);
+		}
+	};
+	if (isPluginOff(info.error)) return <p className="text-sm text-muted-foreground">{t("notifications.pluginOff")}</p>;
+	const hint = state === "needs_https" ? t("notifications.needsHttps") : state === "needs_install" ? t("notifications.needsInstall") : state === "unsupported" ? t(isIos() ? "notifications.unsupportedIos" : "notifications.unsupported") : state === "denied" ? t("notifications.denied") : null;
 	return (
 		<>
-			<div className="flex flex-wrap gap-1.5">
-				<Badge tone={tg?.configured ? "success" : "warning"}>{tg?.configured ? "bot token set" : "no bot token"}</Badge>
-				<Badge tone={tg?.linked ? "success" : "muted"}>{tg?.linked ? "linked to you" : "not linked"}</Badge>
-				{tg?.running && <Badge tone="primary">running{tg.bot ? ` as @${tg.bot}` : ""}</Badge>}
-				{tg?.error && <Badge tone="danger">{tg.error}</Badge>}
-			</div>
-			<p className="text-sm text-muted-foreground">Create a bot with @BotFather and store its token as the secret telegram.bot_token above. Then get a one-time code and send it to your bot, so it answers only you.</p>
 			<div className="flex flex-wrap items-center gap-2">
-				<Button
-					variant="outline"
-					disabled={!!busy || !tg?.configured}
-					onClick={async () => {
-						setBusy("link");
-						try {
-							setCode((await endpoints.telegramLink()).code);
-						} catch (e) {
-							toast({ title: "No code", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
-						} finally {
-							setBusy(undefined);
-						}
-					}}
-				>
-					{busy === "link" ? <Spinner /> : <KeyRound />}
-					Get a link code
-				</Button>
-				<Button
-					variant="outline"
-					disabled={!!busy || !tg?.linked}
-					onClick={async () => {
-						setBusy("test");
-						try {
-							const r = await runOp("telegram.test");
-							toast({ title: "Sent", description: r.text });
-						} catch (e) {
-							toast({ title: "Not sent", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
-						} finally {
-							setBusy(undefined);
-						}
-					}}
-				>
-					{busy === "test" ? <Spinner /> : <Send />}
-					Send a test message
-				</Button>
+				<Badge tone={state === "on" ? "success" : state === "off" ? "muted" : "warning"}>{state === "on" ? t("notifications.on") : state === "off" ? t("notifications.off") : t("notifications.notReady")}</Badge>
+				{state === "off" && (
+					<Button variant="outline" disabled={!!busy} onClick={() => run("on", enablePush)}>
+						{busy === "on" ? <Spinner /> : <Bell />}
+						{t("notifications.enable")}
+					</Button>
+				)}
+				{state === "on" && (
+					<>
+						<Button variant="outline" disabled={!!busy} onClick={() => run("test", testPush, t("notifications.sent"))}>
+							{busy === "test" ? <Spinner /> : <Send />}
+							{t("notifications.sendTest")}
+						</Button>
+						<Button variant="ghost" disabled={!!busy} onClick={() => run("off", disablePush)}>
+							{t("notifications.disable")}
+						</Button>
+					</>
+				)}
 			</div>
-			{code && (
-				<div className="rounded-lg border border-primary/40 bg-primary/10 p-3">
-					<p className="text-sm">
-						Send this code to {tg?.bot ? `@${tg.bot}` : "your bot"} within 10 minutes:
-					</p>
-					<p className="mt-1 font-mono text-3xl font-bold tracking-[0.3em] text-primary">{code}</p>
+			{hint && <p className="text-sm text-muted-foreground">{hint}</p>}
+			{!!devices?.length && (
+				<div className="space-y-1">
+					<p className="text-xs font-semibold text-muted-foreground">{t("notifications.devices")}</p>
+					{devices.map((d) => (
+						<div key={d.id} className="flex items-center gap-2 rounded-md bg-surface px-2.5 py-1.5 text-xs">
+							<div className="min-w-0 flex-1">
+								<p className="font-medium">{d.label}</p>
+								<p className={cn("break-words text-muted-foreground", d.last_error && "text-warning")}>{d.last_error ?? (d.last_ok_at ? t("notifications.lastSent", { ago: timeAgo(d.last_ok_at) }) : t("notifications.notSentYet"))}</p>
+							</div>
+							<Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("notifications.remove")} title={t("notifications.remove")} disabled={!!busy} onClick={() => run(d.id, () => endpoints.pushUnsubscribe({ id: d.id }))}>
+								<Trash2 />
+							</Button>
+						</div>
+					))}
 				</div>
 			)}
 		</>
 	);
 }
 
+/** Chat apps the owner talks to Reelix from: who is linked and whether answers there may approve (docs/plugins.md §7.4). */
+function Channels() {
+	const { t } = useTranslation("settings");
+	const qc = useQueryClient();
+	const channels = useQuery({ queryKey: ["channels"], queryFn: endpoints.channels, refetchInterval: 15_000 });
+	const [busy, setBusy] = useState<string>();
+	const [unlink, setUnlink] = useState<string>();
+	const change = async (key: string, fn: () => Promise<unknown>) => {
+		setBusy(key);
+		try {
+			await fn();
+			await qc.invalidateQueries({ queryKey: ["channels"] });
+		} catch (e) {
+			toast({ title: t("channels.notChanged"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+		} finally {
+			setBusy(undefined);
+		}
+	};
+	if (channels.isLoading) return <Spinner />;
+	if (channels.error) return <ErrorState error={channels.error} onRetry={() => channels.refetch()} />;
+	if (!channels.data?.length) return <p className="text-sm text-muted-foreground">{t("channels.empty")}</p>;
+	return (
+		<div className="space-y-2">
+			{channels.data.map((c) => (
+				<div key={c.id} className="space-y-2 rounded-md bg-surface px-3 py-2">
+					<div className="flex flex-wrap items-center gap-2">
+						<span className="text-sm font-medium">{c.label}</span>
+						<Badge tone={c.linked ? "success" : "muted"}>{c.linked ? t("channels.linked") : t("channels.notLinked")}</Badge>
+						{c.linked && (
+							<Button variant="ghost" size="sm" className="ml-auto h-7 px-2 text-xs" disabled={!!busy} onClick={() => setUnlink(c.id)}>
+								{t("channels.unlink")}
+							</Button>
+						)}
+					</div>
+					{c.last_error && <p className="break-words text-xs text-warning">{t("channels.sendFailed", { ago: c.last_error_at ? timeAgo(c.last_error_at) : "", error: c.last_error })}</p>}
+					{c.linked && (
+						<div className="flex items-start gap-3">
+							<Switch id={`approve-${c.id}`} checked={c.may_approve} disabled={!!busy} onCheckedChange={(on) => void change(c.id, () => endpoints.allowChannelApproval(c.id, on))} />
+							<label htmlFor={`approve-${c.id}`} className="min-w-0 text-sm">
+								<span className="font-medium">{t("channels.mayApprove")}</span>
+								<span className="block text-xs text-muted-foreground">{t("channels.mayApproveHelp")}</span>
+							</label>
+						</div>
+					)}
+				</div>
+			))}
+			<p className="text-xs text-muted-foreground">{t("channels.setUp")}</p>
+			<ConfirmDialog open={!!unlink} onOpenChange={(o) => !o && setUnlink(undefined)} title={t("channels.unlinkTitle", { channel: unlink })} description={t("channels.unlinkBody")} confirmLabel={t("channels.unlink")} destructive onConfirm={() => change(unlink!, () => endpoints.unlinkChannel(unlink!)).then(() => setUnlink(undefined))} />
+		</div>
+	);
+}
+
 function Learned() {
+	const { t } = useTranslation(["settings", "common"]);
 	const qc = useQueryClient();
 	const { askAbout } = useChat();
 	const { data, isLoading, error, refetch } = useQuery({ queryKey: ["skills"], queryFn: endpoints.skills });
@@ -324,36 +348,36 @@ function Learned() {
 	const [remove, setRemove] = useState<string>();
 	if (isLoading) return <Spinner />;
 	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
-	if (!data?.length) return <p className="text-sm text-muted-foreground">Nothing yet. When the agent works something out about your setup (a site's quirks, a naming habit), it writes it down as a skill and it shows up here.</p>;
+	if (!data?.length) return <p className="text-sm text-muted-foreground">{t("learned.empty")}</p>;
 	return (
 		<div className="space-y-2">
 			{data.map((s) => (
-				<div key={s.name} className="rounded-md bg-white/[0.03] px-3 py-2">
+				<div key={s.name} className="rounded-md bg-surface px-3 py-2">
 					<div className="flex flex-wrap items-center gap-2">
 						<span className="font-mono text-sm">{s.name}</span>
 						<span className="min-w-0 flex-1 text-xs text-muted-foreground">{s.description}</span>
 					</div>
 					<div className="mt-1 flex flex-wrap gap-1">
 						<Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setOpen(open === s.name ? undefined : s.name)}>
-							{open === s.name ? "Hide" : "Read"}
+							{open === s.name ? t("common:actions.hide") : t("learned.read")}
 						</Button>
-						<Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => askAbout(`About the skill "${s.name}" you wrote: change this: `)}>
-							<MessageSquare /> Change in chat
+						<Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => askAbout(t("learned.changePrompt", { name: s.name }))}>
+							<MessageSquare /> {t("learned.changeInChat")}
 						</Button>
 						<Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive-foreground" onClick={() => setRemove(s.name)}>
-							<Trash2 /> Delete
+							<Trash2 /> {t("learned.delete")}
 						</Button>
 					</div>
-					{open === s.name && <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-black/30 p-3 text-xs text-muted-foreground">{s.body}</pre>}
+					{open === s.name && <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-well p-3 text-xs text-muted-foreground">{s.body}</pre>}
 				</div>
 			))}
 			<ConfirmDialog
 				open={!!remove}
 				onOpenChange={(o) => !o && setRemove(undefined)}
-				title={`Delete "${remove}"?`}
-				description="The agent forgets what this skill told it."
+				title={t("learned.deleteTitle", { name: remove })}
+				description={t("learned.deleteDescription")}
 				destructive
-				confirmLabel="Delete"
+				confirmLabel={t("learned.delete")}
 				onConfirm={async () => {
 					await runOp("skills.delete", { name: remove });
 					await qc.invalidateQueries({ queryKey: ["skills"] });
@@ -364,6 +388,7 @@ function Learned() {
 }
 
 function PasswordForm() {
+	const { t } = useTranslation("settings");
 	const [current, setCurrent] = useState("");
 	const [next, setNext] = useState("");
 	const [busy, setBusy] = useState(false);
@@ -374,13 +399,13 @@ function PasswordForm() {
 			onSubmit={async (e) => {
 				e.preventDefault();
 				setError(undefined);
-				if (next.length < 8) return setError("Use at least 8 characters.");
+				if (next.length < 8) return setError(t("account.tooShort"));
 				setBusy(true);
 				try {
 					await endpoints.changePassword(current, next);
 					setCurrent("");
 					setNext("");
-					toast({ title: "Password changed" });
+					toast({ title: t("account.changed") });
 				} catch (err) {
 					setError(err instanceof Error ? err.message : String(err));
 				} finally {
@@ -388,34 +413,91 @@ function PasswordForm() {
 				}
 			}}
 		>
-			<Input type="password" autoComplete="current-password" placeholder="Current password" value={current} onChange={(e) => setCurrent(e.target.value)} />
-			<Input type="password" autoComplete="new-password" placeholder="New password (8+ characters)" value={next} onChange={(e) => setNext(e.target.value)} />
+			<Input type="password" autoComplete="current-password" placeholder={t("account.current")} value={current} onChange={(e) => setCurrent(e.target.value)} />
+			<Input type="password" autoComplete="new-password" placeholder={t("account.new")} value={next} onChange={(e) => setNext(e.target.value)} />
 			{error && <p className="text-xs text-destructive-foreground">{error}</p>}
 			<Button type="submit" disabled={busy || !current || !next} className="justify-self-start">
 				{busy && <Spinner />}
-				Change password
+				{t("account.change")}
 			</Button>
 		</form>
 	);
 }
 
+/** The providers of a seam of the kind "one of several", and the owner's choice among them. */
+type ProviderChoice = { active: string; running: boolean; providers: { id: string; label: string; plugin: string }[] };
+
+/** Which downloader Reelix uses (the owner's choice; Reelix never switches by itself), and how its folders look here. */
+function DownloaderChoice({ config }: { config: Record<string, unknown> }) {
+	const { t } = useTranslation("settings");
+	const list = useQuery({ queryKey: ["downloaders", config.downloader], queryFn: () => op<ProviderChoice>("download.downloaders") });
+	if (list.isLoading) return <Loading />;
+	if (list.error) return <ErrorState error={list.error} onRetry={() => void list.refetch()} />;
+	const d = list.data!;
+	return (
+		<>
+			<Field config={config} path="downloader" label={t("downloader.active")} type="select" options={d.providers.map((p) => ({ value: p.id, label: p.label }))} help={t("downloader.activeHelp")} />
+			{!d.running && <p className="text-sm text-warning">{t("downloader.notRunning", { id: d.active })}</p>}
+			<Field config={config} path={`path_maps.downloaders.${d.active}`} label={t("downloader.pathMap")} type="json" help={t("downloader.pathMapHelp", { example: '[{"theirs": "/downloads", "ours": "/media/downloads"}]' })} />
+		</>
+	);
+}
+
+/** Which media server Reelix tells about filed files and reads watch history from (the owner's choice), and how its folders look. */
+function MediaServerChoice({ config }: { config: Record<string, unknown> }) {
+	const { t } = useTranslation("settings");
+	const list = useQuery({ queryKey: ["media-servers", config.media_server], queryFn: () => op<ProviderChoice>("library.media_servers") });
+	if (list.isLoading) return <Loading />;
+	if (list.error) return <ErrorState error={list.error} onRetry={() => void list.refetch()} />;
+	const d = list.data!;
+	return (
+		<>
+			<Field config={config} path="media_server" label={t("mediaServer.active")} type="select" options={d.providers.map((p) => ({ value: p.id, label: p.label }))} help={t("mediaServer.activeHelp")} />
+			{!d.running && <p className="text-sm text-muted-foreground">{t("mediaServer.notRunning", { id: d.active })}</p>}
+			<Field config={config} path={`path_maps.media_servers.${d.active}`} label={t("mediaServer.pathMap")} type="json" help={t("mediaServer.pathMapHelp", { example: '[{"theirs": "/data/media", "ours": "/media"}]' })} />
+			<Field config={config} path="players" label={t("mediaServer.players")} type="list" help={t("mediaServer.playersHelp")} />
+		</>
+	);
+}
+
+/** Which translator writes the lines of a subtitle translation (the owner's choice; Reelix never switches by itself). */
+function TranslatorChoice({ config }: { config: Record<string, unknown> }) {
+	const { t } = useTranslation("settings");
+	const list = useQuery({ queryKey: ["translators", config.translator], queryFn: () => op<ProviderChoice>("subtitle.translators") });
+	if (list.isLoading) return <Loading />;
+	if (list.error) return <ErrorState error={list.error} onRetry={() => void list.refetch()} />;
+	const d = list.data!;
+	return (
+		<>
+			<Field config={config} path="translator" label={t("models.translator")} type="select" options={d.providers.map((p) => ({ value: p.id, label: p.label }))} help={t("models.translatorHelp")} />
+			{!d.running && <p className="text-sm text-warning">{t("models.translatorNotRunning", { id: d.active })}</p>}
+		</>
+	);
+}
+
 const SECTIONS = [
-	["status", "Status"],
-	["doctor", "Doctor"],
-	["paths", "Paths"],
-	["services", "Services"],
-	["secrets", "Secrets"],
-	["proxy", "Proxy"],
-	["models", "Models"],
-	["limits", "Limits"],
-	["telegram", "Telegram"],
-	["agent", "Preferences"],
-	["learned", "Learned"],
-	["account", "Account"],
+	["status", "nav.status"],
+	["appearance", "nav.appearance"],
+	["doctor", "nav.doctor"],
+	["paths", "nav.paths"],
+	["downloaders", "nav.downloader"],
+	["media-server", "nav.mediaServer"],
+	["services", "nav.services"],
+	["secrets", "nav.secrets"],
+	["proxy", "nav.proxy"],
+	["models", "nav.models"],
+	["limits", "nav.limits"],
+	["notifications", "nav.notifications"],
+	["channels", "nav.channels"],
+	["agent", "nav.agent"],
+	["learned", "nav.learned"],
+	["plugins", "nav.plugins"],
+	["account", "nav.account"],
 ] as const;
 
-/** Settings from config.yaml, secrets, doctor, Telegram and the account. */
+/** Settings from config.yaml, secrets, doctor, chat channels, plugins and the account. */
 export function SettingsScreen() {
+	const { t } = useTranslation("settings");
 	const { askAbout } = useChat();
 	const config = useQuery({ queryKey: ["config"], queryFn: endpoints.config });
 	const { data: status } = useStatus();
@@ -423,13 +505,13 @@ export function SettingsScreen() {
 	const models = (status?.models ?? []).map((m) => ({ value: m, label: m }));
 	return (
 		<Screen
-			title="Settings"
-			subtitle="Connections, paths, models, limits and access"
+			title={t("title")}
+			subtitle={t("subtitle")}
 			toolbar={
 				<div className="-mx-1 flex gap-1 overflow-x-auto pb-1">
-					{SECTIONS.map(([id, label]) => (
-						<a key={id} href={`#${id}`} className="shrink-0 rounded-full border border-white/10 px-3 py-1 text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground">
-							{label}
+					{SECTIONS.map(([id, labelKey]) => (
+						<a key={id} href={`#${id}`} className="shrink-0 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground">
+							{t(labelKey)}
 						</a>
 					))}
 				</div>
@@ -441,7 +523,7 @@ export function SettingsScreen() {
 				<ErrorState error={config.error} onRetry={() => config.refetch()} />
 			) : (
 				<div className="mx-auto max-w-4xl space-y-4">
-					<Section id="status" icon={<Gauge />} title="Status">
+					<Section id="status" icon={<Gauge />} title={t("status.title")}>
 						{(config.data?.warning || status?.configWarning) && (
 							<p className="flex items-start gap-2 rounded-md bg-warning/15 p-3 text-sm text-warning">
 								<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -450,107 +532,140 @@ export function SettingsScreen() {
 						)}
 						<div className="grid gap-2 text-sm sm:grid-cols-2">
 							<p>
-								<span className="text-muted-foreground">Main model: </span>
-								{status?.model.main ?? "not set"}
+								<span className="text-muted-foreground">{t("status.mainModel")} </span>
+								{status?.model.roles.chat?.uses.join(" › ") || t("status.notSet")}
 							</p>
 							<p>
-								<span className="text-muted-foreground">Background model: </span>
-								{status?.model.background ?? "same as main"}
+								<span className="text-muted-foreground">{t("status.backgroundModel")} </span>
+								{status?.model.roles.background?.own.join(" › ") || t("status.sameAsMain")}
 							</p>
 							<p>
-								<span className="text-muted-foreground">Background spend today: </span>${status?.spend.usd.toFixed(2) ?? "0"} / ${status?.spend.capUsd ?? "?"} · {(status?.spend.tokens ?? 0).toLocaleString()} / {(status?.spend.capTokens ?? 0).toLocaleString()} tokens
-								{status?.spend.reached && <Badge tone="warning" className="ml-2">cap reached</Badge>}
+								<span className="text-muted-foreground">{t("status.spendToday")} </span>
+								{t("status.spendValue", { usd: formatNumber(status?.spend.usd ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), capUsd: status?.spend.capUsd ?? "?", tokens: (status?.spend.tokens ?? 0).toLocaleString(intlLocale()), capTokens: (status?.spend.capTokens ?? 0).toLocaleString(intlLocale()) })}
+								{status?.spend.reached && <Badge tone="warning" className="ml-2">{t("status.capReached")}</Badge>}
 							</p>
 							<p>
-								<span className="text-muted-foreground">Jobs: </span>
-								{status?.jobs.running ?? 0} running · {status?.jobs.queued ?? 0} queued · {status?.jobs.parked ?? 0} waiting for you
+								<span className="text-muted-foreground">{t("status.jobs")} </span>
+								{t("status.jobsValue", { running: status?.jobs.running ?? 0, queued: status?.jobs.queued ?? 0, parked: status?.jobs.parked ?? 0 })}
 							</p>
 						</div>
 						{config.data?.summary && (
 							<details className="text-xs">
-								<summary className="cursor-pointer text-muted-foreground">Summary as the agent sees it</summary>
-								<pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-black/30 p-3 text-muted-foreground">{config.data.summary}</pre>
+								<summary className="cursor-pointer text-muted-foreground">{t("status.summary")}</summary>
+								<pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-well p-3 text-muted-foreground">{config.data.summary}</pre>
 							</details>
 						)}
 					</Section>
 
-					<Section id="doctor" icon={<Stethoscope />} title="Doctor" description="Checks connections, paths, hard links, permissions, space and indexers.">
+					<AppearanceSection />
+					<Section id="doctor" icon={<Stethoscope />} title={t("doctor.title")} description={t("doctor.description")}>
 						<Doctor />
 					</Section>
 
-					<Section id="paths" icon={<FolderTree />} title="Paths" description="Where media lives, as Reelix sees it. Downloads and library must be on the same file system for hard links.">
-						<Field config={c} path="media_root" label="Media root" />
-						<Field config={c} path="downloads" label="Downloads folder" />
-						<Field config={c} path="library.movies" label="Films" />
-						<Field config={c} path="library.shows" label="Shows" />
-						<Field config={c} path="library.anime" label="Anime" />
-						<Field config={c} path="path_maps.qbittorrent" label="qBittorrent path maps" type="json" help='How qBittorrent names the same folders: [{"theirs": "/downloads", "ours": "/media/downloads"}]' />
-						<Field config={c} path="path_maps.jellyfin" label="Jellyfin path maps" type="json" />
+					<Section id="paths" icon={<FolderTree />} title={t("paths.title")} description={t("paths.description")}>
+						<Field config={c} path="media_root" label={t("paths.mediaRoot")} />
+						<Field config={c} path="downloads" label={t("paths.downloads")} />
+						<Field config={c} path="library.movies" label={t("paths.films")} />
+						<Field config={c} path="library.shows" label={t("paths.shows")} />
+						<Field config={c} path="library.anime" label={t("paths.anime")} />
 					</Section>
 
-					<Section id="services" icon={<Plug />} title="Services" description="Addresses of the services Reelix uses. Passwords and API keys go under Secrets.">
-						<Field config={c} path="qbittorrent.url" label="qBittorrent URL" placeholder="http://qbittorrent:8080" />
-						<Field config={c} path="qbittorrent.username" label="qBittorrent user" />
-						<Field config={c} path="jackett.url" label="Jackett URL" placeholder="http://jackett:9117" />
-						<Field config={c} path="jellyfin.url" label="Jellyfin URL" placeholder="http://jellyfin:8096" />
-						<Field config={c} path="tmdb.language" label="TMDB language" />
-						<Field config={c} path="subtitles.sources" label="Subtitle sources" type="list" help="Comma-separated, in order of preference." />
+					<Section id="downloaders" icon={<Download />} title={t("downloader.title")} description={t("downloader.description")}>
+						<DownloaderChoice config={c} />
 					</Section>
 
-					<Section id="secrets" icon={<KeyRound />} title="Secrets">
+					<Section id="media-server" icon={<Tv />} title={t("mediaServer.title")} description={t("mediaServer.description")}>
+						<MediaServerChoice config={c} />
+					</Section>
+
+					<Section id="services" icon={<Plug />} title={t("services.title")} description={t("services.description")}>
+						<Field config={c} path="subtitles.sources" label={t("services.subtitleSources")} type="list" help={t("services.subtitleSourcesHelp")} />
+						<Field config={c} path="subtitles.languages" label={t("services.subtitleLanguages")} type="list" placeholder="zh, en" help={t("services.subtitleLanguagesHelp")} />
+					</Section>
+
+					<Section id="secrets" icon={<KeyRound />} title={t("secrets.title")}>
 						<Secrets />
 					</Section>
 
-					<Section id="proxy" icon={<Globe />} title="Proxy" description="For services that are blocked or slow from home (TMDB, Telegram, subtitle sites).">
-						<Field config={c} path="proxy.default" label="Proxy URL" placeholder="http://192.168.1.2:7890 or socks5://…" />
-						<Field config={c} path="proxy.use_for" label="Use it for" type="list" help="Comma-separated services, e.g. tmdb, telegram, subhd, models." />
-						<Field config={c} path="proxy.per_service" label="Per service" type="json" help='{"telegram": "socks5://…"}' />
+					<Section id="proxy" icon={<Globe />} title={t("proxy.title")} description={t("proxy.description")}>
+						<Field config={c} path="proxy.default" label={t("proxy.url")} placeholder={t("proxy.urlPlaceholder")} />
+						<Field config={c} path="proxy.use_for" label={t("proxy.useFor")} type="list" help={t("proxy.useForHelp")} />
+						<Field config={c} path="proxy.per_service" label={t("proxy.perService")} type="json" help='{"telegram": "socks5://…"}' />
 					</Section>
 
-					<Section id="models" icon={<Cpu />} title="Models" description="Models come from pi's sign-in and models file; only those with credentials are listed.">
-						<Field config={c} path="models.main" label="Main model" type="select" options={models} help="Used in chat." />
-						<Field config={c} path="models.background" label="Background model" type="select" options={models} help="Used by background jobs; empty means the main model." />
+					<Section id="models" icon={<Cpu />} title={t("models.title")} description={t("models.description")}>
+						{(["chat", "background", "glossary", "translate", "review"] as const).map((r) => (
+							<Field
+								key={r}
+								config={c}
+								path={`models.roles.${r}`}
+								label={t(`models.role.${r}`)}
+								type="list"
+								placeholder={r === "chat" ? (models[0]?.value ?? "provider/model") : t("models.inherits", { role: t(`models.role.${({ background: "chat", glossary: "background", translate: "background", review: "translate" } as const)[r]}`) })}
+								help={`${t(`models.roleHelp.${r}`)}${status?.model.roles[r]?.resting.length ? ` ${t("models.resting", { models: status.model.roles[r]!.resting.join(", ") })}` : ""}`}
+							/>
+						))}
+						<p className="text-xs text-muted-foreground">{t("models.listHelp", { models: models.map((m) => m.value).join(", ") || "—" })}</p>
+						<Field config={c} path="magpie.url" label={t("models.magpieUrl")} placeholder="http://127.0.0.1:3425" help={t("models.magpieHelp")} />
+						{status?.model.magpie.url && <p className={`text-xs ${status.model.magpie.ok ? "text-muted-foreground" : "text-warning"}`}>{status.model.magpie.ok ? t("models.magpieOk", { count: status.model.magpie.models.length }) : t("models.magpieDown", { error: status.model.magpie.error ?? "" })}</p>}
+						{status?.model.magpie.ok && (
+							<p className="text-xs text-muted-foreground">
+								{(status.model.magpie.limits ?? []).filter((l) => l.costLimit).map((l) => t(l.spent ? "models.magpieSpent" : "models.magpieLimit", { used: usd(l.cost ?? 0), limit: usd(l.costLimit ?? 0), period: t(`models.magpiePeriod.${(["day", "week", "month", "total"].includes(l.period) ? l.period : "other") as "day" | "week" | "month" | "total" | "other"}`), reset: l.reset ? new Date(l.reset).toLocaleString(intlLocale(), { dateStyle: "medium", timeStyle: "short" }) : "" })).join(" ")}{" "}
+								{t(status.model.magpie.admin ? "models.magpieAdmin" : "models.magpieReadOnly")}
+							</p>
+						)}
 						<Field
 							config={c}
 							path="models.thinking"
-							label="Thinking"
+							label={t("models.thinking")}
 							type="select"
-							options={["off", "minimal", "low", "medium", "high"].map((v) => ({ value: v, label: v }))}
+							options={(["off", "minimal", "low", "medium", "high"] as const).map((v) => ({ value: v, label: t(`models.thinkingLevel.${v}`) }))}
 						/>
-						<Field config={c} path="models.main_reads_images" label="Main model reads images" type="bool" />
+						<Field config={c} path="models.main_reads_images" label={t("models.readsImages")} type="bool" />
+						<TranslatorChoice config={c} />
 					</Section>
 
-					<Section id="limits" icon={<Gauge />} title="Limits and schedule" description="Background work stops starting new model runs at the cap; chat is not capped.">
-						<Field config={c} path="limits.background_daily_usd" label="Daily cap (USD)" type="number" />
-						<Field config={c} path="limits.background_daily_tokens" label="Daily cap (tokens)" type="number" />
-						<Field config={c} path="limits.shell_timeout_s" label="Shell timeout (s)" type="number" />
-						<Field config={c} path="limits.shell_timeout_max_s" label="Shell timeout max (s)" type="number" />
-						<Field config={c} path="limits.stalled_after_h" label="Stalled after (h)" type="number" />
-						<Field config={c} path="limits.trash_days" label="Keep trash (days)" type="number" />
-						<Field config={c} path="schedule.nightly_at" label="Nightly tidy-up at" placeholder="03:30" />
-						<Field config={c} path="schedule.timezone" label="Time zone" placeholder="Asia/Shanghai" />
+					<Section id="limits" icon={<Gauge />} title={t("limits.title")} description={t("limits.description")}>
+						<Field config={c} path="limits.background_daily_usd" label={t("limits.dailyUsd")} type="number" />
+						<Field config={c} path="limits.background_daily_tokens" label={t("limits.dailyTokens")} type="number" />
+						<Field config={c} path="limits.plugin_daily_usd" label={t("limits.pluginDailyUsd")} type="number" help={t("limits.pluginDailyUsdHelp")} />
+						<Field config={c} path="limits.suggestions_daily_usd" label={t("limits.suggestionsDailyUsd")} type="number" />
+						<Field config={c} path="limits.shell_timeout_s" label={t("limits.shellTimeout")} type="number" />
+						<Field config={c} path="limits.shell_timeout_max_s" label={t("limits.shellTimeoutMax")} type="number" />
+						<Field config={c} path="limits.stalled_after_h" label={t("limits.stalledAfter")} type="number" />
+						<Field config={c} path="limits.trash_days" label={t("limits.trashDays")} type="number" />
+						<Field config={c} path="schedule.nightly_at" label={t("limits.nightlyAt")} placeholder="03:30" />
+						<Field config={c} path="schedule.timezone" label={t("limits.timezone")} placeholder="Asia/Shanghai" />
 					</Section>
 
-					<Section id="telegram" icon={<Send />} title="Telegram" description="Notices with pictures, answers with buttons, and a standing chat thread.">
-						<Telegram />
+					<Section id="notifications" icon={<Bell />} title={t("notifications.title")} description={t("notifications.description")}>
+						<Notifications />
 					</Section>
 
-					<Section id="agent" icon={<Bot />} title="Preferences and what the agent learned" description="Your taste in releases and subtitles, and things the agent has learned, live in notes the agent keeps. Change them by talking to it.">
+					<Section id="channels" icon={<Send />} title={t("channels.title")} description={t("channels.description")}>
+						<Channels />
+					</Section>
+
+					<Section id="agent" icon={<Bot />} title={t("agent.title")} description={t("agent.description")}>
 						<div className="flex flex-wrap gap-2">
-							<Button variant="outline" onClick={() => askAbout("Show me my preferences note, then let's change it: ")}>
-								<MessageSquare /> Edit preferences in chat
+							<Button variant="outline" onClick={() => askAbout(t("agent.editPrefsPrompt"))}>
+								<MessageSquare /> {t("agent.editPrefs")}
 							</Button>
-							<Button variant="ghost" onClick={() => askAbout("What have you learned about my setup and taste so far? List your notes.")}>
-								<Bot /> What has it learned?
+							<Button variant="ghost" onClick={() => askAbout(t("agent.whatLearnedPrompt"))}>
+								<Bot /> {t("agent.whatLearned")}
 							</Button>
 						</div>
 					</Section>
 
-					<Section id="learned" icon={<Bot />} title="Things I've learned" description="Skills the agent wrote for itself.">
+					<Section id="learned" icon={<Bot />} title={t("learned.title")} description={t("learned.description")}>
 						<Learned />
 					</Section>
 
-					<Section id="account" icon={<Lock />} title="Account">
+					<Section id="plugins" icon={<Puzzle />} title={t("plugins.title")} description={t("plugins.description")}>
+						<Plugins />
+					</Section>
+
+					<Section id="account" icon={<Lock />} title={t("account.title")}>
 						<PasswordForm />
 					</Section>
 				</div>

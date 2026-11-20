@@ -1,6 +1,6 @@
 /** Shapes of the Reelix HTTP API (docs/api.md). Kept loose where the server is loose. */
 
-export type Session = { authenticated: boolean; needsPassword: boolean };
+export type Session = { authenticated: boolean; needsPassword: boolean; language?: string | null };
 
 export type Season = { season_number: number; episode_count: number; air_date?: string | null };
 
@@ -21,7 +21,8 @@ export type Title = {
 	seasons?: Season[];
 	poster_path?: string | null;
 	rating?: number | null;
-	douban_rating?: number | null;
+	/** Ratings at the metadata sources, by provider id. */
+	ratings?: Record<string, { label: string; value: number; scale: number }>;
 	overview?: string | null;
 	notes?: string | null;
 	library_folder?: string | null;
@@ -36,6 +37,19 @@ export type Candidate = {
 	year?: number | null;
 	overview?: string | null;
 	poster_path?: string | null;
+};
+
+/** `app`: the player's id, remembered on this device; `label`: its name. */
+export type PlayLink = { app: string; label: string; url: string; autoplay: boolean };
+export type PlayTarget = { title_id: string; name: string; year?: number; kind: string; poster_path?: string | null; in_library: boolean; season?: number; episode?: number; links: PlayLink[]; episodes?: { season: number; episode: number; links: PlayLink[] }[]; note?: string };
+
+export type PushInfo = { public_key: string; devices: { id: string; label: string; service: string; endpoint_id: string; created_at: string; last_ok_at?: string; last_error?: string }[] };
+
+export type TrendItem = Candidate & { rating?: number; in_library: boolean };
+export type Suggestion = TrendItem & { reason: string };
+export type Suggestions = {
+	suggestions?: { made_at: string; state: "ok" | "no_model" | "nothing_known" | "failed"; items: Suggestion[]; model?: string; error?: string; history?: { users: string[]; titles: number; error?: string } };
+	working: boolean;
 };
 
 export type TitleFind = { resolved?: Title; how?: string; candidates: Candidate[]; note?: string };
@@ -87,13 +101,35 @@ export type Release = {
 	parsed?: ParsedRelease;
 	hasMagnet?: boolean;
 	titleId?: string;
+	/** Plugins that hid it, and why. */
+	hidden?: { plugin: string; reason: string }[];
+	notes?: { plugin: string; note: string }[];
 };
+
+export type ReleaseWhyRow = { kind: "hidden" | "moved" | "note" | "provider"; plugin: string; reason: string; detail: { from?: number; to?: number }; at: string };
+export type ReleaseWhy = { handle: string; title: string; hidden: boolean; reasons: ReleaseWhyRow[]; providers: ReleaseWhyRow[]; searched_at?: string };
 
 export type IndexerOutcome = { indexer: string; name: string; ok: boolean; count: number; ms: number; error?: string };
 
-export type ReleaseSearch = { title?: string; queries: string[]; total: number; offset: number; releases: Release[]; all: Release[]; indexers: IndexerOutcome[] };
+export type ReleaseSearch = { title?: string; queries: string[]; total: number; offset: number; releases: Release[]; all: Release[]; hidden: Release[]; search: string; indexers: IndexerOutcome[] };
 
-export type LiveTorrent = { state: string; progress: number; dlspeed: number; upspeed: number; eta: number; num_seeds: number; ratio: number; amount_left?: number };
+/** A transfer as the active downloader reports it (reelix:downloader@1, docs/plugins.md §7.5). */
+export type Transfer = {
+	id: string;
+	name: string;
+	state: "queued" | "checking" | "downloading" | "seeding" | "stopped" | "error";
+	hasMetadata: boolean;
+	done: boolean;
+	progress: number;
+	size: number;
+	left: number;
+	downSpeed?: number;
+	upSpeed?: number;
+	etaSeconds?: number;
+	peersSending?: number;
+	ratio?: number;
+	problem?: { kind: "tracker" | "local"; message: string };
+};
 
 export type Download = {
 	hash: string;
@@ -107,7 +143,7 @@ export type Download = {
 	note?: string | null;
 	added_at: string;
 	filed_at?: string | null;
-	live?: LiveTorrent;
+	live?: Transfer;
 };
 
 export type PlanItem = { source: string; dest: string; kind?: string; reason?: string; episodes?: Episode[] };
@@ -133,27 +169,190 @@ export type Status = {
 	spend: { usd: number; tokens: number; capUsd: number; capTokens: number; reached: boolean };
 	inbox: number;
 	models: string[];
-	model: { main?: string; background?: string };
+	model: { roles: Record<string, { own: string[]; uses: string[]; resting: string[] }>; magpie: { url?: string; ok: boolean; models: string[]; error?: string; admin?: boolean; limits?: { period: string; cost?: number; costLimit?: number; reset?: string; spent?: boolean }[] } };
 	configWarning?: string;
-	telegram: { configured: boolean; linked: boolean; running: boolean; bot?: string; error?: string };
 	jobs: { queued: number; running: number; parked: number };
 	version?: string;
+	/** The folder `reelix plugin dev` loaded; a banner says so on every screen. */
+	devPlugin?: string;
 };
+
+export type ChatChannelInfo = { id: string; label: string; active: boolean; linked: boolean; may_approve: boolean; last_error?: string; last_error_at?: string };
 
 export type DoctorCheck = { name: string; ok: boolean | null; detail: string; fix?: string };
 
 export type SecretInfo = { key: string; what: string; set: boolean };
 
+export type TrialSummary = { calls: number; hidden: number; firstChanged: number; changed: number; since?: string };
+export type PluginSource = { kind: "folder" | "git" | "npm"; location: string; pin?: string };
+export type PluginInfo = {
+	id: string;
+	version: string;
+	description: string;
+	state: "active" | "waiting" | "failed" | "disabled" | "installed" | "incompatible" | "changed";
+	error?: string;
+	failures: number;
+	waitingFor: string[];
+	/** Plugins it requires that are not running at a version in its range: what there is instead, if anything. */
+	waitingForPlugins: PluginRequirement[];
+	requires: { id: string; range: string }[];
+	owns: string[];
+	provides: string[];
+	hooks: string[];
+	operations: string[];
+	jobs: string[];
+	events: string[];
+	runs: string[];
+	secrets: string[];
+	tools: string[];
+	toolsOn: boolean;
+	trial: boolean;
+	trialResult?: TrialSummary;
+	kind: "plugin" | "skills";
+	source?: PluginSource;
+	restartNeeded: boolean;
+	update?: { version: string };
+	skills: string[];
+	setup?: string;
+	jobPrompt?: boolean;
+	/** Its use of the owner's models today (docs/plugins.md §10.2). */
+	model?: { budgetUsd: number; unmetered: boolean; roles: string[]; spentUsd: number; tokens: number; reached: boolean };
+	/** Where its code runs: inside Reelix or in a process of its own (docs/plugins.md §11.7). */
+	runtime: PluginRuntime;
+	runtimeDefault: PluginRuntime;
+	processAllowed: boolean;
+	/** The screen it ships, shown under Plugins while it runs. */
+	screen?: { title: string };
+};
+export type PluginRuntime = "in-process" | "process";
+export type PluginRequirement = { id: string; range: string; version?: string; state?: PluginInfo["state"] };
+export type PluginActionResult = {
+	id: string;
+	result: "applied" | "failed" | "needs_confirmation" | "saved-restart-needed";
+	state: PluginInfo["state"];
+	next: string;
+	dependents?: string[];
+	errors?: { path: string; message: string }[];
+};
+type Effect = "read" | "write" | "destructive" | "admin";
+/** What a plugin declares, from its manifest only (docs/plugins.md §11.1). */
+export type PluginDeclarations = {
+	id: string;
+	version: string;
+	description: string;
+	license?: string;
+	kind: "plugin" | "skills";
+	provides: string[];
+	requires: string[];
+	requiresPlugins: { id: string; range: string }[];
+	owns: string[];
+	hooks: string[];
+	events: string[];
+	operations: { name: string; effect: Effect; tool?: string }[];
+	jobs: string[];
+	runs: string[];
+	network: string[];
+	anyHost: boolean;
+	secrets: string[];
+	skills: string[];
+	scripts: string[];
+	agent: boolean;
+	inbox: boolean;
+	model: boolean;
+	modelRoles: string[];
+	unmetered: boolean;
+	pi: boolean;
+	native: boolean;
+	runtime: PluginRuntime;
+	processAllowed: boolean;
+	screen?: string;
+};
+export type DeclarationDiff = { added: Record<string, string[]>; removed: Record<string, string[]>; effects: { operation: string; from?: Effect; to: Effect }[]; flags: string[] };
+/** A plugin the agent wrote and proposed: its files and what changed since its previous proposal. */
+export type PluginProposal = {
+	id: string;
+	plugin: string;
+	version: string;
+	by: string;
+	at: string;
+	note?: string;
+	status: "open" | "approved" | "declined" | "replaced";
+	folder: string;
+	files: { path: string; size: number; change: "added" | "changed" | "removed" | "same" }[];
+	diffFrom?: string;
+	diff: string;
+};
+export type PluginReview = {
+	id: string;
+	what: "install" | "update" | "changed" | "proposal";
+	hash: string;
+	source: PluginSource;
+	declarations: PluginDeclarations;
+	nativeFound: string[];
+	scriptsNotRun: string[];
+	from?: { version: string; source: PluginSource };
+	diff?: DeclarationDiff;
+	changelog?: string;
+	requirements: (PluginRequirement & { satisfied: boolean })[];
+	proposal?: PluginProposal;
+};
+export type PluginUpdates = { id: string; version: string; source: PluginSource; available: { to: string; label: string }[]; error?: string };
+
+/** A JSON Schema as the settings form reads it (docs/plugins.md §12.2). */
+export type SettingSchema = {
+	type?: string;
+	default?: unknown;
+	minimum?: number;
+	maximum?: number;
+	maxItems?: number;
+	properties?: Record<string, SettingSchema>;
+	items?: SettingSchema;
+	anyOf?: { const?: unknown }[];
+	enum?: unknown[];
+	"x-reelix-options-from"?: string;
+	"x-reelix-show-when"?: { field: string; equals: unknown };
+	"x-reelix-buttons"?: string[];
+};
+export type PluginSettings = {
+	id: string;
+	state: PluginInfo["state"];
+	schema?: SettingSchema;
+	values: Record<string, unknown>;
+	strings: Record<string, string>;
+	secrets: { name: string; key: string; set: boolean }[];
+	buttons: string[];
+	note?: string;
+};
+export type HookView = { hook: string; mode: "guard" | "pipeline" | "collect"; plugins: { plugin: string; trial: boolean }[] };
+
+export type ProposalStepResult = { operation: string; status: "succeeded" | "failed" | "skipped" | "not_approved" | "declined" | "expired"; text?: string };
+export type Proposal = {
+	id: string;
+	plugin: string;
+	title: string;
+	why: string;
+	status: "open" | "approved" | "declined" | "expired" | "replaced";
+	summary: string;
+	destructive: number;
+	steps: { operation: string; effect: string; preview: { text: string; counts?: Record<string, number> }; result?: ProposalStepResult }[];
+	created_at: string;
+	expires_at: string;
+	decided_at?: string;
+};
+
+/** A plugin's card, built by Reelix from its declaration (docs/plugins.md §12.3). */
+export type PluginCardData = { kind: "plugin"; card: string; plugin: string; layout: "list" | "text"; title: string; rows?: { primary: string; secondary?: string }[]; more?: number; text?: string; empty?: string; buttons: { label: string; index: number }[] };
+
 export type Job = { id: string; kind: string; schedule?: string | null; payload_json?: string; next_run_at?: string | null; enabled: number; created_at: string };
 
-export type JobRun = { id: string; job_id?: string | null; kind: string; state: string; summary?: string | null; created_at: string; started_at?: string | null; finished_at?: string | null; thread_id?: string | null };
+export type JobRun = { payload_json?: string; id: string; job_id?: string | null; kind: string; state: string; summary?: string | null; created_at: string; started_at?: string | null; finished_at?: string | null; thread_id?: string | null };
 
 // ------------------------------------------------------------------ chat
 
 export type Thread = {
 	id: string;
 	name: string;
-	kind: "chat" | "telegram" | "job" | "setup" | string;
+	kind: "chat" | "channel" | "job" | "setup" | string;
 	title_id?: string | null;
 	job_run_id?: string | null;
 	updated_at: string;
@@ -166,6 +365,7 @@ export type Ask = { id: string; question: string; kind: "choice" | "confirm" | "
 
 export type Card =
 	| { kind: "title"; title: Title }
+	| { kind: "play"; play: PlayTarget }
 	| { kind: "candidates"; candidates: Candidate[] }
 	| { kind: "releases"; releases: Release[]; pick?: string; reason?: string; total?: number; indexers?: IndexerOutcome[] }
 	| { kind: "plan"; items: PlanItem[]; results?: unknown; problems?: string[]; mode?: string; reason?: string }
@@ -174,6 +374,7 @@ export type Card =
 	| { kind: "image"; image: string; text?: string; path?: string }
 	| { kind: "verification"; image: string; text?: string; path?: string }
 	| { kind: "text"; text: string }
+	| PluginCardData
 	| { kind: string; [k: string]: unknown };
 
 export type ToolCall = { id: string; name: string; label: string; isError?: boolean; summary?: string; card?: Card; done?: boolean };
@@ -201,13 +402,16 @@ export type AppEvent =
 
 export type BrowserTab = { id: string; owner: string; url: string; viewers: number };
 
-export type SubtitleCandidate = { ref: string; source: string; title?: string; release?: string; languages?: string[]; formats?: string[]; tags?: string[]; downloads?: number; date?: string; uploader?: string };
+export type SubtitleCandidate = { ref: string; source: string; title?: string; release?: string; languages?: string[]; formats?: string[]; tags?: string[]; downloads?: number; date?: string; uploader?: string; language?: string; season?: number; episode?: number; hearingImpaired?: boolean; machine?: boolean; hashMatch?: boolean };
 
 export type SubtitleSearch = {
 	title?: string;
-	have: { video: string; external: string[]; embeddedChinese: string[] }[];
+	languages?: string[];
+	have: { video: string; external: string[]; embeddedWanted: string[] }[];
 	candidates: SubtitleCandidate[];
 	errors: string[];
+	/** Sources not asked because they need a key. */
+	skipped?: { source: string; label: string; needs: string[] }[];
 	note?: string;
 };
 

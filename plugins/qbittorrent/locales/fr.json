@@ -1,0 +1,11 @@
+{
+	"description": "Télécharge par l'API Web de qBittorrent (4.x et 5.x).",
+	"settings": {
+		"url": "Adresse de l'interface Web de qBittorrent",
+		"url_help": "Par exemple http://qbittorrent:8080. La correspondance de ses dossiers avec ceux de Reelix se règle dans Réglages → Téléchargements.",
+		"username": "Nom d'utilisateur"
+	},
+	"secrets": {
+		"password": "Mot de passe de l'interface Web"
+	}
+}

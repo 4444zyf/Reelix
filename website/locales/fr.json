@@ -1,0 +1,276 @@
+{
+	"meta": {
+		"title": "Reelix : un copilote pensé pour l'agent, pour vos films, séries et animes",
+		"description": "Auto-hébergé et open source. Vous donnez le titre ; Reelix le trouve, choisit une version, la télécharge, la range dans votre bibliothèque Jellyfin par lien physique et récupère les sous-titres."
+	},
+	"nav": {
+		"loop": "La boucle",
+		"agent": "Pensé pour l'agent",
+		"screens": "Écrans",
+		"plugins": "Plugins",
+		"start": "Commencer",
+		"theme": "Changer de thème",
+		"language": "Langue"
+	},
+	"hero": {
+		"eyebrow": "Auto-hébergé · Open source · MIT",
+		"line1": "Donnez le titre.",
+		"line2": "Reelix fait le reste.",
+		"lead": "Un copilote pensé pour l'agent, pour votre collection de films, de séries et d'animes. Il trouve le titre, choisit une version, la télécharge, la range dans votre bibliothèque et récupère les sous-titres, sur votre propre NAS, avec les outils que vous utilisez déjà.",
+		"primary": "Commencer",
+		"secondary": "Voir sur GitHub",
+		"note": "Fonctionne avec qBittorrent, Jackett et Jellyfin. Tourne sur votre propre NAS."
+	},
+	"demo": {
+		"label": "Illustration d'une vraie conversation",
+		"user": "Trouve-moi Sintel, le film Blender de 2010.",
+		"steps": [
+			"Titre identifié sur TMDB",
+			"3 indexeurs interrogés : 4 versions",
+			"Contenu du 1080p BluRay vérifié : un film, un sous-titre chinois",
+			"Ajouté à qBittorrent",
+			"Rangé par lien physique dans Movies/Sintel (2010)"
+		],
+		"kind": "Film",
+		"minutes": "15 min",
+		"overview": "Une jeune femme cherche partout un petit dragon dont elle s'est autrefois occupée.",
+		"picked": "Choisie",
+		"skipped": "Écartée",
+		"reason": "1080p BluRay, bien partagée, sous-titre inclus.",
+		"skipReason": "Un enregistrement en salle.",
+		"answer": "Sintel est dans votre bibliothèque, avec un sous-titre chinois à côté. Le partage continue depuis le dossier de téléchargement.",
+		"inLibrary": "dans la bibliothèque",
+		"replay": "Rejouer",
+		"placeholder": "Demandez à Reelix…"
+	},
+	"ticker": [
+		"Identifier",
+		"Chercher",
+		"Télécharger",
+		"Ranger",
+		"Sous-titrer",
+		"Suivre"
+	],
+	"loop": {
+		"title": "Une phrase à l'entrée, un film rangé à la sortie",
+		"lead": "Tout le chemin d'un nom à un titre prêt à être lu, parcouru par un seul agent qui voit chaque étape.",
+		"steps": [
+			{
+				"name": "Identifier",
+				"text": "À partir de n'importe quoi : un nom, un lien TMDB ou Douban, un lien magnet, la photo d'une affiche."
+			},
+			{
+				"name": "Chercher",
+				"text": "Tous les indexeurs à la fois. Reelix regarde dans une version avant de se fier à son nom."
+			},
+			{
+				"name": "Télécharger",
+				"text": "Avec qBittorrent. La raison du choix est notée au moment de l'ajout."
+			},
+			{
+				"name": "Ranger",
+				"text": "Des liens physiques vers une bibliothèque au format Jellyfin. Rien n'est copié ; le partage continue."
+			},
+			{
+				"name": "Sous-titrer",
+				"text": "Trouvés, comparés à la vidéo, nettoyés et placés. Ou traduits quand il n'en existe pas."
+			},
+			{
+				"name": "Suivre",
+				"text": "Une consigne permanente, avec vos mots. Les nouveaux épisodes arrivent à leur diffusion."
+			}
+		]
+	},
+	"agent": {
+		"title": "L'agent est le produit",
+		"lead": "La plupart des outils du domaine sont des systèmes de règles auxquels on a ajouté un chat. Reelix fait l'inverse.",
+		"points": [
+			{
+				"title": "Il travaille sur le vrai système",
+				"text": "L'agent dispose d'un shell et d'un accès aux fichiers dans son conteneur. Il peut examiner un téléchargement en désordre et le réparer, sans que personne ait écrit un outil pour ce cas."
+			},
+			{
+				"title": "Du jugement, pas des tables de règles",
+				"text": "Lire un nom de version étrange ou choisir entre plusieurs versions revient au modèle, guidé par une simple note sur vos goûts. Le code exact reste là où une erreur coûte quelque chose."
+			},
+			{
+				"title": "Il ne demande qu'en cas de vrai doute",
+				"text": "Et il retient la réponse. Questions, plans et avis attendent dans une seule boîte de réception : sur le web, en notification ou dans Telegram."
+			}
+		]
+	},
+	"features": {
+		"title": "Tout ce qui entoure le film, aussi",
+		"lead": "Trouver et ranger, c'est le cœur. Ceci vient avec.",
+		"items": [
+			{
+				"title": "Discutez de partout",
+				"text": "Sur le web, dans le terminal et dans Telegram. Le même agent, avec la même note sur vos goûts."
+			},
+			{
+				"title": "Des sous-titres dans toutes les langues",
+				"text": "Quand il n'en existe pas, Reelix en traduit un avec vos propres modèles, dans un fichier séparé. La vidéo n'est jamais modifiée."
+			},
+			{
+				"title": "Tendances et suggestions",
+				"text": "Les tendances, les animes en cours de diffusion et des choix d'après ce que vous avez regardé dans Jellyfin."
+			},
+			{
+				"title": "Une boîte de réception qui vous trouve",
+				"text": "Questions et plans arrivent en notification sur votre téléphone ou dans Telegram. Répondez d'où vous êtes."
+			},
+			{
+				"title": "Il adopte ce que vous avez déjà",
+				"text": "Les téléchargements existants sont examinés puis rangés dans la bibliothèque, une fois le plan approuvé."
+			},
+			{
+				"title": "À votre image",
+				"text": "Deux thèmes et le vôtre, quatre langues, et le fournisseur de modèles de votre choix."
+			}
+		]
+	},
+	"screens": {
+		"title": "Voyez par vous-même",
+		"lead": "De vrais écrans d'une instance de démonstration : services simulés, agent réel.",
+		"tabs": [
+			{
+				"id": "chat",
+				"name": "Chat",
+				"caption": "Chaque étape de l'agent est affichée et peut être ouverte."
+			},
+			{
+				"id": "trends",
+				"name": "Tendances",
+				"caption": "Les tendances, les animes en cours de diffusion et des suggestions d'après ce que vous avez regardé."
+			},
+			{
+				"id": "title",
+				"name": "Titre",
+				"caption": "Un titre et ses versions, venues de tous les indexeurs."
+			},
+			{
+				"id": "downloads",
+				"name": "Téléchargements",
+				"caption": "Chaque téléchargement sait pour quel titre il est là."
+			},
+			{
+				"id": "inbox",
+				"name": "Boîte de réception",
+				"caption": "Questions, plans et avis vous attendent au même endroit."
+			},
+			{
+				"id": "plugins",
+				"name": "Plugins",
+				"caption": "Activez et désactivez les plugins, vérifiez ce que chacun déclare."
+			},
+			{
+				"id": "paper",
+				"name": "Thème Paper",
+				"caption": "Un second thème intégré. Un thème est un dossier ; créez le vôtre."
+			}
+		]
+	},
+	"plugins": {
+		"title": "Fait pour être étendu",
+		"lead": "Presque tout ce qui parle à un service extérieur est un plugin. Activez-les et désactivez-les dans les réglages, installez-en de nouveaux, ou demandez à Reelix d'en écrire un pour vous.",
+		"seamsTitle": "Occuper une jonction",
+		"seamsText": "Être ce que Reelix appelle.",
+		"seams": [
+			"Indexeur",
+			"Source de sous-titres",
+			"Client de téléchargement",
+			"Serveur multimédia",
+			"Notification",
+			"Canal de discussion",
+			"Source de métadonnées",
+			"Traducteur",
+			"Lecteur",
+			"Source de tendances"
+		],
+		"hooksTitle": "Rejoindre un hook",
+		"hooksText": "Modifier une décision au moment où elle est prise.",
+		"hooks": [
+			"Filtrer les versions",
+			"Classer les versions",
+			"Nommer les fichiers",
+			"Contrôler un téléchargement",
+			"Choisir un sous-titre",
+			"Façonner un avis",
+			"Compléter le prompt",
+			"Donner un outil à l'agent"
+		],
+		"moreTitle": "Ajouter les vôtres",
+		"moreText": "Des opérations à l'effet déclaré, un écran dans l'interface web, un lot de compétences pour l'agent.",
+		"ask": "Envie d'en créer un ?",
+		"guide": "Lire le guide des plugins"
+	},
+	"safety": {
+		"title": "Limites souples, invariants stricts",
+		"lead": "Dans la conversation, l'agent fait ce que vous demandez. Quelques points sont fixés dans le code, parce qu'ils relèvent de la justesse et du coût, pas de la permission.",
+		"items": [
+			{
+				"title": "Un oui ne sert qu'une fois",
+				"text": "Les actions destructrices demandent votre accord. Un accord est lié à la demande exacte et ne peut pas être rejoué."
+			},
+			{
+				"title": "Le texte extérieur est une donnée",
+				"text": "Noms de versions, pages web et contenus de sous-titres sont marqués comme texte extérieur et jamais traités comme des instructions."
+			},
+			{
+				"title": "Tout est consigné",
+				"text": "Chaque opération, quel que soit son auteur, laisse une trace dans le journal : quoi, par qui, avec quel résultat."
+			},
+			{
+				"title": "Une suppression se défait",
+				"text": "Supprimer un titre supprime un lien. Une dernière copie part dans une corbeille conservée 14 jours."
+			},
+			{
+				"title": "Les secrets restent hors du chat",
+				"text": "Clés et mots de passe se saisissent dans un champ secret. Ils n'atteignent jamais le modèle ni une conversation enregistrée."
+			},
+			{
+				"title": "La dépense a un plafond",
+				"text": "Le travail en arrière-plan s'arrête à la limite quotidienne que vous fixez, et chaque plugin qui utilise vos modèles a son propre budget."
+			}
+		]
+	},
+	"works": {
+		"title": "Fonctionne avec ce que vous utilisez déjà"
+	},
+	"start": {
+		"title": "Commencer",
+		"lead": "Reelix tourne dans un seul conteneur à côté de vos services existants. Un script de pré-vérification examine d'abord votre NAS.",
+		"tabs": [
+			"Sur un NAS",
+			"Depuis les sources",
+			"Essayer la démo"
+		],
+		"comments": {
+			"preflight": "trouve vos services, teste les liens physiques, affiche un .env",
+			"env": "puis reportez-y ce que la pré-vérification a affiché",
+			"up": "Reelix est à l'adresse http://<nas>:7878",
+			"pi": "connexion à un fournisseur de modèles",
+			"build": "l'interface web",
+			"serve": "la première visite définit le mot de passe",
+			"demo": "faux services, agent réel"
+		},
+		"copy": "Copier",
+		"copied": "Copié",
+		"status": "Reelix est un logiciel en pré-version. Il n'a pas encore tourné longtemps sur un NAS, et l'API des plugins est encore en version 0. Attendez-vous à des changements."
+	},
+	"footer": {
+		"tagline": "Un copilote pensé pour l'agent, pour votre collection de films, de séries et d'animes.",
+		"docs": "Documentation",
+		"design": "Conception",
+		"deployment": "Déploiement",
+		"guide": "Guide des plugins",
+		"reference": "Référence des plugins",
+		"project": "Projet",
+		"source": "Code source",
+		"licence": "Licence MIT",
+		"themes": [
+			"Marquee",
+			"Paper"
+		]
+	}
+}

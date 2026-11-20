@@ -1,0 +1,22 @@
+{
+  "name": "reelix-plugin-auto-subtitles",
+  "version": "0.1.0",
+  "description": "After a download is filed, asks the agent to find subtitles in the owner's first wanted language.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["reelix-plugin"],
+  "peerDependencies": { "@reelix/plugin": "*" },
+  "reelix": {
+    "api": 0,
+    "id": "auto-subtitles",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "requires": { "seams": ["reelix:subtitle.source@1"] },
+    "uses": {
+      "jobs": ["find"],
+      "events": ["download.filed"],
+      "agent": true
+    }
+  }
+}

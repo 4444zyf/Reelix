@@ -1,9 +1,11 @@
 import { existsSync, linkSync, readdirSync, statSync, unlinkSync, accessSync, constants } from "node:fs";
 import { join } from "node:path";
 import type { Reelix } from "./app.ts";
-import { toOurs } from "./config.ts";
+import { inContainer, loopbackAddresses } from "./container.ts";
+import { downloader, ourPath } from "./downloader.ts";
 import { freeSpace } from "./downloads.ts";
-import { http, proxyFor } from "./http.ts";
+import { proxyFor } from "./http.ts";
+import { activeMediaServer, missingMediaServer, serverPath } from "./media-server.ts";
 import { explainLinkError, libraryRoots } from "./organiser.ts";
 import { findBinary } from "./probe.ts";
 import { VIDEO_EXT } from "./torrent.ts";
@@ -19,7 +21,7 @@ async function check(name: string, fn: () => Promise<Omit<Check, "name">> | Omit
 	}
 }
 
-/** Find a real file qBittorrent wrote, for the hard-link test (§10.2 step 4). */
+/** Find a real file the downloader wrote, for the hard-link test (§10.2 step 4). */
 export function findSampleFile(dir: string, depth = 0): string | undefined {
 	if (depth > 4 || !existsSync(dir)) return undefined;
 	let fallback: string | undefined;
@@ -57,6 +59,9 @@ export async function doctor(app: Reelix, opts: { quick?: boolean } = {}): Promi
 	const c = app.config;
 	const checks: Check[] = [];
 	if (app.configWarning) checks.push({ name: "config", ok: false, detail: app.configWarning });
+	// In a container, "localhost" is the container itself (docs/deployment.md).
+	if (inContainer())
+		for (const l of loopbackAddresses(app)) checks.push({ name: `address ${l.path}`, ok: false, detail: `${l.url} points at Reelix's own container`, fix: l.fix });
 
 	checks.push(
 		await check("folders", () => {
@@ -81,27 +86,17 @@ export async function doctor(app: Reelix, opts: { quick?: boolean } = {}): Promi
 		}),
 	);
 
-	let qbSave: string | undefined;
-	checks.push(
-		await check("qbittorrent", async () => {
-			if (!c.qbittorrent?.url) return { ok: false, detail: "not configured", fix: "reelix config set qbittorrent.url http://host:8080" };
-			const v = await app.qb().version();
-			qbSave = await app.qb().defaultSavePath();
-			const prefs = await app.qb().preferences();
-			const tmp = prefs.temp_path_enabled ? `; incomplete folder ${prefs.temp_path} (files move on completion)` : "";
-			return { ok: true, detail: `qBittorrent ${v.app} (API ${v.api}); saves to ${qbSave}${tmp}` };
-		}),
-	);
-
-	if (qbSave !== undefined) {
+	// The active downloader and its path map; its plugin checks the service itself (docs/plugins.md §7.5).
+	if (app.plugins)
 		checks.push(
-			await check("path mapping", () => {
-				const ours = toOurs(c.path_maps.qbittorrent, qbSave!);
-				if (!existsSync(ours)) return { ok: false, detail: `qBittorrent's save folder ${qbSave} maps to ${ours}, which Reelix cannot see`, fix: "reelix config set path_maps.qbittorrent '[{\"theirs\":\"/downloads\",\"ours\":\"/media/torrents\"}]'" };
-				return { ok: true, detail: `${qbSave} → ${ours}` };
+			await check("downloader", async () => {
+				const d = downloader(app);
+				const folder = await d.call("defaultFolder", []);
+				const ours = ourPath(app, d.id, folder);
+				if (!existsSync(ours)) return { ok: false, detail: `${d.label} saves to ${folder}, which is ${ours} here, and Reelix cannot see it`, fix: `reelix config set path_maps.downloaders.${d.id} '[{"theirs":"${folder}","ours":"/media/torrents"}]'` };
+				return { ok: true, detail: `${d.label} saves to ${folder}${ours === folder ? "" : ` (${ours} here)`}` };
 			}),
 		);
-	}
 
 	checks.push(
 		await check("hard link", () => {
@@ -117,7 +112,7 @@ export async function doctor(app: Reelix, opts: { quick?: boolean } = {}): Promi
 			const own = `test file ${sample} is uid ${st.uid} gid ${st.gid} mode ${(st.mode & 0o777).toString(8)}; Reelix runs as uid ${process.getuid?.()} gid ${process.getgid?.()}`;
 			if (bad.length) return { ok: false, detail: `${bad.map((b) => `${b.k}: ${b.detail}`).join("; ")}. ${own}` };
 			const otherRead = (st.mode & 0o004) !== 0 || (st.mode & 0o040) !== 0;
-			return { ok: true, detail: `${results.map((r) => r.k).join(", ")} OK. ${own}${otherRead ? "" : ". WARNING: the file is not group/other-readable; Jellyfin may not read it"}` };
+			return { ok: true, detail: `${results.map((r) => r.k).join(", ")} OK. ${own}${otherRead ? "" : ". WARNING: the file is not group/other-readable; the media server may not read it"}` };
 		}),
 	);
 
@@ -130,18 +125,6 @@ export async function doctor(app: Reelix, opts: { quick?: boolean } = {}): Promi
 	);
 
 	checks.push(
-		await check("jackett", async () => {
-			if (!c.jackett?.url) return { ok: false, detail: "not configured" };
-			const ix = await app.jackett().indexers();
-			if (!ix.length) return { ok: false, detail: "no indexers configured in Jackett" };
-			if (opts.quick) return { ok: true, detail: `${ix.length} indexers: ${ix.map((i) => i.name).join(", ")}` };
-			const { outcomes } = await app.jackett().searchEach(ix, ["test"], [], 20_000);
-			const bad = outcomes.filter((o) => !o.ok);
-			return { ok: bad.length < outcomes.length, detail: outcomes.map((o) => `${o.name}: ${o.ok ? `ok ${(o.ms / 1000).toFixed(1)}s` : `ERROR ${o.error}`}`).join("; ") };
-		}),
-	);
-
-	checks.push(
 		await check("tmdb", async () => {
 			if (!app.secrets["tmdb.api_key"]) return { ok: false, detail: "no API key", fix: "reelix secret set tmdb.api_key" };
 			const t0 = Date.now();
@@ -150,38 +133,20 @@ export async function doctor(app: Reelix, opts: { quick?: boolean } = {}): Promi
 		}),
 	);
 
-	if (!opts.quick) {
-		for (const [name, url] of [
-			["subhd", c.subtitles.subhd_url],
-			["bangumi", c.bangumi.base_url + "/v0/subjects/1"],
-		] as const) {
-			checks.push(
-				await check(name, async () => {
-					const res = await http(url, { proxy: proxyFor(c, name), timeoutMs: 10_000 });
-					return { ok: res.status < 500, detail: `HTTP ${res.status}` };
-				}),
-			);
-		}
-	}
-
-	checks.push(
-		await check("jellyfin", async () => {
-			const jf = app.jellyfin();
-			if (!jf) return { ok: null, detail: "not configured (optional)" };
-			const info = await jf.info();
-			const libs = await jf.virtualFolders().catch(() => []);
-			return { ok: true, detail: `${info.ServerName} ${info.Version}; libraries: ${libs.map((l) => `${l.Name}=${l.Locations.join("|")}`).join("; ") || "none"}` };
-		}),
-	);
-
-	checks.push(
-		await check("telegram", async () => {
-			const tg = app.telegram();
-			if (!tg) return { ok: null, detail: "not configured (optional)" };
-			const me = await tg.getMe();
-			return { ok: !!c.telegram.owner_id, detail: `bot @${me.username}${c.telegram.owner_id ? ", owner linked" : ", owner not linked yet"}` };
-		}),
-	);
+	// The active media server and whether it sees Reelix's library folders (docs/plugins.md §7.7); its plugin checks the service itself.
+	if (app.plugins)
+		checks.push(
+			await check("media server", async () => {
+				const p = activeMediaServer(app);
+				if (!p) return { ok: null, detail: `${missingMediaServer(app)} It is optional.` };
+				const [info, libs] = await Promise.all([p.call("info", []), p.call("libraries", [])]);
+				const detail = `${p.label} ${info.name} ${info.version}; libraries: ${libs.map((l) => `${l.name}=${l.paths.join("|")}`).join("; ") || "none"}`;
+				const near = (a: string, b: string) => a === b || a.startsWith(`${b.replace(/\/+$/, "")}/`) || b.startsWith(`${a.replace(/\/+$/, "")}/`);
+				const unseen = Object.entries(libraryRoots(app)).flatMap(([k, r]) => (r && !libs.some((l) => l.paths.some((lp) => near(serverPath(app, p.id, r), lp))) ? [`${k} (${serverPath(app, p.id, r)} there)`] : []));
+				if (unseen.length) return { ok: false, detail: `${detail}. No library of ${p.label} holds ${unseen.join(", ")}`, fix: `Add the folder as a library in ${p.label}, or say how its paths look: reelix config set path_maps.media_servers.${p.id} '[{"theirs":"/data/media","ours":"/media"}]'` };
+				return { ok: true, detail };
+			}),
+		);
 
 	checks.push(
 		await check("tools", () => {
@@ -195,10 +160,26 @@ export async function doctor(app: Reelix, opts: { quick?: boolean } = {}): Promi
 	checks.push(
 		await check("identity", () => {
 			const uid = process.getuid?.();
-			return { ok: uid !== 0, detail: `running as uid ${uid} gid ${process.getgid?.()}${uid === 0 ? " — should not be root; run as qBittorrent's user" : ""}` };
+			return { ok: uid !== 0, detail: `running as uid ${uid} gid ${process.getgid?.()}${uid === 0 ? " — should not be root; run as the downloader's user" : ""}` };
 		}),
 	);
+	// The plugins' own checks: services only they know about (docs/plugins.md §6).
+	if (!app.plugins) checks.push({ name: "plugins", ok: null, detail: "not checked: plugins run inside the server (start it with `reelix serve`)" });
+	for (const [name, run] of app.checks) {
+		const r = await check(name, async () => (await withTimeout(run({ quick: !!opts.quick }))) ?? { ok: null, detail: "" });
+		if (r.detail || r.ok !== null) checks.push(r);
+	}
 	return checks;
+}
+
+const PLUGIN_CHECK_MS = 30_000;
+
+function withTimeout<T>(p: Promise<T>): Promise<T> {
+	let timer!: NodeJS.Timeout;
+	const timeout = new Promise<never>((_, reject) => {
+		timer = setTimeout(() => reject(new Error(`no answer within ${PLUGIN_CHECK_MS / 1000} seconds`)), PLUGIN_CHECK_MS);
+	});
+	return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
 }
 
 export function checksToText(checks: Check[]): string {

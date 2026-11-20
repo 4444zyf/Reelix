@@ -1,7 +1,18 @@
+.git
 node_modules
+plugins/*/node_modules
 references
 .tools
 .dev-data
 packages/web/dist
 packages/web/.astro
 *.log
+
+# local Docker Compose setup (docs/deployment.md): secrets and service data, never in git or the image
+.env
+docker-compose.override.yml
+reelix-data/
+magpie-config/
+qbittorrent-config/
+jackett-config/
+jellyfin-config/

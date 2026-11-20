@@ -1,0 +1,22 @@
+{
+	"description": "Sources de sous-titres : SubHD, ASSRT, OpenSubtitles, SubDL, Gestdown et Jimaku.",
+	"settings": {
+		"subhd_url": "Adresse de SubHD",
+		"subhd_url_help": "Ne changez l'adresse d'un site que s'il a déménagé.",
+		"assrt_url": "Adresse d'ASSRT",
+		"opensubtitles_url": "Adresse de l'API OpenSubtitles.com",
+		"subdl_url": "Adresse de l'API SubDL",
+		"subdl_download_url": "Adresse de téléchargement SubDL",
+		"gestdown_url": "Adresse de Gestdown",
+		"jimaku_url": "Adresse de l'API Jimaku"
+	},
+	"secrets": {
+		"assrt_token": "Jeton API ASSRT",
+		"opensubtitles_api_key": "Clé API OpenSubtitles.com (opensubtitles.com/consumers)",
+		"opensubtitles_username": "Nom d'utilisateur OpenSubtitles.com (facultatif : quota quotidien plus élevé)",
+		"opensubtitles_password": "Mot de passe OpenSubtitles.com (facultatif, avec le nom d'utilisateur)",
+		"opensubtitles_token": "Jeton de connexion OpenSubtitles.com (Reelix l'obtient seul avec le nom d'utilisateur et le mot de passe)",
+		"subdl_api_key": "Clé API SubDL (subdl.com, compte → API)",
+		"jimaku_api_key": "Clé API Jimaku (jimaku.cc, compte → API ; sous-titres d'anime japonais)"
+	}
+}

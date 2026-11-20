@@ -1,20 +1,23 @@
 import { AlertCircle, Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
 
 export function Spinner({ className }: { className?: string }) {
 	return <Loader2 className={cn("h-4 w-4 animate-spin", className)} />;
 }
 
-export function Loading({ label = "Loading…" }: { label?: string }) {
+export function Loading({ label }: { label?: string }) {
+	const { t } = useTranslation();
 	return (
 		<div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
-			<Spinner /> {label}
+			<Spinner /> {label ?? t("loading")}
 		</div>
 	);
 }
 
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+	const { t } = useTranslation();
 	const msg = error instanceof Error ? error.message : String(error);
 	return (
 		<div className="rounded-xl bg-destructive/15 p-4 text-destructive-foreground">
@@ -23,7 +26,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
 			</div>
 			{onRetry && (
 				<button className="mt-2 text-sm underline underline-offset-4" onClick={onRetry}>
-					Try again
+					{t("actions.retry")}
 				</button>
 			)}
 		</div>

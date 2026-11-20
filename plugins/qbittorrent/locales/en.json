@@ -1,0 +1,11 @@
+{
+	"description": "Downloads through qBittorrent's Web API (4.x and 5.x).",
+	"settings": {
+		"url": "Address of qBittorrent's Web UI",
+		"url_help": "For example http://qbittorrent:8080. How its folders look to Reelix is the path map under Settings → Downloads.",
+		"username": "User name"
+	},
+	"secrets": {
+		"password": "Web UI password"
+	}
+}

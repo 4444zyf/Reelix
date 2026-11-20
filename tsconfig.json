@@ -10,7 +10,10 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "reelix-plugin-release-tags/contract": ["./plugins/examples/release-tags/src/contract.ts"]
+    }
   },
-  "include": ["packages/core/src", "packages/core/test", "packages/cli/src", "packages/server/src", "packages/server/test", "preflight"]
+  "include": ["packages/core/src", "packages/core/test", "packages/cli/src", "packages/cli/templates", "packages/cli/test", "packages/server/src", "packages/server/test", "packages/plugin/src", "packages/plugin-testing/src", "packages/plugin-testing/test", "plugins", "preflight", "website"]
 }

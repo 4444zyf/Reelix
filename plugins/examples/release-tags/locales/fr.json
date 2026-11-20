@@ -1,0 +1,5 @@
+{
+	"description": "Exemple : demande aux plugins d'étiquetage ce que dit le nom d'une sortie et affiche les étiquettes à côté.",
+	"note": "Étiquettes : {{tags}}",
+	"reason": "Étiquettes lues dans les noms des sorties par les plugins d'étiquetage"
+}

@@ -1,0 +1,8 @@
+{
+	"description": "Exemple : masque les versions dont le nom contient un mot de votre liste.",
+	"reason": "Le nom contient « {{word}} »",
+	"settings": {
+		"words": "Mots",
+		"words_help": "Une release dont le nom contient l'un de ces mots est masquée."
+	}
+}

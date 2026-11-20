@@ -4,7 +4,11 @@ import { BrowserRouter } from "react-router";
 import { Toaster } from "../components/ui/toaster";
 import { ApiError, UNAUTHORIZED_EVENT, endpoints } from "../lib/api";
 import { ChatProvider } from "../lib/chat";
+import "../lib/theme";
+import i18n, { isLang, setLanguage } from "../lib/i18n";
+import { useTranslation } from "react-i18next";
 import { AppEvents } from "../lib/events";
+import { AppSync } from "../lib/push";
 import { Loading } from "../components/common/States";
 import { LoginScreen } from "../screens/LoginScreen";
 import { AppRoutes } from "./router";
@@ -18,15 +22,22 @@ function Gate() {
 		return () => window.removeEventListener(UNAUTHORIZED_EVENT, on);
 	}, [qc]);
 
-	if (session.isLoading) return <Loading label="Connecting to Reelix…" />;
+	const { t } = useTranslation(["nav", "common"]);
+	// The owner's language lives on the server (config `language`); this browser follows it.
+	const serverLang = session.data?.language;
+	useEffect(() => {
+		if (isLang(serverLang) && serverLang !== i18n.language) setLanguage(serverLang);
+	}, [serverLang]);
+
+	if (session.isLoading) return <Loading label={t("connecting")} />;
 	if (session.error)
 		return (
 			<div className="flex h-dvh items-center justify-center p-6 text-center text-muted-foreground">
 				<div>
-					<p className="text-lg text-foreground">Reelix is not reachable.</p>
+					<p className="text-lg text-foreground">{t("unreachable")}</p>
 					<p className="text-sm">{(session.error as Error).message}</p>
 					<button className="mt-3 text-sm text-primary underline" onClick={() => session.refetch()}>
-						Try again
+						{t("common:actions.retry")}
 					</button>
 				</div>
 			</div>
@@ -45,6 +56,7 @@ function Gate() {
 		<BrowserRouter>
 			<ChatProvider>
 				<AppEvents />
+				<AppSync />
 				<AppRoutes />
 			</ChatProvider>
 		</BrowserRouter>
@@ -64,9 +76,11 @@ export function App() {
 				},
 			}),
 	);
+	// A language switch re-mounts the app so every formatted date and number follows it.
+	const { i18n: live } = useTranslation();
 	return (
 		<QueryClientProvider client={client}>
-			<Gate />
+			<Gate key={live.language} />
 			<Toaster />
 		</QueryClientProvider>
 	);

@@ -1,0 +1,22 @@
+{
+  "name": "reelix-plugin-subtitle-sites",
+  "version": "0.1.0",
+  "description": "Subtitle sources: SubHD, ASSRT, OpenSubtitles, SubDL, Gestdown and Jimaku.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["reelix-plugin"],
+  "peerDependencies": { "@reelix/plugin": "*" },
+  "reelix": {
+    "api": 0,
+    "id": "subtitle-sites",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "settings": "./settings.schema.json",
+    "uses": {
+      "provides": ["reelix:subtitle.source@1"],
+      "network": ["config:subhd_url", "config:assrt_url", "config:opensubtitles_url", "config:subdl_url", "config:subdl_download_url", "config:gestdown_url", "config:jimaku_url", "*"],
+      "secrets": ["assrt_token", "opensubtitles_api_key", "opensubtitles_username", "opensubtitles_password", "opensubtitles_token", "subdl_api_key", "jimaku_api_key"]
+    }
+  }
+}

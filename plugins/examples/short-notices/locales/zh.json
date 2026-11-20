@@ -1,0 +1,7 @@
+{
+	"description": "示例：缩短发送到设备的通知正文。",
+	"reason": "已缩短至 {{max}} 个字符",
+	"settings": {
+		"max_body": "正文最长（字符）"
+	}
+}

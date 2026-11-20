@@ -1,0 +1,12 @@
+{
+	"type": "object",
+	"required": [
+		"base_url"
+	],
+	"properties": {
+		"base_url": {
+			"type": "string",
+			"default": "https://api.bgm.tv"
+		}
+	}
+}

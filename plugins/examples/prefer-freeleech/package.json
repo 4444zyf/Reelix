@@ -1,0 +1,25 @@
+{
+  "name": "reelix-plugin-prefer-freeleech",
+  "version": "0.1.0",
+  "description": "Reference plugin: puts freeleech releases first.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "reelix-plugin"
+  ],
+  "peerDependencies": {
+    "@reelix/plugin": "*"
+  },
+  "reelix": {
+    "api": 0,
+    "id": "prefer-freeleech",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "uses": {
+      "hooks": [
+        "release.rank@1"
+      ]
+    }
+  }
+}

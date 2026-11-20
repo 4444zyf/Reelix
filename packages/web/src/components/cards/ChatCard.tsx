@@ -1,15 +1,17 @@
 import { FileText } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useChat } from "../../lib/chat";
-import type { Candidate, Card, Download, IndexerOutcome, PlanItem, Release, SubtitleSearch, Title } from "../../lib/types";
+import type { Candidate, Card, Download, IndexerOutcome, PlanItem, PlayTarget, PluginCardData, Release, SubtitleSearch, Title } from "../../lib/types";
+import { PlayCard } from "../media/PlayButton";
 import { Markdown } from "../common/Markdown";
 import { SubtitleResults } from "../media/Subtitles";
 import { Captions } from "lucide-react";
 import { CandidatesCard } from "./CandidatesCard";
 import { CardShell } from "./CardShell";
 import { DownloadsCard } from "./DownloadsCard";
-import { GenericCard } from "./GenericCard";
 import { ImageCard, VerificationCard } from "./ImageCard";
 import { PlanCard } from "./PlanCard";
+import { PluginCard } from "./PluginCard";
 import { ProgressCard } from "./ProgressCard";
 import { ReleasesCard } from "./ReleasesCard";
 import { TitleCard } from "./TitleCard";
@@ -19,16 +21,19 @@ import { TitleCard } from "./TitleCard";
  * then leave a short note in the thread so the agent knows what the owner did (design §7.2).
  */
 export function ChatCard({ card, threadId }: { card: Card; threadId?: string }) {
+	const { t } = useTranslation("chat");
 	const { note, askAbout } = useChat();
 	const tell = (text: string) => {
 		if (threadId) void note(threadId, text);
 	};
 	const c = card as Record<string, any>;
 	switch (card.kind) {
+		case "play":
+			return c.play ? <PlayCard target={c.play as PlayTarget} /> : null;
 		case "title":
 			return c.title ? <TitleCard title={c.title as Title} /> : null;
 		case "candidates":
-			return <CandidatesCard candidates={(c.candidates ?? []) as Candidate[]} onPick={threadId ? (x) => tell(`It is ${x.name}${x.year ? ` (${x.year})` : ""}, ${x.id}.`) : undefined} />;
+			return <CandidatesCard candidates={(c.candidates ?? []) as Candidate[]} onPick={threadId ? (x) => tell(x.year ? t("cards.agent.candidateYear", { name: x.name, year: x.year, id: x.id }) : t("cards.agent.candidate", { name: x.name, id: x.id })) : undefined} />;
 		case "releases":
 			return (
 				<ReleasesCard
@@ -37,7 +42,7 @@ export function ChatCard({ card, threadId }: { card: Card; threadId?: string }) 
 					reason={c.reason as string | undefined}
 					total={c.total as number | undefined}
 					indexers={c.indexers as IndexerOutcome[] | undefined}
-					onDownloaded={(r, out) => tell(`I downloaded release ${r.handle} ("${r.title}") from the list${out.adopted ? " (it was already in qBittorrent and was adopted)" : ""}. Hash ${out.hash.slice(0, 10)}.`)}
+					onDownloaded={(r, out) => tell(t(out.adopted ? "cards.agent.downloadedAdopted" : "cards.agent.downloaded", { handle: r.handle, title: r.title, hash: out.hash.slice(0, 10) }))}
 				/>
 			);
 		case "plan":
@@ -48,8 +53,8 @@ export function ChatCard({ card, threadId }: { card: Card; threadId?: string }) 
 					results={c.results}
 					mode={c.mode as string | undefined}
 					reason={c.reason as string | undefined}
-					onApplied={(_o, text) => tell(`I approved the plan and it was applied:\n${text.slice(0, 1500)}`)}
-					onEdit={() => askAbout("About the plan above, change this: ")}
+					onApplied={(_o, text) => tell(t("cards.agent.planApplied", { text: text.slice(0, 1500) }))}
+					onEdit={() => askAbout(t("cards.agent.planEdit"))}
 				/>
 			);
 		case "progress":
@@ -62,8 +67,8 @@ export function ChatCard({ card, threadId }: { card: Card; threadId?: string }) 
 			return <VerificationCard image={String(c.image)} text={c.text as string | undefined} onCode={threadId ? (code) => tell(code) : undefined} threadId={threadId} />;
 		case "subtitles":
 			return (
-				<CardShell icon={<Captions />} title={`Subtitles${c.title ? ` for ${String(c.title)}` : ""}`}>
-					<SubtitleResults data={{ have: [], candidates: [], errors: [], ...(c as object) } as SubtitleSearch} fetchLabel="Use this" onFetch={threadId ? async (s) => tell(`Use subtitle ${s.ref}${s.title ? ` ("${s.title}")` : ""}.`) : undefined} />
+				<CardShell icon={<Captions />} title={c.title ? t("cards.subtitles.titleFor", { title: String(c.title) }) : t("cards.subtitles.title")}>
+					<SubtitleResults data={{ have: [], candidates: [], errors: [], ...(c as object) } as SubtitleSearch} fetchLabel={t("cards.subtitles.use")} onFetch={threadId ? async (s) => tell(s.title ? t("cards.agent.subtitleTitled", { ref: s.ref, title: s.title }) : t("cards.agent.subtitle", { ref: s.ref })) : undefined} />
 				</CardShell>
 			);
 		case "text":
@@ -72,7 +77,9 @@ export function ChatCard({ card, threadId }: { card: Card; threadId?: string }) 
 					<Markdown text={String(c.text ?? "")} />
 				</CardShell>
 			);
+		case "plugin":
+			return <PluginCard card={card as PluginCardData} onPressed={(label, text) => tell(t("cards.agent.pressed", { label, plugin: c.plugin, text: text.slice(0, 1500) }))} />;
 		default:
-			return <GenericCard card={card as { kind: string }} />;
+			return null;
 	}
 }

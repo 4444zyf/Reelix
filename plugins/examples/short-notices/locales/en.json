@@ -1,0 +1,7 @@
+{
+	"description": "Example: shortens the text of notices sent to your devices.",
+	"reason": "Shortened to {{max}} characters",
+	"settings": {
+		"max_body": "Longest text (characters)"
+	}
+}

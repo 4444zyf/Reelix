@@ -1,0 +1,168 @@
+{
+	"welcome": {
+		"title": "Что посмотрим?",
+		"subtitle": "Попросите фильм или сериал, исправление в библиотеке или что угодно о настройке.",
+		"suggestions": {
+			"downloading": "Что сейчас скачивается?",
+			"newSeason": "Найди новый сезон сериала, который я отслеживаю",
+			"doctor": "Проверь, что всё настроено (диагностика)",
+			"lastNight": "Что ты делал прошлой ночью?"
+		}
+	},
+	"pane": {
+		"conversations": "Разговоры",
+		"conversation": "Разговор",
+		"newChat": "Новый чат",
+		"working": "работает",
+		"actions": "Действия с разговором",
+		"rename": "Переименовать",
+		"close": "Закрыть чат",
+		"noMessages": "Сообщений пока нет.",
+		"thinking": "думает"
+	},
+	"threads": {
+		"renameTitle": "Переименовать разговор",
+		"archive": "В архив",
+		"waiting": "ждёт ответа",
+		"running": "выполняется",
+		"empty": "Разговоров пока нет."
+	},
+	"ask": {
+		"answerPlaceholder": "Ваш ответ",
+		"secret": "секрет",
+		"send": "Отправить",
+		"skip": "Пропустить",
+		"secretNote": "Сохранено в файле секретов сервера как {{key}}. Агент узнает только, что значение указано.",
+		"orType": "Или введите ответ ниже."
+	},
+	"composer": {
+		"pastedImage": "вставленное изображение",
+		"imageTooLarge": "Изображение слишком большое",
+		"imageTooLargeDetail": "{{name}}: {{size}} (лимит {{limit}})",
+		"droppedFile": "Я загрузил файл в {{path}} ({{name}}, {{size}}).",
+		"uploadFailed": "Не удалось загрузить: {{name}}",
+		"dropHint": "Отпустите, чтобы загрузить и сообщить агенту",
+		"removeImage": "Убрать изображение",
+		"uploading": "Загрузка…",
+		"attach": "Прикрепить файлы",
+		"placeholderRunning": "Добавьте что-нибудь — это будет доставлено после текущего шага",
+		"placeholderAnswer": "Введите ответ…",
+		"placeholder": "Спросите Reelix…",
+		"stop": "Остановить",
+		"send": "Отправить"
+	},
+	"message": {
+		"from": "через {{source}}",
+		"images_one": "{{count}} изображение",
+		"images_few": "{{count}} изображения",
+		"images_many": "{{count}} изображений",
+		"images_other": "{{count}} изображения",
+		"queued": "будет доставлено после текущего шага",
+		"answered": "Ответ: {{text}}"
+	},
+	"tools": {
+		"earlier_one": "{{count}} предыдущий шаг",
+		"earlier_few": "{{count}} предыдущих шага",
+		"earlier_many": "{{count}} предыдущих шагов",
+		"earlier_other": "{{count}} предыдущего шага"
+	},
+	"notices": {
+		"stopped": "Остановлено.",
+		"failed": "Что-то пошло не так.",
+		"messageNotSent": "Сообщение не отправлено",
+		"noteFailed": "Не удалось сообщить агенту",
+		"answerFailed": "Ответ не принят",
+		"stopFailed": "Не удалось остановить",
+		"problem": "Проблема",
+		"notice": "Уведомление"
+	},
+	"cards": {
+		"candidates": {
+			"none": "Совпадений не найдено",
+			"count_one": "{{count}} возможное совпадение",
+			"count_few": "{{count}} возможных совпадения",
+			"count_many": "{{count}} возможных совпадений",
+			"count_other": "{{count}} возможного совпадения",
+			"tv": "Сериал",
+			"movie": "Фильм",
+			"chosen": "Выбрано",
+			"pick": "Этот"
+		},
+		"agent": {
+			"candidate": "Это {{name}}, {{id}}.",
+			"candidateYear": "Это {{name}} ({{year}}), {{id}}.",
+			"downloaded": "Я скачал релиз {{handle}} («{{title}}») из списка. Hash {{hash}}.",
+			"downloadedAdopted": "Я скачал релиз {{handle}} («{{title}}») из списка (он уже был в загрузчике и был принят). Hash {{hash}}.",
+			"planApplied": "Я одобрил план, и он применён:\n{{text}}",
+			"planEdit": "По плану выше: измени вот что: ",
+			"subtitle": "Используй субтитры {{ref}}.",
+			"subtitleTitled": "Используй субтитры {{ref}} («{{title}}»).",
+			"pressed": "Я нажал «{{label}}» на карточке {{plugin}}: {{text}}"
+		},
+		"subtitles": {
+			"title": "Субтитры",
+			"titleFor": "Субтитры для «{{title}}»",
+			"use": "Использовать"
+		},
+		"downloads": {
+			"none": "Загрузок нет."
+		},
+		"image": {
+			"alt": "изображение от агента"
+		},
+		"verification": {
+			"title": "Требуется проверка",
+			"alt": "проверка",
+			"code": "Код",
+			"codeSent": "Код отправлен. Ещё один?",
+			"send": "Отправить",
+			"liveView": "Открыть трансляцию"
+		},
+		"plan": {
+			"title_one": "План: {{count}} пункт",
+			"title_few": "План: {{count}} пункта",
+			"title_many": "План: {{count}} пунктов",
+			"title_other": "План: {{count}} пункта",
+			"titleApplied_one": "План: {{count}} пункт (применён)",
+			"titleApplied_few": "План: {{count}} пункта (применён)",
+			"titleApplied_many": "План: {{count}} пунктов (применён)",
+			"titleApplied_other": "План: {{count}} пункта (применён)",
+			"applied": "План применён",
+			"notApplied": "План не применён",
+			"approve": "Одобрить"
+		},
+		"progress": {
+			"checking": "Проверяем загрузку…",
+			"unknown": "Эта загрузка неизвестна (возможно, её удалили)."
+		},
+		"releases": {
+			"count_one": "{{count}} релиз",
+			"count_few": "{{count}} релиза",
+			"count_many": "{{count}} релизов",
+			"count_other": "{{count}} релиза",
+			"countOf_one": "{{count}} релиз из {{total}}",
+			"countOf_few": "{{count}} релиза из {{total}}",
+			"countOf_many": "{{count}} релизов из {{total}}",
+			"countOf_other": "{{count}} релиза из {{total}}",
+			"pick": "Выбор:",
+			"pickHandle": "Выбор {{handle}}:",
+			"showFewer": "Свернуть",
+			"showAll": "Показать все ({{n}})"
+		},
+		"title": {
+			"inLibrary_one": "в библиотеке · {{count}} файл",
+			"inLibrary_few": "в библиотеке · {{count}} файла",
+			"inLibrary_many": "в библиотеке · {{count}} файлов",
+			"inLibrary_other": "в библиотеке · {{count}} файла",
+			"followed": "отслеживается",
+			"releases": "Релизы"
+		},
+		"plugin": {
+			"from": "От плагина {{plugin}}",
+			"more_one": "и ещё {{count}}",
+			"more_few": "и ещё {{count}}",
+			"more_many": "и ещё {{count}}",
+			"more_other": "и ещё {{count}}"
+		}
+	}
+}

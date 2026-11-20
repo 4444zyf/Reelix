@@ -1,0 +1,25 @@
+{
+	"description": "Telegram: notices with buttons and pictures, and chat with the agent.",
+	"linked": "Linked. I'll send notices here, and you can chat with me in this conversation.",
+	"gotIt": "Got it.",
+	"answered": "Answered: {{answer}}",
+	"alreadyHandled": "Already handled",
+	"questionClosed": "That question is closed",
+	"approveInWeb": "This chat may not approve that. Please approve it in the web app.",
+	"replyToAnswer": "(Reply to this message to answer.)",
+	"test": "Reelix test message: notices will arrive here.",
+	"answeredStatus": "answered",
+	"dismissedStatus": "dismissed",
+	"settings": {
+		"api_url": "Bot API address",
+		"api_url_help": "Leave it as it is unless you run your own Bot API server."
+	},
+	"secrets": {
+		"bot_token": "Bot token, from @BotFather"
+	},
+	"buttons": {
+		"status": "Check the bot",
+		"link": "Get a linking code",
+		"test": "Send a test message"
+	}
+}

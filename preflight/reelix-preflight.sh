@@ -51,6 +51,23 @@ case "$ARCH" in
 	*) bad "CPU architecture $ARCH is not supported (Chromium has no build for it)" ;;
 esac
 
+# The NAS's home network (for magpie's allow list: the owner's browser opens magpie's page from it).
+LAN_CIDR=""
+if command -v ip >/dev/null 2>&1; then
+	dev=$(ip -4 route show default 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
+	cidr=$(ip -o -4 addr show dev "${dev:-none}" 2>/dev/null | awk '{print $4; exit}')
+	if [ -n "$cidr" ]; then
+		IFS=./ read -r a b c d bits <<< "$cidr"
+		n=$(( (a<<24 | b<<16 | c<<8 | d) & (bits == 0 ? 0 : (0xFFFFFFFF << (32 - bits)) & 0xFFFFFFFF) ))
+		LAN_CIDR="$(( n>>24 & 255 )).$(( n>>16 & 255 )).$(( n>>8 & 255 )).$(( n & 255 ))/$bits"
+		case "$a.$b" in
+			10.*|192.168|172.1[6-9]|172.2[0-9]|172.3[01]|100.6[4-9]|100.[7-9][0-9]|100.1[01][0-9]|100.12[0-7]) say "  home network: $LAN_CIDR (via $dev)" ;;
+			*) note "the NAS's network $LAN_CIDR is public, not a home network: magpie's page stays on the NAS itself"
+			   LAN_CIDR=""; PUBLIC_NET=1 ;;
+		esac
+	fi
+fi
+
 # ---------------------------------------------------------------- 2. containers
 hr "Containers"
 DOCKER=""
@@ -58,6 +75,29 @@ for d in docker /usr/local/bin/docker /var/packages/ContainerManager/target/usr/
 	if command -v "$d" >/dev/null 2>&1; then DOCKER="$d"; break; fi
 done
 QB_MOUNTS=""; QB_UID=""; QB_GID=""; JF_UID=""; JF_GID=""; JF_MOUNTS=""; QB_CONFIG_HOST=""
+QB_URL=""; JK_URL=""; JF_URL=""; JOIN_NETWORK=""; QB_FOUND=""; JK_FOUND=""; JF_FOUND=""
+# How Reelix's container reaches a found container (docs/deployment.md, "Reaching each other"):
+#   a user network -> join it, use the container name; behind a VPN container -> that container's name;
+#   host networking -> host.docker.internal; Docker's default bridge (no names) -> the published port on the NAS.
+reach() {   # sets REACH (the address) and may set JOIN_NETWORK; no subshell, so both survive
+	local c="$1" port="$2" mode nets net pub via
+	REACH=""
+	mode=$(inspect "$c" '{{.HostConfig.NetworkMode}}')
+	case "$mode" in
+		host) REACH="http://host.docker.internal:$port"; return ;;
+		container:*)
+			via=$(inspect "${mode#container:}" '{{.Name}}' | sed 's#^/##'); [ -z "$via" ] && via=${mode#container:}
+			c="$via" ;;
+	esac
+	nets=$(inspect "$c" '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}')
+	net=$(say "$nets" | tr ' ' '\n' | grep -v -E '^(bridge|host|none)?$' | head -1)
+	if [ -n "$net" ]; then
+		[ -z "$JOIN_NETWORK" ] && JOIN_NETWORK="$net"
+		REACH="http://$c:$port"; return
+	fi
+	pub=$(inspect "$c" "{{(index (index .NetworkSettings.Ports \"$port/tcp\") 0).HostPort}}")
+	REACH="http://host.docker.internal:${pub:-$port}"
+}
 inspect() { "$DOCKER" inspect --format "$2" "$1" 2>/dev/null; }
 env_of() { inspect "$1" '{{range .Config.Env}}{{println .}}{{end}}' | grep -E "^$2=" | head -1 | cut -d= -f2; }
 if [ -z "$DOCKER" ]; then
@@ -81,10 +121,13 @@ else
 		say "  $label ($c): runs as uid=${uid:-root?} gid=${gid:-?}"
 		say "$mounts" | sed 's/^/      mount: /'
 		case "$label" in
-			qBittorrent) QB_MOUNTS="$mounts"; QB_UID="$uid"; QB_GID="$gid"
-				QB_CONFIG_HOST=$(say "$mounts" | awk -F' -> ' '$2=="/config" {print $1}') ;;
-			Jellyfin) JF_MOUNTS="$mounts"; JF_UID="$uid"; JF_GID="$gid" ;;
+			qBittorrent) QB_MOUNTS="$mounts"; QB_UID="$uid"; QB_GID="$gid"; QB_FOUND="$c"
+				QB_CONFIG_HOST=$(say "$mounts" | awk -F' -> ' '$2=="/config" {print $1}')
+				reach "$c" "$(env_of "$c" WEBUI_PORT | grep . || echo 8080)"; QB_URL=$REACH ;;
+			Jackett) JK_FOUND="$c"; reach "$c" 9117; JK_URL=$REACH ;;
+			Jellyfin) JF_MOUNTS="$mounts"; JF_UID="$uid"; JF_GID="$gid"; JF_FOUND="$c"; reach "$c" 8096; JF_URL=$REACH ;;
 		esac
+		say "      Reelix will reach it at: $REACH"
 	done
 fi
 
@@ -201,17 +244,46 @@ fi
 hr "Recommendation"
 if [ ${#BAD[@]} -eq 0 ] && [ -n "$MEDIA_ROOT" ] && [ "$MEDIA_ROOT" != "/" ]; then
 	DL_REL=${DOWNLOADS#$MEDIA_ROOT}; LIB_REL=${LIBRARY#$MEDIA_ROOT}
-	say "This layout works. Mount the common parent ONCE into Reelix as /media:"
+	say "This layout works. Put this in .env next to docker-compose.yml (from .env.example):"
 	say ""
-	say "  docker run -d --name reelix --restart unless-stopped \\"
-	say "    --user ${QB_UID:-1000}:${QB_GID:-1000} \\"
-	say "    -p 7878:7878 \\"
-	say "    -v $MEDIA_ROOT:/media \\"
-	say "    -v /path/to/reelix-data:/data \\"
-	say "    reelix:latest"
+	PROFILES=""
+	[ -z "$QB_FOUND" ] && PROFILES="$PROFILES,qbittorrent"
+	[ -z "$JK_FOUND" ] && PROFILES="$PROFILES,jackett"
+	[ -z "$JF_FOUND" ] && PROFILES="$PROFILES,jellyfin"
+	say "  COMPOSE_PROFILES=${PROFILES#,}        # add ,magpie for the model gateway"
+	say "  MEDIA_ROOT=$MEDIA_ROOT"
+	say "  PUID=${QB_UID:-1000}"
+	say "  PGID=${QB_GID:-1000}"
+	say "  QBITTORRENT_URL=${QB_URL:-http://qbittorrent:8080}"
+	say "  JACKETT_URL=${JK_URL:-http://jackett:9117}"
+	say "  JELLYFIN_URL=${JF_URL:-http://jellyfin:8096}"
+	say "  MAGPIE_URL=http://magpie:3425"
+	if [ -n "${PUBLIC_NET:-}" ]; then
+		say "  MAGPIE_ALLOW_IPS_EXTRA=             # public network: nobody else"
+		say "  MAGPIE_WEB_BIND=127.0.0.1           # open magpie's page through an SSH tunnel: ssh -L 3430:127.0.0.1:3430 <nas>"
+	else
+		say "  MAGPIE_ALLOW_IPS_EXTRA=${LAN_CIDR}     # your home network may open magpie's page"
+	fi
 	say ""
-	say "  Then in Reelix: downloads = /media$DL_REL, library = /media$LIB_REL/{Movies,Shows,Anime}"
-	say "  qBittorrent path map: its save path ${QB_SAVE:-?} = /media$DL_REL"
+	if [ -n "$JOIN_NETWORK" ]; then
+		say "  Reelix joins the network of your existing containers so it can call them by name."
+		say "  Copy docker-compose.override.example.yml to docker-compose.override.yml with:"
+		say "    name: $JOIN_NETWORK"
+		say ""
+	fi
+	say "  In Reelix: downloads = /media$DL_REL, library = /media$LIB_REL/{Movies,Shows,Anime}"
+	QB_MEDIA_DST=$(say "$QB_MOUNTS" | awk -F' -> ' -v r="$MEDIA_ROOT" '$1==r {print $2}' | head -1)
+	if [ -n "$QB_FOUND" ] && [ "${QB_MEDIA_DST:-/media}" != "/media" ]; then
+		say "  qBittorrent sees this folder as ${QB_MEDIA_DST:-?}, not /media; tell Reelix once it runs:"
+		say "    reelix config set path_maps.downloaders.qbittorrent '[{\"theirs\":\"${QB_MEDIA_DST:-?}\",\"ours\":\"/media\"}]'"
+	elif [ -n "$QB_FOUND" ] && [ -z "$QB_MEDIA_DST" ]; then
+		say "  qBittorrent's save path ${QB_SAVE:-?} = /media$DL_REL in Reelix (set path_maps.downloaders.qbittorrent if they differ)"
+	fi
+	JF_MEDIA_DST=$(say "$JF_MOUNTS" | awk -F' -> ' -v r="$MEDIA_ROOT" '$1==r {print $2}' | head -1)
+	if [ -n "$JF_FOUND" ] && [ -n "$JF_MEDIA_DST" ] && [ "$JF_MEDIA_DST" != "/media" ]; then
+		say "  Jellyfin sees this folder as $JF_MEDIA_DST; tell Reelix once it runs:"
+		say "    reelix config set path_maps.media_servers.jellyfin '[{\"theirs\":\"$JF_MEDIA_DST\",\"ours\":\"/media\"}]'"
+	fi
 else
 	say "The layout needs a change before Reelix can hard-link:"
 	for b in "${BAD[@]}"; do say "  - $b"; done
@@ -226,4 +298,4 @@ else
 fi
 say ""
 say "Nothing was changed except one test link, created and removed."
-say "REELIX_PREFLIGHT nas=\"$NAS\" arch=$ARCH downloads=\"$DOWNLOADS\" library=\"$LIBRARY\" media_root=\"$MEDIA_ROOT\" qb_uid=${QB_UID:-} qb_gid=${QB_GID:-} jf_uid=${JF_UID:-} failures=${#BAD[@]}"
+say "REELIX_PREFLIGHT nas=\"$NAS\" arch=$ARCH downloads=\"$DOWNLOADS\" library=\"$LIBRARY\" media_root=\"$MEDIA_ROOT\" qb_uid=${QB_UID:-} qb_gid=${QB_GID:-} jf_uid=${JF_UID:-} qb_url=\"${QB_URL:-}\" jackett_url=\"${JK_URL:-}\" jellyfin_url=\"${JF_URL:-}\" join_network=\"${JOIN_NETWORK:-}\" lan=\"${LAN_CIDR:-}\" failures=${#BAD[@]}"

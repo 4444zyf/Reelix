@@ -1,0 +1,11 @@
+{
+	"title": "Appearance",
+	"description": "One language for Reelix, on every device. The theme is kept in this browser.",
+	"theme": "Theme",
+	"matchDevice": "Match device",
+	"matchDeviceDescription": "{{dark}} when the device is dark, {{light}} when it is light.",
+	"language": "Language",
+	"languageHint": "Everything follows it: pages, dates and numbers, titles and overviews from TMDB, the agent's own messages, inbox notices and Telegram. The agent still answers in whatever language you write to it.",
+	"installed": "installed",
+	"makeYourOwn": "Themes are folders in {{dir}}: copy one with “reelix theme new”, or ask the agent to make one."
+}

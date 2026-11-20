@@ -4,16 +4,15 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { QbClient } from "../src/clients/qbittorrent.ts";
-import { fileDownload, getDownload, watchTick, type WatchEvent } from "../src/downloads.ts";
+import { fileDownload, getDownload, watchTick, type WatchEvent, type WatchState } from "../src/downloads.ts";
 import { runOperation } from "../src/registry.ts";
 import { parseTorrent } from "../src/torrent.ts";
 import { ReelixError } from "../src/util.ts";
 import { makeTorrent } from "./fakes/bencode.ts";
-import { startFakeJackett, type FakeIndexer } from "./fakes/jackett.ts";
-import { startFakeQb, type FakeQbVersion, type MagnetMeta } from "./fakes/qbittorrent.ts";
+import { startFakeJackett, type FakeIndexer } from "../../../plugins/jackett/test/fake-jackett.ts";
+import { startFakeQb, type FakeQbVersion, type MagnetMeta } from "../../../plugins/qbittorrent/test/fake-qbittorrent.ts";
 import { startFakeTmdb } from "./fakes/tmdb.ts";
-import { tempApp } from "./helpers.ts";
+import { tempApp, withPlugins } from "./helpers.ts";
 
 // probe() looks for ffprobe in ./.tools/bin; run from elsewhere so no real binary is ever executed
 // (the cheap content check is then skipped, as on a system without ffprobe).
@@ -95,13 +94,14 @@ async function world(opts: { version?: FakeQbVersion; magnets?: Record<string, M
 	const jackett = await startFakeJackett({ apiKey: JACKETT_KEY, indexers: defaultIndexers() });
 	const tmdb = await startFakeTmdb();
 	const { app } = t;
-	app.setConfig("qbittorrent", { url: qb.url, username: "admin" });
-	app.setSecret("qbittorrent.password", QB_PASSWORD);
-	app.setConfig("jackett", { url: jackett.url });
-	app.setSecret("jackett.api_key", JACKETT_KEY);
+	app.setConfig("plugins.qbittorrent.url", qb.url);
+	app.setSecret("plugins.qbittorrent.password", QB_PASSWORD);
+	app.setConfig("plugins.jackett.servers", [{ url: jackett.url }]);
+	app.setSecret("plugins.jackett.api_key", JACKETT_KEY);
 	app.setConfig("tmdb.base_url", tmdb.url);
 	app.setSecret("tmdb.api_key", tmdb.apiKey);
-	app.setConfig("path_maps", { qbittorrent: [{ theirs: "/downloads", ours: t.downloads }], jellyfin: [] });
+	app.setConfig("path_maps.downloaders.qbittorrent", [{ theirs: "/downloads", ours: t.downloads }]);
+	const stopPlugins = await withPlugins(app, ["jackett", "qbittorrent"]);
 	const run = (name: string, input: unknown, requestId?: string) => runOperation(app, name, input, { actor: "agent:test", requestId });
 	return {
 		...t,
@@ -110,6 +110,7 @@ async function world(opts: { version?: FakeQbVersion; magnets?: Record<string, M
 		tmdb,
 		run,
 		async close() {
+			await stopPlugins();
 			app.close();
 			await Promise.all([qb.close(), jackett.close(), tmdb.close()]);
 		},
@@ -211,7 +212,7 @@ test("get me Sintel: find, search, look inside, add, complete, file", async () =
 		assertNoLeak("ledger row", JSON.stringify(ledger));
 
 		// watch: nothing yet, then completed
-		const ws = { rid: 0, known: new Map() };
+		const ws: WatchState = { known: new Map() };
 		assert.deepEqual(await watchTick(w.app, ws), []);
 		w.qb.complete(hash);
 		const events = await watchTick(w.app, ws);
@@ -268,7 +269,7 @@ test("season pack: only wanted episodes downloaded; a missing wanted episode goe
 		assert.equal((added.output as any).skipped_files, SEV_EPS.length - 2);
 		const qt = w.qb.torrents.get(hash)!;
 		assert.deepEqual(
-			qt.files.map((f, i) => (only.includes(i) ? 1 : 0)),
+			[...qt.files.keys()].map((i) => (only.includes(i) ? 1 : 0)),
 			qt.files.map((f) => f.priority),
 			"unwanted files set to do-not-download before starting",
 		);
@@ -277,7 +278,7 @@ test("season pack: only wanted episodes downloaded; a missing wanted episode goe
 		const startCall = w.qb.calls.findIndex((c) => c.path === "torrents/start");
 		assert.ok(prioCall >= 0 && prioCall < startCall, "priorities set before starting");
 
-		const ws = { rid: 0, known: new Map() };
+		const ws: WatchState = { known: new Map() };
 		await watchTick(w.app, ws);
 		w.qb.complete(hash);
 		assert.deepEqual(await watchTick(w.app, ws), [{ kind: "completed", hash }]);
@@ -328,7 +329,10 @@ test("magnet release: added stopped, metadata arrives, RAR-packed list → remov
 		assert.equal(del.form.hashes, FRIEREN_RAR_HASH);
 		assert.equal(del.form.deleteFiles, "true");
 		assert.ok(!w.qb.torrents.has(FRIEREN_RAR_HASH), "removed from qBittorrent");
-		assert.ok(!w.qb.hits().includes("torrents/start"), "never started");
+		// §7.5: a paused magnet need not fetch metadata, so it is started for that alone and stopped again.
+		const hits = w.qb.hits();
+		assert.ok(hits.indexOf("torrents/start") < hits.lastIndexOf("torrents/stop") && hits.lastIndexOf("torrents/stop") < hits.indexOf("torrents/delete"), "stopped before the check");
+		assert.equal(hits.filter((h) => h === "torrents/start").length, 1, "never started after the check");
 		assert.equal(getDownload(w.app, FRIEREN_RAR_HASH), undefined, "not recorded as a download");
 		const ledger = w.app.db.prepare("SELECT status, error FROM actions WHERE op = 'download.add'").get() as any;
 		assert.equal(ledger.status, "failed");
@@ -344,9 +348,7 @@ test("re-adding a torrent qBittorrent already has adopts it instead of duplicati
 	const w = await world();
 	try {
 		// someone added it by hand, untagged
-		const direct = new QbClient({ url: w.qb.url, username: "admin", password: QB_PASSWORD });
-		await direct.addTorrentFile(oppenheimer);
-		const hash = hashOf(oppenheimer);
+		const hash = w.qb.addOutside(oppenheimer);
 		assert.equal(w.qb.torrents.get(hash)!.tags.size, 0);
 
 		await w.run("title.find", { id: "movie:872585" });
@@ -359,7 +361,7 @@ test("re-adding a torrent qBittorrent already has adopts it instead of duplicati
 		const second = (await w.run("download.add", { handle: rel.handle, title_id: "movie:872585" })).output as any;
 		assert.equal(second.adopted, true);
 		assert.equal(w.qb.torrents.size, 1);
-		assert.equal(w.qb.hits().filter((h) => h === "torrents/add").length, 1, "only the hand-made add reached qBittorrent");
+		assert.equal(w.qb.hits().filter((h) => h === "torrents/add").length, 0, "nothing was added through Reelix");
 		const rows = w.app.db.prepare("SELECT * FROM downloads").all() as any[];
 		assert.equal(rows.length, 1);
 		assert.equal(rows[0].reason, "2160p WEB-DL", "a later add without a reason keeps the first");
@@ -392,7 +394,7 @@ for (const version of ["v4.6.7", "v5.0.2"] as const) {
 			await w.run("download.pause", { hash: FRIEREN_OK_HASH.slice(0, 10) });
 			assert.equal(qt.stopped, true);
 			const status = (await w.run("download.status", { hash: FRIEREN_OK_HASH })).output as any[];
-			assert.equal(status[0].live.state, v5 ? "stoppedDL" : "pausedDL");
+			assert.equal(status[0].live.state, "stopped");
 			await w.run("download.resume", { hash: FRIEREN_OK_HASH.slice(0, 10) });
 			assert.equal(qt.stopped, false);
 
@@ -415,7 +417,7 @@ test("a torrent removed outside Reelix is reported and marked gone", async () =>
 		const so = (await w.run("release.search", { title_id: "movie:45745" })).output as any;
 		const rel = so.all.find((r: any) => r.title === SINTEL_2160);
 		const hash = ((await w.run("download.add", { handle: rel.handle, title_id: "movie:45745" })).output as any).hash;
-		const ws = { rid: 0, known: new Map() };
+		const ws: WatchState = { known: new Map() };
 		assert.deepEqual(await watchTick(w.app, ws), []);
 		w.qb.removeOutside(hash);
 		assert.deepEqual(await watchTick(w.app, ws), [{ kind: "removed_outside", hash, filed: false }]);
@@ -450,15 +452,17 @@ test("the same request ID for download.add runs once", async () => {
 
 // ------------------------------------------------------------------ fakes behave like the real services where it matters
 
-test("fake qBittorrent refuses a wrong password; TMDB rejects a wrong key", async () => {
+test("TMDB rejects a wrong key; Jackett too", async () => {
 	const w = await world();
 	try {
-		const bad = new QbClient({ url: w.qb.url, username: "admin", password: "wrong" });
-		await rejectsWith(bad.version(), "qb_auth");
 		w.app.setSecret("tmdb.api_key", "not-the-key");
 		await rejectsWith(w.run("title.find", { id: "movie:45745" }), "tmdb_auth");
-		w.app.setSecret("jackett.api_key", "wrong-jackett-key");
-		await rejectsWith(w.run("release.search", { query: "Sintel" }), "jackett_error");
+		w.app.setSecret("plugins.jackett.api_key", "wrong-jackett-key");
+		// The plugin starts again with the new key, in its own process, which takes a moment.
+		const state = () => w.app.plugins!.list().find((p) => p.id === "jackett")!.state;
+		for (let i = 0; i < 500 && state() === "active"; i++) await new Promise((r) => setTimeout(r, 2));
+		for (let i = 0; i < 500 && state() !== "active"; i++) await new Promise((r) => setTimeout(r, 10));
+		await rejectsWith(w.run("release.search", { query: "Sintel" }), "indexers_unavailable");
 	} finally {
 		await w.close();
 	}

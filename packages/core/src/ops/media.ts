@@ -1,13 +1,19 @@
 import { Type } from "typebox";
-import { getPath, KNOWN_SECRETS, describeConfig, isKnownConfigPath, parseLooseValue } from "../config.ts";
+import { getPath, KNOWN_SECRETS, configChange, describeConfig } from "../config.ts";
+import { consumeApproval } from "../approvals.ts";
 import { checksToText, doctor } from "../doctor.ts";
-import { addDownload, downloadLine, fileDownload, getDownload, listDownloads, markFiled, notifyJellyfin, reconcileAdd, setDownloadState, TAG } from "../downloads.ts";
+import { DOWNLOADER, MARK, downloaderOf } from "../downloader.ts";
+import { addDownload, downloadLine, fileDownload, getDownload, listDownloads, markFiled, reconcileAdd, setDownloadState } from "../downloads.ts";
+import { MEDIA_SERVER, tellMediaServer } from "../media-server.ts";
+import { type EnrichResult, enrichTitle } from "../metadata.ts";
 import { haveInLibrary, libraryOverview, listRemoved, removeFromLibrary, restoreRemoved, titleFiles } from "../library.ts";
-import { applyPlan, autoPlan, planToText, type Plan } from "../organiser.ts";
+import { applyPlan, checkWrittenItems, plannedByReelix, planToText, type Plan } from "../organiser.ts";
 import { grabFrame, probe, probeToText } from "../probe.ts";
 import { defineOperation } from "../registry.ts";
 import { describeFiles, fetchRelease, getHandle, searchReleases, searchToText } from "../releases.ts";
 import { addTitleNote, createLocalTitle, fetchTitle, findTitle, linkBangumi, linkDouban, requireTitle, titleSummary, type Title } from "../titles.ts";
+import { libraryPlayLinks, playTarget, playTargetText } from "../playback.ts";
+import { trendingTitles } from "../trends.ts";
 import { ReelixError, humanBytes } from "../util.ts";
 import { join } from "node:path";
 import { existsSync } from "node:fs";
@@ -23,7 +29,7 @@ defineOperation({
 	input: Type.Object({ path: Type.Optional(Type.String({ description: "dotted path, e.g. limits" })) }),
 	positional: ["path"],
 	async run(ctx, i) {
-		return i.path ? { path: i.path, value: getPath(ctx.app.config, i.path) } : { summary: describeConfig(ctx.app.config, ctx.app.secrets), config: ctx.app.config, warning: ctx.app.configWarning };
+		return i.path ? { path: i.path, value: getPath(ctx.app.config, i.path) } : { summary: describeConfig(ctx.app), config: ctx.app.config, warning: ctx.app.configWarning };
 	},
 	toText: (o: any) => (o.summary ? o.summary + (o.warning ? `\nWARNING: ${o.warning}` : "") : `${o.path} = ${JSON.stringify(o.value, null, 1)}`),
 });
@@ -31,13 +37,15 @@ defineOperation({
 defineOperation({
 	name: "config.set",
 	summary: "Change a setting in config.yaml (validated, recorded)",
-	effect: "write",
+	effect: "admin",
+	agentMay: true,
 	input: Type.Object({ path: Type.String({ description: "dotted path, e.g. library.movies" }), value: Type.Unknown({ description: "the new value (any JSON); a string is parsed as JSON if it can be; empty string unsets" }) }),
 	positional: ["path", "value"],
 	async run(ctx, i) {
-		if (i.path.startsWith("secrets") || KNOWN_SECRETS[i.path]) throw new ReelixError("use_secret", `"${i.path}" is a secret; use secret.set (the secret field), not config.`);
-		if (!isKnownConfigPath(i.path)) throw new ReelixError("unknown_setting", `There is no setting "${i.path}". See \`reelix config show\`.`);
-		const value = i.value === "" || i.value === null ? undefined : typeof i.value === "string" ? parseLooseValue(i.value) : i.value;
+		const { value, needsOwner } = configChange(ctx.app, i);
+		if (needsOwner && !ctx.actor.startsWith("owner:") && !consumeApproval(ctx.app, "config.set", i, ctx.actor)) {
+			throw new ReelixError("owner_only", `"${i.path}" is the owner's to change: it decides where Reelix connects, or it is one of your own limits. Use the reelix tool with command=config.set (not the shell): Reelix then asks the owner to confirm. The owner can also change it in Settings.`);
+		}
 		const before = getPath(ctx.app.config, i.path);
 		ctx.app.setConfig(i.path, value);
 		return { path: i.path, before, after: getPath(ctx.app.config, i.path) };
@@ -48,9 +56,10 @@ defineOperation({
 defineOperation({
 	name: "secret.set",
 	summary: "Store a password or API key in secrets.yaml (owner only; the value never enters chat)",
-	effect: "write",
+	effect: "admin",
 	input: Type.Object({ key: Type.String(), value: Type.String() }),
 	positional: ["key"],
+	recordInput: (i) => ({ key: i.key, value: "[secret]" }),
 	async run(ctx, i) {
 		ctx.app.setSecret(i.key, i.value);
 		return { key: i.key, set: !!i.value };
@@ -64,8 +73,10 @@ defineOperation({
 	effect: "read",
 	input: Type.Object({}),
 	async run(ctx) {
-		const names = new Set([...Object.keys(KNOWN_SECRETS), ...Object.keys(ctx.app.secrets)]);
-		return [...names].sort().map((k) => ({ key: k, what: KNOWN_SECRETS[k] ?? "", set: !!ctx.app.secrets[k] }));
+		// A plugin's secrets are named by the plugin; their labels come from its strings.
+		const declared = ctx.app.plugins?.list().flatMap((p) => p.secrets) ?? [];
+		const names = new Set([...Object.keys(KNOWN_SECRETS), ...declared, ...Object.keys(ctx.app.secrets)]);
+		return [...names].sort().map((k) => ({ key: k, what: KNOWN_SECRETS[k] ?? ctx.app.plugins?.secretLabel(k) ?? "", set: !!ctx.app.secrets[k] }));
 	},
 	toText: (o: any[]) => o.map((s) => `${s.set ? "set    " : "missing"} ${s.key}${s.what ? ` — ${s.what}` : ""}`).join("\n"),
 });
@@ -114,6 +125,42 @@ defineOperation({
 		return `${o.parsed ? `Parsed: ${JSON.stringify(o.parsed)}\n` : ""}${c.length ? `Candidates:\n${c.join("\n")}` : "No candidates."}${o.note ? `\n${o.note}` : ""}`;
 	},
 	titleOf: (_i, o: any) => o?.resolved?.id,
+});
+
+defineOperation({
+	name: "title.trending",
+	summary: "What is trending on TMDB today or this week (films, shows or both), marking titles already in the library",
+	effect: "read",
+	tool: "title_trending",
+	input: Type.Object({
+		kind: Type.Optional(Type.Union([Type.Literal("all"), Type.Literal("movie"), Type.Literal("tv")])),
+		window: Type.Optional(Type.Union([Type.Literal("day"), Type.Literal("week")], { description: "default week" })),
+	}),
+	async run(ctx, i) {
+		return { items: await trendingTitles(ctx.app, i.kind ?? "all", i.window ?? "week") };
+	},
+	toText: (o: any) => o.items.map((x: any) => `${x.id} | ${x.name} | ${x.year ?? "?"}${x.rating ? ` | ${x.rating.toFixed(1)}` : ""}${x.in_library ? " | in library" : ""}`).join("\n") || "Nothing trending.",
+});
+
+defineOperation({
+	name: "title.play",
+	summary: "Links that open a library title in the owner's player (Infuse, Swiftfin, Jellyfin): the next episode to watch unless a season or episode is given",
+	description: "When the owner says they want to watch something that is in the library, put it in front of them with the show tool, kind=play. Nothing starts on its own: the owner taps.",
+	effect: "read",
+	tool: "title_play",
+	input: Type.Object({ id: Type.String(), season: Type.Optional(Type.Integer({ minimum: 0 })), episode: Type.Optional(Type.Integer({ minimum: 0 })) }),
+	positional: ["id"],
+	run: (ctx, i) => playTarget(ctx.app, i.id, { season: i.season, episode: i.episode }),
+	toText: (o: any) => playTargetText(o),
+});
+
+defineOperation({
+	name: "library.play_links",
+	summary: "Player links for every title in the library",
+	effect: "read",
+	input: Type.Object({}),
+	run: (ctx) => libraryPlayLinks(ctx.app),
+	toText: (o: any) => `${Object.keys(o.targets).length} titles`,
 });
 
 defineOperation({
@@ -175,6 +222,17 @@ defineOperation({
 });
 
 defineOperation({
+	name: "title.enrich",
+	summary: "Ask the metadata sources (such as Douban) for a title's ratings and record them; TMDB stays the title's identity",
+	effect: "write",
+	input: Type.Object({ id: Type.String(), sources: Type.Optional(Type.Array(Type.String(), { description: "only these sources (provider ids)" })) }),
+	positional: ["id"],
+	run: (ctx, i) => enrichTitle(ctx.app, i.id, i.sources),
+	toText: (o: EnrichResult) => `${o.title}\n${o.results.map((r) => `${r.label}: ${r.rating ? `${r.rating.value}/${r.rating.scale}` : r.note}`).join("\n") || "No metadata source is running."}`,
+	titleOf: (i) => i.id,
+});
+
+defineOperation({
 	name: "title.local",
 	summary: "Create a local-only title for something not on TMDB (no ID tag in its folder)",
 	effect: "write",
@@ -190,7 +248,7 @@ defineOperation({
 
 defineOperation({
 	name: "release.search",
-	summary: "Search Jackett for a title; a compact paged list with handles",
+	summary: "Search the indexers for a title; a compact paged list with handles",
 	description: "Each indexer is queried separately; errors are reported per indexer. If nothing is found, check indexer health before saying it is unavailable.",
 	effect: "read",
 	tool: "release_search",
@@ -231,7 +289,7 @@ defineOperation({
 
 defineOperation({
 	name: "download.add",
-	summary: "Add a chosen release to qBittorrent for a known title, recording why",
+	summary: "Add a chosen release to the downloader for a known title, recording why",
 	description: "Fetches the .torrent itself (hash and file list known at once); a magnet is added stopped and checked first. Adopts an existing identical torrent. Use skip_files/only_files (indexes from release_files) for partial packs.",
 	effect: "write",
 	tool: "download_add",
@@ -244,10 +302,11 @@ defineOperation({
 		skip_files: Type.Optional(Type.Array(Type.Integer())),
 		only_files: Type.Optional(Type.Array(Type.Integer())),
 		allow_rar: Type.Optional(Type.Boolean()),
+		allow_hidden: Type.Optional(Type.Boolean({ description: "take a release a plugin hid; only when the owner said so: Reelix asks them to confirm" })),
 	}),
 	positional: ["handle"],
 	async run(ctx, i) {
-		return addDownload(ctx.app, i, ctx.requestId, ctx.signal);
+		return addDownload(ctx.app, i, ctx);
 	},
 	reconcile: (ctx) => reconcileAdd(ctx.app, ctx.requestId),
 	toText: (o: any) => `${o.adopted ? "Adopted existing" : "Added and started"}: ${o.name} (${o.hash.slice(0, 10)}), ${o.files} files${o.size ? `, ${humanBytes(o.size)}` : ""}${o.skipped_files ? `, ${o.skipped_files} files skipped` : ""}. Added is not downloaded: check download_status later.${o.warnings?.length ? `\nNote: ${o.warnings.join(" ")}` : ""}`,
@@ -269,9 +328,13 @@ defineOperation({
 	toText: (o: any[]) => (o.length ? `hash | state | progress | title | name\n${o.map(downloadLine).join("\n")}` : "No downloads."),
 });
 
+/** A download's hash from the hash or its start: at least 6 hex characters (so nothing in it is a LIKE wildcard), matching one download. */
 function resolveHash(ctx: { app: import("../app.ts").Reelix }, h: string): string {
-	const row = ctx.app.db.prepare("SELECT hash FROM downloads WHERE hash LIKE ?").get(h.toLowerCase() + "%") as { hash: string } | undefined;
-	return row?.hash ?? h.toLowerCase();
+	const given = h.toLowerCase();
+	if (!/^[0-9a-f]{6,64}$/.test(given)) throw new ReelixError("invalid_input", `"${h}" is not a hash: give at least its first 6 characters (0-9, a-f).`);
+	const rows = ctx.app.db.prepare("SELECT hash FROM downloads WHERE hash LIKE ? LIMIT 2").all(`${given}%`) as { hash: string }[];
+	if (rows.length > 1) throw new ReelixError("invalid_input", `More than one download starts with "${h}": give more of the hash.`);
+	return rows[0]?.hash ?? given;
 }
 
 defineOperation({
@@ -282,7 +345,7 @@ defineOperation({
 	positional: ["hash"],
 	async run(ctx, i) {
 		const h = resolveHash(ctx, i.hash);
-		await ctx.app.qb().stop([h]);
+		await downloaderOf(ctx.app, getDownload(ctx.app, h)).call("stop", [[h]]);
 		return { hash: h, paused: true };
 	},
 	toText: (o: any) => `Paused ${o.hash.slice(0, 10)}.`,
@@ -296,7 +359,7 @@ defineOperation({
 	positional: ["hash"],
 	async run(ctx, i) {
 		const h = resolveHash(ctx, i.hash);
-		await ctx.app.qb().start([h]);
+		await downloaderOf(ctx.app, getDownload(ctx.app, h)).call("start", [[h]]);
 		return { hash: h, resumed: true };
 	},
 	toText: (o: any) => `Resumed ${o.hash.slice(0, 10)}.`,
@@ -304,36 +367,54 @@ defineOperation({
 
 defineOperation({
 	name: "download.remove",
-	summary: "Remove a torrent from qBittorrent, optionally with its data",
+	summary: "Remove a torrent from the downloader, optionally with its data",
 	effect: "destructive",
 	input: Type.Object({ hash: Type.String(), delete_data: Type.Boolean({ default: false }) }),
 	positional: ["hash"],
+	async preview(ctx, i) {
+		const h = resolveHash(ctx, i.hash);
+		const row = getDownload(ctx.app, h);
+		const live = await downloaderOf(ctx.app, row).call("get", [h]);
+		const name = live?.name ?? row?.name ?? h;
+		const size = live?.size ?? row?.size ?? undefined;
+		const sized = size ? ` (${humanBytes(size)})` : "";
+		return {
+			text: i.delete_data ? `Remove the torrent ${name}${sized} and delete its files` : `Remove the torrent ${name}${sized}; its files stay on disk`,
+			// Gone from the downloader, or a different torrent under the same name: the step no longer applies.
+			target: { hash: h, present: !!live, name, size: size ?? null, delete_data: i.delete_data },
+			counts: { downloads: 1, ...(i.delete_data && size ? { bytes: size } : {}) },
+		};
+	},
 	async run(ctx, i) {
 		const h = resolveHash(ctx, i.hash);
-		await ctx.app.qb().delete([h], i.delete_data);
+		await downloaderOf(ctx.app, getDownload(ctx.app, h)).call("remove", [[h], { deleteFiles: i.delete_data }]);
 		setDownloadState(ctx.app, h, "removed", i.delete_data ? "removed with data" : "removed, data kept");
 		return { hash: h, data_deleted: i.delete_data };
 	},
-	reconcile: async (ctx, i) => ((await ctx.app.qb().torrent(resolveHash(ctx, i.hash))) ? { status: "failed" } : { status: "succeeded" }),
+	reconcile: async (ctx, i) => {
+		const h = resolveHash(ctx, i.hash);
+		return (await downloaderOf(ctx.app, getDownload(ctx.app, h)).call("get", [h])) ? { status: "failed" } : { status: "succeeded" };
+	},
 	toText: (o: any) => `Removed torrent ${o.hash.slice(0, 10)}${o.data_deleted ? " and deleted its data" : "; its data is still on disk"}.`,
 });
 
 defineOperation({
 	name: "download.adopt",
-	summary: "Take an existing qBittorrent torrent under Reelix's care for a title",
+	summary: "Take an existing torrent in the downloader under Reelix's care for a title",
 	effect: "write",
 	input: Type.Object({ hash: Type.String(), title_id: Type.String(), episodes: Type.Optional(Type.Array(Episode)), reason: Type.Optional(Type.String()) }),
 	positional: ["hash", "title_id"],
 	async run(ctx, i) {
-		const t = await ctx.app.qb().torrent(i.hash.toLowerCase());
-		if (!t) throw new ReelixError("not_found", `qBittorrent has no torrent ${i.hash}.`);
+		const d = downloaderOf(ctx.app, undefined);
+		const t = await d.call("get", [i.hash.toLowerCase()]);
+		if (!t) throw new ReelixError("not_found", `${d.label} has no torrent ${i.hash}.`);
 		const title = requireTitle(ctx.app, i.title_id);
-		await ctx.app.qb().addTags([t.hash], [TAG]);
+		await d.call("addMark", [[t.id], MARK]);
 		ctx.app.db
-			.prepare(`INSERT INTO downloads (hash, title_id, name, episodes_json, release_json, reason, state, progress, size, added_at, last_progress_at) VALUES (?, ?, ?, ?, ?, ?, 'downloading', ?, ?, datetime('now'), datetime('now'))
-			 ON CONFLICT(hash) DO UPDATE SET title_id = excluded.title_id, episodes_json = excluded.episodes_json, state = CASE WHEN downloads.state = 'filed' THEN 'filed' ELSE 'downloading' END`)
-			.run(t.hash, title.id, t.name, JSON.stringify(i.episodes ?? []), JSON.stringify({ title: t.name, adopted: true }), i.reason ?? "adopted", t.progress, t.size);
-		return { hash: t.hash, name: t.name, title: title.id, progress: t.progress };
+			.prepare(`INSERT INTO downloads (hash, title_id, name, episodes_json, release_json, reason, state, progress, size, added_at, last_progress_at, downloader) VALUES (?, ?, ?, ?, ?, ?, 'downloading', ?, ?, datetime('now'), datetime('now'), ?)
+			 ON CONFLICT(hash) DO UPDATE SET title_id = excluded.title_id, episodes_json = excluded.episodes_json, downloader = excluded.downloader, state = CASE WHEN downloads.state = 'filed' THEN 'filed' ELSE 'downloading' END`)
+			.run(t.id, title.id, t.name, JSON.stringify(i.episodes ?? []), JSON.stringify({ title: t.name, adopted: true }), i.reason ?? "adopted", t.progress, t.size, d.id);
+		return { hash: t.id, name: t.name, title: title.id, progress: t.progress };
 	},
 	toText: (o: any) => `Adopted ${o.name} (${o.hash.slice(0, 10)}) for ${o.title}, ${Math.round(o.progress * 100)}% done. It is filed when complete.`,
 	titleOf: (i) => i.title_id,
@@ -373,8 +454,10 @@ defineOperation({
 		const titleId = i.title_id ?? d?.title_id ?? undefined;
 		let plan: Plan;
 		let problems: string[] = [];
-		if (i.items?.length) plan = { title_id: titleId, download_hash: hash, items: i.items };
-		else if (hash && i.mode === "plan" && !i.path) {
+		if (i.items?.length) {
+			checkWrittenItems(app, titleId ? requireTitle(app, titleId) : undefined, i.items);
+			plan = { title_id: titleId, download_hash: hash, items: i.items };
+		} else if (hash && i.mode === "plan" && !i.path) {
 			const r = await fileDownload(app, hash, { apply: false });
 			plan = r.plan;
 			problems = r.problems;
@@ -383,7 +466,7 @@ defineOperation({
 			const title = requireTitle(app, titleId);
 			const path = i.path ?? d?.content_path;
 			if (!path) throw new ReelixError("invalid_input", "No path: give path=, or a hash of a completed download.");
-			const r = autoPlan(app, title, path, { hash, version: i.version, seasonHint: i.season, wanted: d ? JSON.parse(d.episodes_json) : undefined });
+			const r = await plannedByReelix(app, title, path, { hash, version: i.version, seasonHint: i.season, wanted: d ? JSON.parse(d.episodes_json) : undefined });
 			plan = r.plan;
 			problems = r.problems;
 		}
@@ -391,8 +474,11 @@ defineOperation({
 		if (!plan.items.length) throw new ReelixError("empty_plan", `Nothing to apply.${problems.length ? ` Problems: ${problems.join("; ")}` : ""}`);
 		const results = applyPlan(app, plan);
 		const ok = results.every((r) => r.status === "linked" || r.status === "already");
-		if (ok && hash) await markFiled(app, hash, titleId, plan);
-		else if (ok && titleId) await notifyJellyfin(app, plan.items.map((x) => x.dest)).catch(() => {});
+		if (ok && hash) await markFiled(app, hash, titleId, plan, "download");
+		else if (ok && titleId) {
+			await tellMediaServer(app, plan.items.map((x) => x.dest)).catch(() => {});
+			app.pluginEvents.emit("download.filed", { titleId, paths: plan.items.map((x) => x.dest), via: "organise" });
+		}
 		return { mode: "apply", plan, results, ok };
 	},
 	reconcile: async () => ({ status: "succeeded" }), // apply is idempotent: re-running yields "already"
@@ -455,21 +541,6 @@ defineOperation({
 	toText: (o: any) => `Restored ${o.restored.length}.${o.failed.length ? ` Failed: ${o.failed.map((f: any) => `${f.dest}: ${f.error}`).join("; ")}` : ""}`,
 });
 
-defineOperation({
-	name: "jellyfin.refresh",
-	summary: "Tell Jellyfin that paths changed (or scan everything)",
-	effect: "write",
-	input: Type.Object({ paths: Type.Optional(Type.Array(Type.String())) }),
-	async run(ctx, i) {
-		if (i.paths?.length) return { result: await notifyJellyfin(ctx.app, i.paths) };
-		const jf = ctx.app.jellyfin();
-		if (!jf) throw new ReelixError("not_configured", "Jellyfin is not configured.");
-		await jf.refreshAll();
-		return { result: "Full library scan requested." };
-	},
-	toText: (o: any) => o.result,
-});
-
 // ------------------------------------------------------------------ media
 
 defineOperation({
@@ -489,58 +560,35 @@ defineOperation({
 	toText: (o: any) => probeToText(o) + (o.frame ? `\nframe saved: ${o.frame}` : ""),
 });
 
-// ------------------------------------------------------------------ qBittorrent and Jackett settings (§10)
+// ------------------------------------------------------------------ the downloader (docs/plugins.md §7.5)
+
+/** The providers of a seam of the kind "one of several", and the owner's choice among them. */
+type ProviderChoice = { active: string; running: boolean; providers: { id: string; label: string; plugin: string }[] };
 
 defineOperation({
-	name: "qb.prefs",
-	summary: "Read qBittorrent preferences (save folders, completion behaviour, …)",
+	name: "download.downloaders",
+	summary: "The downloaders this Reelix can use and the active one, which only the owner chooses (config downloader)",
 	effect: "read",
-	input: Type.Object({ keys: Type.Optional(Type.Array(Type.String())) }),
-	async run(ctx, i) {
-		const p = await ctx.app.qb().preferences();
-		const keys = i.keys?.length ? i.keys : ["save_path", "temp_path_enabled", "temp_path", "auto_tmm_enabled", "torrent_changed_tmm_enabled", "max_ratio_enabled", "max_ratio", "max_ratio_act", "add_stopped_enabled", "start_paused_enabled", "preallocate_all", "incomplete_files_ext"];
-		return Object.fromEntries(keys.filter((k) => k in p).map((k) => [k, p[k]]));
+	input: Type.Object({}),
+	async run(ctx): Promise<ProviderChoice> {
+		const providers = ctx.app.seams.providers(DOWNLOADER).map((p) => ({ id: p.id, label: p.label, plugin: p.plugin }));
+		return { active: ctx.app.config.downloader, running: providers.some((p) => p.id === ctx.app.config.downloader), providers };
 	},
-	toText: (o: any) => Object.entries(o).map(([k, v]) => `${k}: ${JSON.stringify(v)}`).join("\n"),
+	toText: (o: ProviderChoice) => `Active: ${o.active}${o.running ? "" : " (not running)"}\n${o.providers.map((p) => `${p.id} | ${p.label} | plugin ${p.plugin}`).join("\n") || "No downloader is running."}`,
 });
 
-defineOperation({
-	name: "qb.set_prefs",
-	summary: "Change qBittorrent preferences (JSON object)",
-	effect: "write",
-	input: Type.Object({ prefs: Type.Record(Type.String(), Type.Unknown()) }),
-	async run(ctx, i) {
-		await ctx.app.qb().setPreferences(i.prefs);
-		return { changed: Object.keys(i.prefs) };
-	},
-	toText: (o: any) => `qBittorrent preferences changed: ${o.changed.join(", ")}`,
-});
+// ------------------------------------------------------------------ the media server (docs/plugins.md §7.7)
 
 defineOperation({
-	name: "qb.torrents",
-	summary: "All torrents in qBittorrent (not only Reelix's), for adoption and diagnosis",
+	name: "library.media_servers",
+	summary: "The media servers this Reelix can use and the active one, which only the owner chooses (config media_server)",
 	effect: "read",
-	input: Type.Object({ filter: Type.Optional(Type.String({ description: "substring of the name" })), limit: Type.Optional(Type.Integer({ default: 50 })) }),
-	async run(ctx, i) {
-		let t = await ctx.app.qb().torrents();
-		if (i.filter) t = t.filter((x) => x.name.toLowerCase().includes(i.filter!.toLowerCase()));
-		return { total: t.length, torrents: t.slice(0, i.limit).map((x) => ({ hash: x.hash, name: x.name, state: x.state, progress: x.progress, size: x.size, tags: x.tags, category: x.category, content_path: x.content_path })) };
+	input: Type.Object({}),
+	async run(ctx): Promise<ProviderChoice> {
+		const providers = ctx.app.seams.providers(MEDIA_SERVER).map((p) => ({ id: p.id, label: p.label, plugin: p.plugin }));
+		return { active: ctx.app.config.media_server, running: providers.some((p) => p.id === ctx.app.config.media_server), providers };
 	},
-	toText: (o: any) => `${o.total} torrents\n${o.torrents.map((x: any) => `${x.hash.slice(0, 10)} | ${x.state} | ${Math.round(x.progress * 100)}% | ${humanBytes(x.size)} | ${x.tags || "-"} | ${x.name}`).join("\n")}`,
-});
-
-defineOperation({
-	name: "jackett.indexers",
-	summary: "Jackett's configured indexers; with test=true, a health check of each",
-	effect: "read",
-	input: Type.Object({ test: Type.Optional(Type.Boolean()) }),
-	async run(ctx, i) {
-		const ix = await ctx.app.jackett().indexers();
-		if (!i.test) return { indexers: ix };
-		const { outcomes } = await ctx.app.jackett().searchEach(ix, ["test"], [], 20_000);
-		return { indexers: ix, health: outcomes };
-	},
-	toText: (o: any) => o.indexers.map((x: any) => { const h = o.health?.find((y: any) => y.indexer === x.id); return `${x.id} | ${x.name} | ${x.type ?? ""}${h ? ` | ${h.ok ? `ok ${(h.ms / 1000).toFixed(1)}s` : `ERROR ${h.error}`}` : ""}`; }).join("\n"),
+	toText: (o: ProviderChoice) => `Active: ${o.active}${o.running ? "" : " (not running or not set up)"}\n${o.providers.map((p) => `${p.id} | ${p.label} | plugin ${p.plugin}`).join("\n") || "No media server is running."}`,
 });
 
 // ------------------------------------------------------------------ the ledger (Activity)

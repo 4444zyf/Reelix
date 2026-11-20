@@ -1,0 +1,22 @@
+{
+  "name": "reelix-plugin-douban",
+  "version": "0.1.0",
+  "description": "Douban links and ratings, read from Douban's ordinary public pages.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["reelix-plugin"],
+  "peerDependencies": { "@reelix/plugin": "*" },
+  "reelix": {
+    "api": 0,
+    "id": "douban",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "uses": {
+      "provides": ["reelix:metadata.source@1"],
+      "operations": { "rating": "write" },
+      "runs": ["title.set", "title.enrich"],
+      "network": ["movie.douban.com"]
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "reelix-skills-seeding-report",
+  "version": "0.1.0",
+  "description": "Reference skill pack: how the downloads are seeding, from a script that calls the reelix command.",
+  "private": true,
+  "license": "MIT",
+  "keywords": ["reelix-plugin"],
+  "reelix": {
+    "api": 0,
+    "id": "seeding-report"
+  }
+}

@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
 
 export type Tone = "default" | "primary" | "success" | "warning" | "danger" | "info" | "muted";
 
 const tones: Record<Tone, string> = {
-	default: "bg-white/10 text-foreground",
+	default: "bg-surface-hover text-foreground",
 	primary: "bg-primary/20 text-primary",
 	success: "bg-success/15 text-success",
 	warning: "bg-warning/15 text-warning",
@@ -45,9 +46,10 @@ const stateTones: Record<string, Tone> = {
 };
 
 export function StateBadge({ state, className }: { state: string; className?: string }) {
+	const { t } = useTranslation();
 	return (
 		<Badge tone={stateTones[state] ?? "default"} className={className}>
-			{state.replace(/_/g, " ")}
+			{t(`state.${state}` as "state.open", { defaultValue: state.replace(/_/g, " ") })}
 		</Badge>
 	);
 }

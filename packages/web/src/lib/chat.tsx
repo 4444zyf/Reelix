@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 import { toast } from "../components/hooks/use-toast";
 import { ApiError, endpoints, useEventStream } from "./api";
+import i18n from "./i18n";
 import type { Ask, Card, ThreadDetail, ToolCall, UiEvent, UiMessage } from "./types";
 
 /**
@@ -70,7 +71,7 @@ function applyEvent(s: ThreadState, ev: UiEvent): ThreadState {
 		case "run_end": {
 			const items = s.items.map((it) => (it.role === "assistant" && it.streaming ? { ...it, streaming: false } : it));
 			const state = ev.state as string;
-			const extra: ChatItem[] = state === "interrupted" ? [{ role: "notice", text: "Stopped.", level: "info" }] : [];
+			const extra: ChatItem[] = state === "interrupted" ? [{ role: "notice", text: i18n.t("chat:notices.stopped"), level: "info" }] : [];
 			return { ...s, running: false, thinking: false, pending: undefined, items: [...items, ...extra] };
 		}
 		case "user_message": {
@@ -141,7 +142,7 @@ function applyEvent(s: ThreadState, ev: UiEvent): ThreadState {
 		case "notice":
 			return { ...s, items: [...s.items, { role: "notice", text: String(ev.text ?? ""), level: "info" }] };
 		case "error":
-			return { ...s, items: [...s.items, { role: "notice", text: String(ev.message ?? "Something went wrong."), level: "error" }] };
+			return { ...s, items: [...s.items, { role: "notice", text: String(ev.message ?? i18n.t("chat:notices.failed")), level: "error" }] };
 		default:
 			return s;
 	}
@@ -320,7 +321,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 				if (r.runId) dispatch({ type: "patch", id, patch: { running: true } });
 				qc.invalidateQueries({ queryKey: ["threads"] });
 			} catch (e) {
-				toast({ title: "Message not sent", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+				toast({ title: i18n.t("chat:notices.messageNotSent"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });
 				setDrafts((d) => ({ ...d, [keyBefore]: body }));
 			} finally {
 				setSending(false);
@@ -335,7 +336,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 			try {
 				await endpoints.sendMessage(threadId, text);
 			} catch (e) {
-				toast({ title: "Could not tell the agent", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+				toast({ title: i18n.t("chat:notices.noteFailed"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });
 			}
 		},
 		[],
@@ -351,7 +352,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 			return true;
 		} catch (e) {
 			if (e instanceof ApiError && e.status === 409) dispatch({ type: "patch", id, patch: { pending: undefined } });
-			toast({ title: "Answer not taken", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+			toast({ title: i18n.t("chat:notices.answerFailed"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });
 			return false;
 		}
 	}, []);
@@ -362,7 +363,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 		try {
 			await endpoints.abort(id);
 		} catch (e) {
-			toast({ title: "Could not stop", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+			toast({ title: i18n.t("chat:notices.stopFailed"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });
 		}
 	}, []);
 

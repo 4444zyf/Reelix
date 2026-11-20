@@ -1,0 +1,117 @@
+{
+	"screen": {
+		"title": "Activité",
+		"subtitle": "Ce qui a été fait, par qui, et avec quel résultat",
+		"ledger": "Journal",
+		"jobs": "Tâches"
+	},
+	"ledger": {
+		"all": "Tout",
+		"failed": "Échecs",
+		"unsettled": "Incertains",
+		"empty": "Rien d’enregistré pour l’instant",
+		"showMore": "Afficher plus",
+		"input": "Entrée",
+		"askAbout": "À propos de l’entrée de journal n° {{id}} ({{op}} par {{actor}}, {{status}}, {{at}}) : ",
+		"askAboutWithError": "À propos de l’entrée de journal n° {{id}} ({{op}} par {{actor}}, {{status}} : {{error}}, {{at}}) : "
+	},
+	"jobs": {
+		"scheduled": "Planifiées",
+		"noScheduled": "Aucune tâche planifiée.",
+		"once": "une fois",
+		"next": "prochaine : {{time}}",
+		"started": "Lancée",
+		"notStarted": "Non lancée",
+		"runNow": "Lancer maintenant",
+		"recentRuns": "Exécutions récentes",
+		"noRuns": "Aucune tâche n’a encore été exécutée.",
+		"openConversation": "Ouvrir la conversation",
+		"askAbout": "À propos de l’exécution {{id}} ({{kind}}, {{state}}) : ",
+		"stopTranslation": "Arrêter",
+		"translationStopped": "Traduction arrêtée ; les épisodes terminés sont conservés",
+		"notStopped": "Non arrêtée"
+	},
+	"inbox": {
+		"title": "Boîte de réception",
+		"subtitle": "Questions, plans à approuver, vérifications et résumés des tâches en arrière-plan",
+		"tabs": {
+			"open": "En attente",
+			"answered": "Répondues",
+			"dismissed": "Ignorées",
+			"all": "Tout"
+		},
+		"kind": {
+			"question": "question",
+			"plan": "plan",
+			"verification": "vérification",
+			"summary": "résumé",
+			"notice": "avis",
+			"proposal": "proposition"
+		},
+		"from": "de {{source}}",
+		"answer": "Réponse : {{answer}}",
+		"answered": "Réponse envoyée",
+		"dismissed": "Ignoré",
+		"failed": "Échec",
+		"code": "Code",
+		"yourAnswer": "Votre réponse",
+		"send": "Envoyer",
+		"continueInChat": "Continuer dans le chat",
+		"done": "Terminé",
+		"askAbout": "À propos de l’élément de la boîte de réception « {{title}} » ({{id}}, {{kind}}) : ",
+		"emptyOpen": "Rien ne vous attend",
+		"empty": "Rien ici",
+		"emptyOpenHint": "Quand une tâche en arrière-plan a besoin d’une décision, elle apparaît ici (et sur Telegram, s’il est relié)."
+	},
+	"browser": {
+		"title": "Navigateur",
+		"subtitle": "Le navigateur que Reelix utilise pour les sites sans API ; prenez la main quand une vérification demande vos clics",
+		"go": "Aller",
+		"liveViewAlt": "Vue en direct du navigateur du serveur",
+		"waitingFrame": "En attente de la première image…",
+		"connecting": "Connexion…",
+		"hint": "Cliquez sur l’image pour cliquer sur la page ; faites défiler dessus pour faire défiler. Quand l’image a le focus, la saisie est envoyée à la page.",
+		"typePlaceholder": "Saisir dans le champ actif",
+		"type": "Saisir",
+		"enter": "Entrée",
+		"scrollUp": "Défiler vers le haut",
+		"scrollDown": "Défiler vers le bas",
+		"inputNotDelivered": "Saisie non transmise",
+		"couldNotOpen": "Ouverture impossible",
+		"yours": "la vôtre",
+		"thisConversation": "cette conversation",
+		"watching_one": "{{count}} spectateur",
+		"watching_many": "{{count}} spectateurs",
+		"watching_other": "{{count}} spectateurs",
+		"chat": "chat",
+		"openPlaceholder": "Ouvrir une page…",
+		"noPages": "Aucune page ouverte",
+		"noPagesHint": "Quand l’agent utilise le navigateur, sa page apparaît ici."
+	},
+	"proposal": {
+		"from": "De la part de l’extension {{plugin}} :",
+		"approve": "Approuver",
+		"approveDestructive_one": "Approuver ({{count}} étape destructive)",
+		"approveDestructive_many": "Approuver ({{count}} d’étapes destructives)",
+		"approveDestructive_other": "Approuver ({{count}} étapes destructives)",
+		"decline": "Refuser",
+		"destructive": "destructive",
+		"expires": "Ouverte jusqu’au {{when}}",
+		"approved": "Approuvée",
+		"declined": "Refusée",
+		"result": {
+			"succeeded": "fait",
+			"failed": "échec",
+			"skipped": "ignorée",
+			"not_approved": "non approuvée",
+			"declined": "refusée",
+			"expired": "expirée"
+		},
+		"status": {
+			"approved": "Approuvée. Le résultat de chaque étape est indiqué ci-dessus.",
+			"declined": "Refusée. Rien n’a été exécuté.",
+			"expired": "Expirée avant d’être décidée. Rien n’a été exécuté.",
+			"replaced": "Remplacée par une proposition plus récente de la même extension."
+		}
+	}
+}

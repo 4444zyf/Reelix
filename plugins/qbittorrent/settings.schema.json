@@ -1,0 +1,15 @@
+{
+	"type": "object",
+	"required": [
+		"username"
+	],
+	"properties": {
+		"url": {
+			"type": "string"
+		},
+		"username": {
+			"type": "string",
+			"default": "admin"
+		}
+	}
+}

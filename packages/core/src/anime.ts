@@ -1,10 +1,10 @@
 import { Type } from "typebox";
 import type { Reelix } from "./app.ts";
-import type { BgmEpisode } from "./clients/bangumi.ts";
 import { json } from "./db.ts";
 import { normName } from "./parser.ts";
 import { defineOperation } from "./registry.ts";
-import { doubanPage, getTitle, linkBangumi, linkDouban, requireTitle, type Title } from "./titles.ts";
+import { bangumiEpisodes, findAtSources, metadataSources } from "./metadata.ts";
+import { linkBangumi, requireTitle, type Title } from "./titles.ts";
 import { ReelixError, errorMessage } from "./util.ts";
 
 export type AnimeMapRow = { id: number; title_id: string; bangumi_id: number; bgm_from: number; bgm_to: number; tmdb_season: number; tmdb_start: number; exceptions_json: string; source: string };
@@ -27,17 +27,18 @@ export async function mapAnime(app: Reelix, titleId: string): Promise<{ title: s
 		const season = await app.tmdb().season(t.tmdb_id, s.season_number);
 		for (const e of season.episodes) tmdbEps.push({ season: s.season_number, episode: e.episode_number, air: day(e.air_date) || null });
 	}
-	// Bangumi entries: the linked ones, else a search by the original name
+	// Bangumi entries: the linked ones, else what the metadata sources find by the original name (docs/plugins.md §7.6)
 	let ids = t.bangumi_ids;
-	if (!ids.length) {
+	if (!metadataSources(app).length) notes.push("No metadata source is running to read Bangumi entries from (the bangumi plugin).");
+	else if (!ids.length) {
 		const names = [t.original_name, t.name, t.folder_name].filter((x): x is string => !!x);
 		for (const n of names) {
-			const hits = await app.bangumi().search(n, 10);
+			const hits = (await findAtSources(app, { text: n, kind: "anime" })).map((x) => x.hit).filter((h) => h.ids.bangumi);
 			const want = new Set(t.names.concat(names).map(normName));
 			const year = t.year;
-			const good = hits.filter((h) => (!h.platform || /TV/i.test(h.platform)) && (want.has(normName(h.name)) || (h.name_cn && want.has(normName(h.name_cn))) || normName(h.name).startsWith(normName(n))) && (!year || !h.date || Number(h.date.slice(0, 4)) >= year));
+			const good = hits.filter((h) => h.series !== false && (want.has(normName(h.name)) || h.names?.some((x) => want.has(normName(x))) || normName(h.name).startsWith(normName(n))) && (!year || !h.year || h.year >= year));
 			if (good.length) {
-				ids = good.map((g) => g.id);
+				ids = [...new Set(good.map((g) => g.ids.bangumi!))];
 				break;
 			}
 		}
@@ -46,9 +47,9 @@ export async function mapAnime(app: Reelix, titleId: string): Promise<{ title: s
 	const mappings: AnimeMapRow[] = [];
 	app.db.prepare("DELETE FROM anime_map WHERE title_id = ? AND source = 'auto'").run(t.id);
 	for (const bid of ids) {
-		let eps: BgmEpisode[];
+		let eps: { number: number; airDate?: string }[];
 		try {
-			eps = (await app.bangumi().episodes(bid)).filter((e) => e.type === 0).sort((a, b) => a.sort - b.sort);
+			eps = (await bangumiEpisodes(app, bid)).sort((a, b) => a.number - b.number);
 		} catch (e) {
 			notes.push(`Bangumi ${bid}: ${errorMessage(e)}`);
 			continue;
@@ -56,7 +57,7 @@ export async function mapAnime(app: Reelix, titleId: string): Promise<{ title: s
 		if (!eps.length) continue;
 		linkBangumi(app, t.id, bid);
 		const first = eps[0]!;
-		const firstAir = day(first.airdate);
+		const firstAir = day(first.airDate);
 		// The TMDB episode closest in air date to this entry's first episode (±3 days).
 		let best: TmdbEp | undefined;
 		let bestDiff = Infinity;
@@ -69,7 +70,7 @@ export async function mapAnime(app: Reelix, titleId: string): Promise<{ title: s
 			}
 		}
 		if (!best || bestDiff > 3 * 86400_000) {
-			notes.push(`Bangumi ${bid} (${first.airdate || "no date"}): no TMDB episode within 3 days of its first episode; settle it by hand.`);
+			notes.push(`Bangumi ${bid} (${first.airDate || "no date"}): no TMDB episode within 3 days of its first episode; settle it by hand.`);
 			continue;
 		}
 		const exceptions: Record<string, string> = {};
@@ -79,10 +80,10 @@ export async function mapAnime(app: Reelix, titleId: string): Promise<{ title: s
 			if (!target) {
 				const absIdx = tmdbEps.indexOf(best!) + i;
 				const alt = tmdbEps[absIdx];
-				if (alt) exceptions[String(e.sort)] = `S${alt.season}E${alt.episode}`;
+				if (alt) exceptions[String(e.number)] = `S${alt.season}E${alt.episode}`;
 			}
 		});
-		const row = { title_id: t.id, bangumi_id: bid, bgm_from: first.sort, bgm_to: eps[eps.length - 1]!.sort, tmdb_season: best.season, tmdb_start: best.episode };
+		const row = { title_id: t.id, bangumi_id: bid, bgm_from: first.number, bgm_to: eps[eps.length - 1]!.number, tmdb_season: best.season, tmdb_start: best.episode };
 		const info = app.db.prepare("INSERT INTO anime_map (title_id, bangumi_id, bgm_from, bgm_to, tmdb_season, tmdb_start, exceptions_json, source) VALUES (?, ?, ?, ?, ?, ?, ?, 'auto')").run(row.title_id, row.bangumi_id, row.bgm_from, row.bgm_to, row.tmdb_season, row.tmdb_start, JSON.stringify(exceptions));
 		mappings.push({ ...row, id: Number(info.lastInsertRowid), exceptions_json: JSON.stringify(exceptions), source: "auto" });
 		const seasonCount = tmdbEps.filter((x) => x.season === best!.season).length;
@@ -157,24 +158,5 @@ defineOperation({
 		return i;
 	},
 	toText: (o: any) => `Stored: Bangumi ${o.bangumi_id} eps ${o.from}-${o.to} → S${o.season}E${o.start}.`,
-	titleOf: (i) => i.title_id,
-});
-
-defineOperation({
-	name: "douban.rating",
-	summary: "Refresh a title's Douban rating from the public page (Douban ID from subhd or a link)",
-	effect: "write",
-	input: Type.Object({ title_id: Type.String(), douban_id: Type.Optional(Type.String()) }),
-	positional: ["title_id"],
-	async run(ctx, i) {
-		const t = requireTitle(ctx.app, i.title_id);
-		const id = i.douban_id ?? t.douban_id;
-		if (!id) throw new ReelixError("not_found", "No Douban ID yet; it arrives with a subhd search (subtitle.search) or a Douban link.");
-		const page = await doubanPage(ctx.app, id);
-		if (page.error) throw new ReelixError("douban", `Douban page unavailable (${page.error}); best-effort, nothing else depends on it.`);
-		linkDouban(ctx.app, t.id, id, page.rating);
-		return { ...page, douban_id: id, title: getTitle(ctx.app, t.id)?.name };
-	},
-	toText: (o: any) => `${o.title}: Douban ${o.douban_id} ${o.rating ?? "no rating"}${o.title ? ` (${o.title})` : ""}`,
 	titleOf: (i) => i.title_id,
 });

@@ -1,0 +1,4 @@
+{
+	"description": "Après le classement d'un téléchargement, demande à l'agent de trouver des sous-titres dans votre première langue.",
+	"jobTitle": "Sous-titres : {{name}}"
+}

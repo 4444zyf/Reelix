@@ -7,11 +7,16 @@
   "engines": { "node": ">=22.18" },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test --test-concurrency=1 'packages/*/test/**/*.test.ts'",
-    "reelix": "node packages/cli/src/main.ts",
-    "server": "node packages/server/src/main.ts",
+    "test": "node --test --test-concurrency=1 'packages/*/test/**/*.test.ts' 'plugins/**/test/**/*.test.ts' && node packages/web/scripts/check-locales.mjs",
+    "reelix": "node --disable-sigusr1 packages/cli/src/main.ts",
+    "server": "node --disable-sigusr1 packages/server/src/main.ts",
+    "plugin-reference": "node scripts/plugin-reference.ts",
+    "site:build": "node website/build.ts",
     "web:build": "npm -w @reelix/web run build",
     "web:dev": "npm -w @reelix/web run dev"
+  },
+  "dependencies": {
+    "playwright-core": "^1.65.1"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",

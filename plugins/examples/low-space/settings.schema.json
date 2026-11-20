@@ -1,0 +1,13 @@
+{
+	"type": "object",
+	"required": [
+		"min_free_gb"
+	],
+	"properties": {
+		"min_free_gb": {
+			"type": "number",
+			"default": 50,
+			"minimum": 1
+		}
+	}
+}

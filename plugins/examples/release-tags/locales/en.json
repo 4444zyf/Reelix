@@ -1,0 +1,5 @@
+{
+	"description": "Example: asks tagger plugins what a release name says and shows the tags beside each release.",
+	"note": "Tags: {{tags}}",
+	"reason": "Tags read from the release names by the tagger plugins"
+}

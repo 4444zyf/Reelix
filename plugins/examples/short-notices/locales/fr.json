@@ -1,0 +1,7 @@
+{
+	"description": "Exemple : raccourcit le texte des notifications envoyées à vos appareils.",
+	"reason": "Raccourci à {{max}} caractères",
+	"settings": {
+		"max_body": "Texte le plus long (caractères)"
+	}
+}

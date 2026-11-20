@@ -1,8 +1,8 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { startPlugins } from "@reelix/plugin-testing";
 import { Reelix } from "../src/app.ts";
-import "../src/ops/index.ts";
 
 export function tempApp(opts: { base?: string } = {}) {
 	const root = mkdtempSync(join(opts.base ?? tmpdir(), "reelix-test-"));
@@ -14,6 +14,15 @@ export function tempApp(opts: { base?: string } = {}) {
 	app.setConfig("downloads", downloads);
 	app.setConfig("library", { movies: join(library, "Movies"), shows: join(library, "Shows"), anime: join(library, "Anime") });
 	return { app, root, media, downloads, library };
+}
+
+/** The built-in plugins of this repository. */
+export const PLUGINS = join(import.meta.dirname, "../../../plugins");
+
+/** Start built-in plugins on this app, through the real loading path. Returns the step that stops them. */
+export async function withPlugins(app: Reelix, ids: string[]): Promise<() => Promise<void>> {
+	const t = await startPlugins(ids.map((id) => join(PLUGINS, id)), { app });
+	return t.close;
 }
 
 export function touch(path: string, size = 16): string {

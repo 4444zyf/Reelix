@@ -1,0 +1,11 @@
+{
+	"description": "A notifier: sends Reelix's notices to a web address of your choice.",
+	"httpError": "The address answered HTTP {{status}}",
+	"settings": {
+		"url": "Address",
+		"url_help": "Each notice is posted here as JSON: title, body, urgent, path."
+	},
+	"secrets": {
+		"token": "Token (sent as Authorization: Bearer)"
+	}
+}

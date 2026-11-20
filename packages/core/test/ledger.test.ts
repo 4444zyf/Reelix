@@ -1,28 +1,34 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Type } from "typebox";
-import { defineOperation, reconcileOnStartup, runOperation } from "../src/registry.ts";
+import { type Operation, reconcileOnStartup, runOperation } from "../src/registry.ts";
 import { ReelixError } from "../src/util.ts";
-import { tempApp } from "./helpers.ts";
+import { tempApp as emptyApp } from "./helpers.ts";
 
 let runs = 0;
 let world = new Set<string>();
-defineOperation({
+const TEST_ADD = {
 	name: "test.add",
 	summary: "test",
 	effect: "write",
 	input: Type.Object({ thing: Type.String(), fail: Type.Optional(Type.Boolean()), timeout: Type.Optional(Type.Boolean()) }),
-	async run(_ctx, i) {
+	async run(_ctx, i: any) {
 		runs++;
 		if (i.fail) throw new ReelixError("refused", "no");
 		world.add(i.thing);
 		if (i.timeout) throw new ReelixError("network_timeout", "slow");
 		return { added: i.thing };
 	},
-	async reconcile(_ctx, i) {
+	async reconcile(_ctx, i: any) {
 		return world.has(i.thing) ? { status: "succeeded", output: { added: i.thing, reconciled: true } } : { status: "failed" };
 	},
-});
+} satisfies Operation<any>;
+
+function tempApp() {
+	const t = emptyApp();
+	t.app.operations.add(TEST_ADD);
+	return t;
+}
 
 test("same request id returns the first result without running again", async () => {
 	const { app } = tempApp();
@@ -74,9 +80,18 @@ test("input is validated against the schema", async () => {
 	app.close();
 });
 
+test("the ledger never keeps a secret's value", async () => {
+	const { app } = tempApp();
+	await runOperation(app, "secret.set", { key: "plugins.jackett.api_key", value: "abcdef123456" }, { actor: "owner:cli", requestId: "s1" });
+	assert.equal(app.secrets["plugins.jackett.api_key"], "abcdef123456");
+	const row = app.db.prepare("SELECT input_json FROM actions WHERE request_id = 's1'").get() as { input_json: string };
+	assert.deepEqual(JSON.parse(row.input_json), { key: "plugins.jackett.api_key", value: "[secret]" });
+	app.close();
+});
+
 test("secrets are blanked from text", () => {
 	const { app } = tempApp();
-	app.setSecret("jackett.api_key", "abcdef123456");
-	assert.equal(app.redact("key=abcdef123456 and http://x/dl?apikey=zzz&file=1"), "key=[secret:jackett.api_key] and http://x/dl?apikey=[redacted]&file=1");
+	app.setSecret("plugins.jackett.api_key", "abcdef123456");
+	assert.equal(app.redact("key=abcdef123456 and http://x/dl?apikey=zzz&file=1"), "key=[secret:plugins.jackett.api_key] and http://x/dl?apikey=[redacted]&file=1");
 	app.close();
 });

@@ -1,15 +1,13 @@
 import { EventEmitter } from "node:events";
+import type { PluginEvents } from "@reelix/plugin";
 import { existsSync, statSync, watch, type FSWatcher } from "node:fs";
-import { QbClient } from "./clients/qbittorrent.ts";
-import { JackettClient } from "./clients/jackett.ts";
 import { TmdbClient } from "./clients/tmdb.ts";
-import { BangumiClient } from "./clients/bangumi.ts";
-import { JellyfinClient } from "./clients/jellyfin.ts";
-import { TelegramClient } from "./clients/telegram.ts";
 import {
 	type Config,
 	type DataPaths,
+	type MovedOwner,
 	type Secrets,
+	changedPaths,
 	dataPaths,
 	ensureDataDirs,
 	getPath,
@@ -19,10 +17,18 @@ import {
 	saveConfig,
 	saveSecrets,
 	setPath,
+	TMDB_LOCALES,
 } from "./config.ts";
+import { adoptChannelOwner } from "./channels.ts";
 import { type Db, openDb } from "./db.ts";
 import { proxyFor } from "./http.ts";
-import { ReelixError } from "./util.ts";
+import { HookHub } from "./hooks.ts";
+import { NotificationDispatcher } from "./notify.ts";
+import { CORE_OPERATIONS } from "./ops/index.ts";
+import type { Check } from "./doctor.ts";
+import type { PluginCardKind, PluginControl } from "./plugins.ts";
+import { OperationRegistry } from "./registry.ts";
+import { SeamHub } from "./seams.ts";
 
 export type AppEvent =
 	| { type: "action"; action: Record<string, unknown> }
@@ -31,6 +37,10 @@ export type AppEvent =
 	| { type: "config" }
 	| { type: "notice"; level: "info" | "warn" | "error"; text: string }
 	| { type: string; [k: string]: unknown };
+
+/** The events plugins can listen to (docs/plugins.md §9). The internal stream above is not one of them. */
+export type PluginEventMap = { [E in keyof PluginEvents]: [PluginEvents[E]] };
+export const PLUGIN_EVENTS: readonly string[] = ["config.changed", "download.filed", "session.ended"] satisfies (keyof PluginEventMap)[];
 
 /**
  * The core's shared state: settings, secrets, database, clients, event bus.
@@ -42,7 +52,25 @@ export class Reelix {
 	config: Config;
 	secrets: Secrets;
 	configWarning?: string;
+	/** What this process is running on which model right now (set by the agent host; docs/magpie.md). */
+	modelsInUse?: () => { actor: string; spec: string; label: string }[];
+	/** The running server's plugins; absent when the CLI works without a server. */
+	plugins?: PluginControl;
+	/** Every operation of this running Reelix (docs/plugins.md §15). */
+	operations = new OperationRegistry(CORE_OPERATIONS);
+	/** Providers of the seams, registered by plugins. */
+	seams = new SeamHub(this);
+	/** Hooks plugins take part in. */
+	hooks = new HookHub(this);
+	/** Sends what needs the owner to every notifier; started with the plugins. */
+	notifications = new NotificationDispatcher(this);
+	private otherSecrets = new Map<string, string>();
+	/** Chat card kinds registered by plugins, as `<plugin>.<kind>` (docs/plugins.md §12.3). */
+	cards = new Map<string, PluginCardKind>();
+	/** Doctor checks registered by plugins. */
+	checks = new Map<string, (o: { quick: boolean }) => Promise<Omit<Check, "name"> | undefined>>();
 	events = new EventEmitter();
+	pluginEvents = new EventEmitter<PluginEventMap>();
 	private clients = new Map<string, unknown>();
 	private watcher?: FSWatcher;
 	private configMtime = 0;
@@ -51,12 +79,15 @@ export class Reelix {
 		this.paths = dataPaths(root);
 		ensureDataDirs(this.paths);
 		this.db = openDb(this.paths.db);
-		const { config, warning } = loadConfig(this.paths);
+		const { config, warning } = loadConfig(this.paths, this.keepOwner);
 		this.config = config;
 		this.configWarning = warning;
 		this.secrets = loadSecrets(this.paths);
 		this.events.setMaxListeners(100);
+		this.pluginEvents.setMaxListeners(100);
 	}
+
+	private keepOwner = (o: MovedOwner) => adoptChannelOwner(this.db, o);
 
 	emit(e: AppEvent): void {
 		this.events.emit("event", e);
@@ -80,12 +111,22 @@ export class Reelix {
 	}
 
 	reload(): void {
-		const { config, warning } = loadConfig(this.paths);
+		const before = this.config;
+		const secretsBefore = this.secrets;
+		const { config, warning } = loadConfig(this.paths, this.keepOwner);
 		this.config = config;
 		this.configWarning = warning;
 		this.secrets = loadSecrets(this.paths);
+		this.configApplied(before);
+		const changed = changedPaths(secretsBefore, this.secrets);
+		if (changed.length) this.emit({ type: "secrets", keys: changed });
+	}
+
+	private configApplied(before: Config): void {
 		this.clients.clear();
 		this.emit({ type: "config" });
+		const paths = changedPaths(before, this.config);
+		if (paths.length) this.pluginEvents.emit("config.changed", { paths });
 	}
 
 	getConfig(path: string): unknown {
@@ -100,26 +141,33 @@ export class Reelix {
 		try {
 			this.configMtime = statSync(this.paths.config).mtimeMs;
 		} catch {}
+		const before = this.config;
 		this.config = parsed;
 		this.configWarning = undefined;
-		this.clients.clear();
-		this.emit({ type: "config" });
+		this.configApplied(before);
 		return parsed;
 	}
 
-	setSecret(key: string, value: string | undefined): void {
+	/** `byPlugin`: the plugin stored it itself, and need not restart for it. */
+	setSecret(key: string, value: string | undefined, byPlugin?: string): void {
 		const next = { ...this.secrets };
 		if (value === undefined || value === "") delete next[key];
 		else next[key] = value;
 		saveSecrets(this.paths, next);
 		this.secrets = next;
 		this.clients.clear();
+		this.emit({ type: "secrets", keys: [key], byPlugin });
+	}
+
+	/** A secret that lives outside secrets.yaml (the owner's socket token): `redact` blanks it too. */
+	addRedaction(name: string, value: string): void {
+		this.otherSecrets.set(name, value);
 	}
 
 	/** Blank known secret values out of text before it reaches the model (§9). A cheap filter, not a guarantee. */
 	redact(text: string): string {
 		let out = text;
-		for (const [k, v] of Object.entries(this.secrets)) {
+		for (const [k, v] of [...Object.entries(this.secrets), ...this.otherSecrets]) {
 			if (!v || v.length < 6 || k === "web.password_hash") continue;
 			if (out.includes(v)) out = out.split(v).join(`[secret:${k}]`);
 		}
@@ -137,45 +185,8 @@ export class Reelix {
 		return c;
 	}
 
-	qb(): QbClient {
-		return this.client("qb", () => {
-			const c = this.config.qbittorrent;
-			if (!c?.url) throw new ReelixError("not_configured", "qBittorrent is not configured. Set it with `reelix config set qbittorrent.url http://host:8080`.");
-			return new QbClient({ url: c.url, username: c.username, password: this.secrets["qbittorrent.password"] });
-		});
-	}
-
-	jackett(): JackettClient {
-		return this.client("jackett", () => {
-			const c = this.config.jackett;
-			if (!c?.url) throw new ReelixError("not_configured", "Jackett is not configured. Set it with `reelix config set jackett.url http://host:9117`.");
-			const key = this.secrets["jackett.api_key"];
-			if (!key) throw new ReelixError("not_configured", "The Jackett API key is missing (secret jackett.api_key).");
-			const j = new JackettClient({ url: c.url, apiKey: key });
-			j.proxy = proxyFor(this.config, "jackett");
-			return j;
-		});
-	}
-
 	tmdb(): TmdbClient {
-		return this.client("tmdb", () => new TmdbClient({ key: this.secrets["tmdb.api_key"] ?? "", baseUrl: this.config.tmdb.base_url, language: this.config.tmdb.language, proxy: proxyFor(this.config, "tmdb") }));
-	}
-
-	bangumi(): BangumiClient {
-		return this.client("bangumi", () => new BangumiClient({ baseUrl: this.config.bangumi.base_url, proxy: proxyFor(this.config, "bangumi") }));
-	}
-
-	jellyfin(): JellyfinClient | undefined {
-		const c = this.config.jellyfin;
-		const key = this.secrets["jellyfin.api_key"];
-		if (!c?.url || !key) return undefined;
-		return this.client("jellyfin", () => new JellyfinClient({ url: c.url, apiKey: key }));
-	}
-
-	telegram(): TelegramClient | undefined {
-		const token = this.secrets["telegram.bot_token"];
-		if (!token) return undefined;
-		return this.client("telegram", () => new TelegramClient({ token, apiUrl: this.config.telegram.api_url, proxy: proxyFor(this.config, "telegram") }));
+		return this.client("tmdb", () => new TmdbClient({ key: this.secrets["tmdb.api_key"] ?? "", baseUrl: this.config.tmdb.base_url, language: TMDB_LOCALES[this.config.language ?? "en"], proxy: proxyFor(this.config, "tmdb") }));
 	}
 
 	close(): void {

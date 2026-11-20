@@ -1,10 +1,9 @@
-import { FormData as UndiciFormData, ProxyAgent, fetch as ufetch, type Dispatcher } from "undici";
+import { lookup as dnsLookup } from "node:dns";
+import { Agent, FormData as UndiciFormData, ProxyAgent, fetch as ufetch, type Dispatcher } from "undici";
 import type { Config } from "./config.ts";
 import { ReelixError, errorMessage } from "./util.ts";
 
 export const USER_AGENT = "Reelix/0.1 (self-hosted media assistant; https://github.com/4444zyf/Reelix)";
-export const BROWSER_UA =
-	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 const agents = new Map<string, Dispatcher>();
 
@@ -26,6 +25,29 @@ function dispatcher(proxy: string | undefined): Dispatcher | undefined {
 	return a;
 }
 
+/**
+ * A one-use connection that resolves the host itself and connects only to addresses `allow`
+ * accepts, so a name cannot change between the check and the connection (docs/plugins.md §11.4).
+ */
+export function checkedConnection(allow: (address: string) => void): Agent {
+	return new Agent({
+		connect: {
+			lookup(host, options, callback) {
+				dnsLookup(host, { all: true, family: options.family as number | undefined }, (e, addresses) => {
+					if (e) return callback(e, "", 0);
+					try {
+						for (const a of addresses) allow(a.address);
+					} catch (refused) {
+						return callback(refused as NodeJS.ErrnoException, "", 0);
+					}
+					if (options.all) (callback as unknown as (e: null, a: typeof addresses) => void)(null, addresses);
+					else callback(null, addresses[0]!.address, addresses[0]!.family);
+				});
+			},
+		},
+	});
+}
+
 export type HttpOptions = {
 	method?: string;
 	headers?: Record<string, string>;
@@ -33,6 +55,8 @@ export type HttpOptions = {
 	timeoutMs?: number;
 	signal?: AbortSignal;
 	proxy?: string;
+	/** Use this connection instead of the default or the proxy's. */
+	dispatcher?: Dispatcher;
 	redirect?: "follow" | "manual";
 };
 
@@ -43,8 +67,29 @@ export type HttpResponse = {
 	url: string;
 	text(): Promise<string>;
 	json<T = unknown>(): Promise<T>;
-	bytes(): Promise<Uint8Array>;
+	/** With `limit`, refuses a body larger than that many bytes without reading the rest. */
+	bytes(limit?: number): Promise<Uint8Array>;
 };
+
+async function readUpTo(r: Response, limit: number, host: string): Promise<Uint8Array> {
+	const tooLarge = () => new ReelixError("network_too_large", `${host} sent more than ${Math.round(limit / 1024 / 1024)} MB.`);
+	if (Number(r.headers.get("content-length") ?? 0) > limit) {
+		await r.body?.cancel();
+		throw tooLarge();
+	}
+	const chunks: Uint8Array[] = [];
+	let size = 0;
+	const reader = r.body?.getReader();
+	for (let next = await reader?.read(); next && !next.done; next = await reader!.read()) {
+		size += next.value.length;
+		if (size > limit) {
+			await reader!.cancel();
+			throw tooLarge();
+		}
+		chunks.push(next.value);
+	}
+	return new Uint8Array(Buffer.concat(chunks));
+}
 
 export async function http(url: string, opts: HttpOptions = {}): Promise<HttpResponse> {
 	const timeout = AbortSignal.timeout(opts.timeoutMs ?? 20_000);
@@ -57,7 +102,7 @@ export async function http(url: string, opts: HttpOptions = {}): Promise<HttpRes
 			body: toUndiciBody(opts.body) as never,
 			signal,
 			redirect: opts.redirect ?? "follow",
-			dispatcher: dispatcher(opts.proxy),
+			dispatcher: opts.dispatcher ?? dispatcher(opts.proxy),
 		});
 	} catch (e) {
 		const host = safeHost(url);
@@ -66,7 +111,7 @@ export async function http(url: string, opts: HttpOptions = {}): Promise<HttpRes
 	}
 	const r = res;
 	let buf: Uint8Array | undefined;
-	const bytes = async () => (buf ??= new Uint8Array(await r.arrayBuffer()));
+	const bytes = async (limit?: number) => (buf ??= limit === undefined ? new Uint8Array(await r.arrayBuffer()) : await readUpTo(r as unknown as Response, limit, safeHost(url)));
 	return {
 		status: r.status,
 		ok: r.ok,

@@ -1,0 +1,8 @@
+{
+	"description": "Anime facts from Bangumi: entries, episodes and air dates for lining up seasons, and what is airing now.",
+	"perSeason": "Bangumi has one entry per season; check which TMDB season it is.",
+	"settings": {
+		"base_url": "Bangumi API address",
+		"base_url_help": "https://api.bgm.tv unless you use a mirror."
+	}
+}

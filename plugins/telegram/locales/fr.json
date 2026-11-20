@@ -1,0 +1,25 @@
+{
+	"description": "Telegram : notifications avec boutons et images, et discussion avec l’agent.",
+	"linked": "Compte lié. J’enverrai les notifications ici, et vous pouvez discuter avec moi dans cette conversation.",
+	"gotIt": "C’est noté.",
+	"answered": "Répondu : {{answer}}",
+	"alreadyHandled": "Déjà traité",
+	"questionClosed": "Cette question est close",
+	"approveInWeb": "Cette conversation ne peut pas approuver cela. Approuvez-le dans l’application web.",
+	"replyToAnswer": "(Répondez à ce message pour donner votre réponse.)",
+	"test": "Message de test de Reelix : les notifications arriveront ici.",
+	"answeredStatus": "répondu",
+	"dismissedStatus": "ignoré",
+	"settings": {
+		"api_url": "Adresse de la Bot API",
+		"api_url_help": "Laissez-la telle quelle, sauf si vous faites tourner votre propre serveur Bot API."
+	},
+	"secrets": {
+		"bot_token": "Jeton du bot, donné par @BotFather"
+	},
+	"buttons": {
+		"status": "Vérifier le bot",
+		"link": "Obtenir un code de liaison",
+		"test": "Envoyer un message de test"
+	}
+}

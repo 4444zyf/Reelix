@@ -1,0 +1,9 @@
+{
+	"description": "为已安装的网页应用提供原生通知。",
+	"lang": "zh",
+	"testTitle": "Reelix 通知已开启",
+	"testBody": "Reelix 需要你时，这台设备会收到提醒。",
+	"secrets": {
+		"vapid_private": "Reelix 用来签名通知的密钥（自动生成；更改后所有设备上的通知都会关闭）"
+	}
+}

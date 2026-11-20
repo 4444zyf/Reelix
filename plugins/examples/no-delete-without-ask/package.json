@@ -1,0 +1,25 @@
+{
+  "name": "reelix-plugin-no-delete-without-ask",
+  "version": "0.1.0",
+  "description": "Reference plugin: background jobs may not delete anything; they ask you instead.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "reelix-plugin"
+  ],
+  "peerDependencies": {
+    "@reelix/plugin": "*"
+  },
+  "reelix": {
+    "api": 0,
+    "id": "no-delete-without-ask",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "uses": {
+      "hooks": [
+        "agent.tool@1"
+      ]
+    }
+  }
+}

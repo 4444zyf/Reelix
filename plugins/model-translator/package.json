@@ -1,0 +1,20 @@
+{
+  "name": "reelix-plugin-model-translator",
+  "version": "0.1.0",
+  "description": "Translates subtitle lines with your own models (the translate role).",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["reelix-plugin"],
+  "peerDependencies": { "@reelix/plugin": "*" },
+  "reelix": {
+    "api": 0,
+    "id": "model-translator",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "uses": {
+      "provides": ["reelix:translator@1"],
+      "model": { "roles": ["translate"], "unmetered": true }
+    }
+  }
+}

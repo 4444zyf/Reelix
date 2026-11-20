@@ -1,0 +1,39 @@
+{
+	"items": {
+		"chat": "Discussion",
+		"inbox": "Boîte de réception",
+		"library": "Bibliothèque",
+		"trends": "Tendances",
+		"downloads": "Téléchargements",
+		"activity": "Activité",
+		"browser": "Navigateur",
+		"settings": "Réglages"
+	},
+	"more": "Plus",
+	"conversations": "Conversations",
+	"owner": "Propriétaire",
+	"signOut": "Se déconnecter",
+	"theme": "Thème",
+	"language": "Langue",
+	"expandSidebar": "Déplier la barre latérale",
+	"collapseSidebar": "Replier la barre latérale",
+	"openChat": "Ouvrir la discussion",
+	"spendCap": "Plafond de dépenses en arrière-plan atteint pour aujourd’hui.",
+	"connecting": "Connexion à Reelix…",
+	"unreachable": "Reelix est injoignable.",
+	"login": {
+		"firstRun": "Choisissez un mot de passe pour ce Reelix. Il servira à vous connecter depuis n’importe quel appareil.",
+		"signInToContinue": "Connectez-vous pour continuer.",
+		"newPassword": "Nouveau mot de passe",
+		"password": "Mot de passe",
+		"repeat": "Répétez-le",
+		"tooShort": "Au moins 8 caractères.",
+		"differ": "Les deux mots de passe diffèrent.",
+		"setPassword": "Définir le mot de passe",
+		"signIn": "Se connecter"
+	},
+	"devPlugin": "Développement de plugin : {{folder}} est chargé sans approbation ni contrôle des fichiers. Services simulés, données temporaires.",
+	"plugins": "Plugins",
+	"screenFailed": "L’écran de {{id}} n’a pas pu être affiché.",
+	"screenTitle": "{{title}} — un écran du plugin {{id}}"
+}

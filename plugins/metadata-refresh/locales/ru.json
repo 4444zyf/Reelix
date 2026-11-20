@@ -1,0 +1,12 @@
+{
+	"description": "Заново загружает названия, описания и постеры из TMDB, когда меняется язык владельца.",
+	"jobTitle": "Перечитать сведения о фильмах на новом языке",
+	"refreshed_one": "Перечитан {{count}} тайтл ({{locale}}).",
+	"refreshed_few": "Перечитано {{count}} тайтла ({{locale}}).",
+	"refreshed_many": "Перечитано {{count}} тайтлов ({{locale}}).",
+	"refreshed_other": "Перечитано {{count}} тайтла ({{locale}}).",
+	"failed_one": "{{count}} ошибка.",
+	"failed_few": "{{count}} ошибки.",
+	"failed_many": "{{count}} ошибок.",
+	"failed_other": "{{count}} ошибки."
+}

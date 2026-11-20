@@ -1,9 +1,10 @@
 import { Type } from "typebox";
 import type { Reelix } from "./app.ts";
-import { addDownload } from "./downloads.ts";
+import { tr } from "./i18n.ts";
+import { addInbox } from "./inbox.ts";
 import { defineOperation, runOperation } from "./registry.ts";
 import { searchReleases, type Release } from "./releases.ts";
-import { fetchTitle, requireTitle, type Title } from "./titles.ts";
+import { fetchTitle, requireTitle } from "./titles.ts";
 import { ReelixError, errorMessage, newId, nowIso } from "./util.ts";
 
 export type Follow = { id: string; title_id: string; instruction: string; quick_accept: string | null; season: number | null; active: number; created_at: string };
@@ -57,8 +58,10 @@ export async function followTick(app: Reelix, actor = "job:follow"): Promise<Due
 		const title = requireTitle(app, e.title_id);
 		try {
 			const s = await searchReleases(app, { title, season: e.season, episode: e.episode, limit: 30 });
-			const hits = s.all.filter((r) => r.parsed.episodes?.includes(e.episode) || (!r.parsed.episodes && r.parsed.season === e.season && r.parsed.complete));
-			const quick = e.quick_accept ? hits.filter((r) => r.parsed.episodes?.includes(e.episode) && matchesQuickAccept(e.quick_accept!, r)).sort((a, b) => (b.seeders ?? 0) - (a.seeders ?? 0))[0] : undefined;
+			const fits = (r: Release) => r.parsed.episodes?.includes(e.episode) || (!r.parsed.episodes && r.parsed.season === e.season && r.parsed.complete);
+			const hits = s.all.filter((r) => !r.hidden?.length && fits(r));
+			// The first match in the order Reelix presents, which a ranking plugin may have set.
+			const quick = e.quick_accept ? hits.find((r) => r.parsed.episodes?.includes(e.episode) && matchesQuickAccept(e.quick_accept!, r)) : undefined;
 			if (quick) {
 				const r = await runOperation(app, "download.add", { handle: quick.handle, title_id: title.id, episodes: [{ season: e.season, episode: e.episode }], reason: `follow quick-accept "${e.quick_accept}"` }, { actor, requestId: `follow:${e.follow_id}:${e.season}:${e.episode}:${e.misses}` });
 				const hash = (r.output as { hash: string }).hash;
@@ -69,6 +72,11 @@ export async function followTick(app: Reelix, actor = "job:follow"): Promise<Due
 				app.db.prepare("UPDATE follow_episodes SET next_check_at = ? WHERE follow_id = ? AND season = ? AND episode = ?").run(new Date(Date.now() + 6 * 3600_000).toISOString(), e.follow_id, e.season, e.episode);
 				out.push({ follow: e.follow_id, season: e.season, episode: e.episode, result: "needs_agent", detail: `${hits.length} candidates`, candidates: hits.slice(0, 8).map((h) => h.handle) });
 			} else {
+				// Candidates existed and plugins hid every one: the owner should know who did it.
+				const hiddenBy = [...new Set(s.hidden.filter(fits).flatMap((r) => r.hidden!.map((h) => h.plugin)))];
+				if (hiddenBy.length) {
+					addInbox(app, { kind: "notice", title: tr(app, "follow.filteredTitle", { name: title.name, episode: `S${e.season}E${e.episode}` }), body: tr(app, "follow.filteredBody", { plugins: hiddenBy.join(", "), count: s.hidden.filter(fits).length }), source: `plugin:${hiddenBy[0]}`, dedupeKey: `follow-filtered:${e.follow_id}:${e.season}:${e.episode}` });
+				}
 				// After a miss the interval widens.
 				const misses = e.misses + 1;
 				const wait = Math.min(7 * DAY, 2 ** Math.min(misses, 6) * 3 * 3600_000);
@@ -171,5 +179,3 @@ defineOperation({
 	},
 	toText: (o: DueOutcome[]) => o.map((x) => `${x.follow} S${x.season}E${x.episode}: ${x.result} — ${x.detail}`).join("\n") || "Nothing due.",
 });
-
-export { addDownload, type Title };

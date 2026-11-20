@@ -1,0 +1,7 @@
+{
+	"description": "An indexer: searches one tracker for releases.",
+	"httpError": "The tracker answered HTTP {{status}}",
+	"secrets": {
+		"api_key": "API key"
+	}
+}

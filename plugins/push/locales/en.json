@@ -1,0 +1,9 @@
+{
+	"description": "Native notifications for the installed web app.",
+	"lang": "en",
+	"testTitle": "Reelix notifications are on",
+	"testBody": "This device will be told when Reelix needs you.",
+	"secrets": {
+		"vapid_private": "Reelix's own key for signing notifications (made automatically; changing it turns notifications off on every device)"
+	}
+}

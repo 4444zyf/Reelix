@@ -1,0 +1,4 @@
+{
+	"description": "After a download is filed, asks the agent to find subtitles in your first wanted language.",
+	"jobTitle": "Subtitles: {{name}}"
+}

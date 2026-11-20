@@ -1,0 +1,22 @@
+{
+	"description": "字幕来源：SubHD、ASSRT、OpenSubtitles、SubDL、Gestdown 和 Jimaku。",
+	"settings": {
+		"subhd_url": "SubHD 地址",
+		"subhd_url_help": "只有网站搬家时才需要改地址。",
+		"assrt_url": "ASSRT 地址",
+		"opensubtitles_url": "OpenSubtitles.com API 地址",
+		"subdl_url": "SubDL API 地址",
+		"subdl_download_url": "SubDL 下载地址",
+		"gestdown_url": "Gestdown 地址",
+		"jimaku_url": "Jimaku API 地址"
+	},
+	"secrets": {
+		"assrt_token": "ASSRT API 令牌",
+		"opensubtitles_api_key": "OpenSubtitles.com API 密钥（opensubtitles.com/consumers）",
+		"opensubtitles_username": "OpenSubtitles.com 用户名（可选：每日下载额度更高）",
+		"opensubtitles_password": "OpenSubtitles.com 密码（可选，与用户名一起）",
+		"opensubtitles_token": "OpenSubtitles.com 登录令牌（Reelix 会用用户名和密码自动获取）",
+		"subdl_api_key": "SubDL API 密钥（subdl.com，账户 → API）",
+		"jimaku_api_key": "Jimaku API 密钥（jimaku.cc，账户 → API；日本动画字幕）"
+	}
+}

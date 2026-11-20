@@ -1,0 +1,30 @@
+{
+  "name": "reelix-plugin-tag-hdr",
+  "version": "0.1.0",
+  "description": "Reference plugin: a tagger for release-tags that reads HDR10, HDR10+, Dolby Vision and HLG from release names.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "reelix-plugin"
+  ],
+  "peerDependencies": {
+    "@reelix/plugin": "*"
+  },
+  "reelix": {
+    "api": 0,
+    "id": "tag-hdr",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "requires": {
+      "plugins": {
+        "release-tags": "^0.1.0"
+      }
+    },
+    "uses": {
+      "provides": [
+        "release-tags:tagger@1"
+      ]
+    }
+  }
+}

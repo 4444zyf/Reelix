@@ -1,0 +1,125 @@
+# Reelix with optional services, each in its own container (docs/deployment.md).
+#
+#   cp .env.example .env      # then fill it in (or use what the pre-flight check printed)
+#   docker compose up -d      # Reelix plus the profiles named in COMPOSE_PROFILES
+#
+# Profiles: magpie, qbittorrent, jackett, jellyfin. Leave out the ones you already run elsewhere and
+# point Reelix at them (QBITTORRENT_URL … in .env; to join their network, see
+# docker-compose.override.example.yml).
+#
+# Inside the network services reach each other by name (http://qbittorrent:8080 …).
+# "localhost" inside a container is that container itself, never the NAS.
+
+name: reelix
+
+services:
+  reelix:
+    build: .
+    image: reelix:local
+    container_name: reelix
+    restart: unless-stopped
+    ports:
+      - "${REELIX_BIND:-0.0.0.0}:${REELIX_PORT:-7878}:7878"
+    volumes:
+      - "${MEDIA_ROOT:?set MEDIA_ROOT in .env}:/media"   # ONE mount: the common parent of downloads and library
+      - "${REELIX_DATA_DIR:-./reelix-data}:/data"
+      # magpie's volume is deliberately NOT mounted here: the agent has a shell in this container.
+    environment:
+      # qBittorrent's user and group: hard links and file ownership need them to match (decision D). No `user:`:
+      # the image starts as root and switches to these itself, so the agent's shell can run as another user (docs/deployment.md).
+      PUID: "${PUID:-1000}"
+      PGID: "${PGID:-1000}"
+      TZ: "${TZ:-Etc/UTC}"
+      # restart: unless-stopped starts Reelix again when it exits, so Settings may offer "Restart" (server.restart).
+      REELIX_RESTART: "exit"
+      # Copied into Settings at start only while the setting is empty; a change in Settings wins. The first three
+      # become the qbittorrent, jackett and jellyfin plugins' addresses (plugins.<id>), the last magpie.url.
+      REELIX_DEFAULT_QBITTORRENT_URL: "${QBITTORRENT_URL:-}"
+      REELIX_DEFAULT_JACKETT_URL: "${JACKETT_URL:-}"
+      REELIX_DEFAULT_JELLYFIN_URL: "${JELLYFIN_URL:-}"
+      REELIX_DEFAULT_MAGPIE_URL: "${MAGPIE_URL:-}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # things listening on the NAS itself (a proxy, host-network containers)
+    shm_size: "512m"                           # Chromium
+    networks: [reelix]
+
+  magpie:
+    profiles: [magpie]
+    image: "ghcr.io/yetone/magpie:${MAGPIE_VERSION:-0.1.4405}"   # pinned: the version Reelix was tested with
+    container_name: reelix-magpie
+    restart: unless-stopped
+    command: [serve, "--web=0.0.0.0:3430"]
+    environment:
+      TZ: "${TZ:-Etc/UTC}"
+      MAGPIE_ADDR: "0.0.0.0:3425"
+      # Opens its web page (?k=…). Not ":?": compose reads every service's variables even when the profile is
+      # off. Left empty, magpie makes a new key at each start (docker compose logs magpie).
+      MAGPIE_WEB_KEY: "${MAGPIE_WEB_KEY:-}"
+      MAGPIE_NO_STATS: "1"
+      # Only Reelix's network (and addresses you add) may call it: Reelix's admin key is "any", not "local".
+      MAGPIE_ALLOW_IPS: "${REELIX_SUBNET:-172.31.78.0/24}${MAGPIE_ALLOW_IPS_EXTRA:+,}${MAGPIE_ALLOW_IPS_EXTRA:-}"
+    volumes:
+      - "${MAGPIE_CONFIG_DIR:-./magpie-config}:/config"   # must be owned by uid 65532
+    ports:
+      # Its web page, where you add providers and make Reelix's two keys. The gateway (3425) is not
+      # published: Reelix reaches it inside the network. Publish it only for other machines' agents
+      # (docker-compose.override.example.yml).
+      - "${MAGPIE_WEB_BIND:-0.0.0.0}:${MAGPIE_WEB_PORT:-3430}:3430"
+    networks: [reelix]
+
+  qbittorrent:
+    profiles: [qbittorrent]
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: reelix-qbittorrent
+    restart: unless-stopped
+    environment:
+      PUID: "${PUID:-1000}"
+      PGID: "${PGID:-1000}"
+      TZ: "${TZ:-Etc/UTC}"
+      WEBUI_PORT: "8080"
+    volumes:
+      - "${QBITTORRENT_CONFIG_DIR:-./qbittorrent-config}:/config"
+      - "${MEDIA_ROOT:?set MEDIA_ROOT in .env}:/media"   # same path as in Reelix: save to /media/torrents
+    ports:
+      - "${QBITTORRENT_WEB_PORT:-8080}:8080"
+      - "${TORRENT_PORT:-6881}:6881"
+      - "${TORRENT_PORT:-6881}:6881/udp"
+    networks: [reelix]
+
+  jackett:
+    profiles: [jackett]
+    image: lscr.io/linuxserver/jackett:latest
+    container_name: reelix-jackett
+    restart: unless-stopped
+    environment:
+      PUID: "${PUID:-1000}"
+      PGID: "${PGID:-1000}"
+      TZ: "${TZ:-Etc/UTC}"
+    volumes:
+      - "${JACKETT_CONFIG_DIR:-./jackett-config}:/config"
+    ports:
+      - "${JACKETT_WEB_PORT:-9117}:9117"
+    networks: [reelix]
+
+  jellyfin:
+    profiles: [jellyfin]
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: reelix-jellyfin
+    restart: unless-stopped
+    environment:
+      PUID: "${PUID:-1000}"
+      PGID: "${PGID:-1000}"
+      TZ: "${TZ:-Etc/UTC}"
+    volumes:
+      - "${JELLYFIN_CONFIG_DIR:-./jellyfin-config}:/config"
+      - "${MEDIA_ROOT:?set MEDIA_ROOT in .env}:/media:ro"   # same path as in Reelix; it only reads
+    ports:
+      - "${JELLYFIN_WEB_PORT:-8096}:8096"
+    networks: [reelix]
+
+networks:
+  reelix:
+    name: reelix
+    ipam:
+      config:
+        - subnet: "${REELIX_SUBNET:-172.31.78.0/24}"

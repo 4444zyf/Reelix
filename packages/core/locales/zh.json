@@ -1,0 +1,151 @@
+{
+	"chat": {
+		"photo": "（图片）",
+		"secretInWeb": "密码和密钥要在网页应用的密钥输入框里填写：请到网页应用中回答。",
+		"error": "出错了：{{message}}",
+		"hiddenBy": "已被 {{plugins}} 隐藏"
+	},
+	"watcher": {
+		"downloaderUnreachableTitle": "无法连接 {{name}}",
+		"downloaderUnreachableBody": "已持续超过一小时：{{error}}",
+		"downloaderBack": "{{name}} 已恢复连接。",
+		"removedTitle": "有下载在 Reelix 之外被删除",
+		"removedBody": "{{name}} 在入库之前就从 {{downloader}} 中被删除了。"
+	},
+	"jobs": {
+		"capTitle": "后台花费已达上限",
+		"capBody": "今天的后台模型预算已用完（${{usd}} / {{tokens}} tokens）。等待中的任务明天继续；下载仍会被监视，常规下载照常入库。"
+	},
+	"adopt": {
+		"title_other": "接管 {{count}} 个已有下载",
+		"body": "{{confident}} 个可以直接入库；{{unsure}} 个需要你决定。请查看表格。",
+		"approveAll": "全部批准有把握的",
+		"reviewInChat": "在对话中查看",
+		"reviewThread": "接管已有下载（{{date}}）",
+		"reviewPrompt": "我们一起看看接管扫描 {{scan}}：把没把握的条目列给我（reelix adopt show），帮我逐个确定。"
+	},
+	"nightly": {
+		"title": "早间汇总 {{date}}",
+		"backedUp": "已备份数据库和设置。",
+		"backupFailed": "备份失败：{{error}}",
+		"trash_other": "已清空 {{count}} 个过期的回收项（{{size}}）。",
+		"notFiled": "{{name}}：已完成超过 6 小时但尚未入库",
+		"lowSpace": "下载目录只剩 {{size}} 可用空间。",
+		"downloaderFailing": "下载器无法工作：{{error}}",
+		"indexerFailing": "索引器 {{name}} 出错：{{error}}",
+		"indexerCheckFailed": "索引器检查失败：{{error}}",
+		"agentSkipped": "（助手没有处理这些问题：{{error}}）",
+		"added": "新增：{{names}}",
+		"filed": "已入库：{{names}}",
+		"problems": "发现的问题：",
+		"noProblems": "没有发现问题。",
+		"waiting_other": "收件箱里有 {{count}} 项在等你处理。"
+	},
+	"ask": {
+		"yes": "是",
+		"no": "否"
+	},
+	"jobTitles": {
+		"follow": "追更：{{name}} {{episode}}",
+		"nightly": "夜间整理",
+		"fileDownload": "将完成的下载入库",
+		"stalled": "停滞的下载"
+	},
+	"translate": {
+		"jobTitle": "翻译字幕：{{name}} → {{target}}",
+		"sampleTitle": "{{target}}字幕：第一集已完成",
+		"sampleBody": "{{file}} 已作为样本放在视频旁边。其余 {{rest}} 集正在翻译；如果不满意，可以在“活动”里停止，或直接告诉我。",
+		"doneTitle": "{{target}}字幕已完成：{{name}}",
+		"failedTitle": "未能制作{{target}}字幕：{{name}}",
+		"pausedTitle": "字幕翻译已暂停",
+		"pausedBody": "{{reason}}\n将在 {{time}} 重试。已完成的部分都会保留。"
+	},
+	"approval": {
+		"approve": "批准",
+		"decline": "拒绝"
+	},
+	"magpie": {
+		"approvalTitle": "修改 magpie？{{summary}}",
+		"approvalBody": "{{reasons}}\n\n修改后会自动检查；如果某个角色的模型不再响应，会自动恢复原状。"
+	},
+	"plugins": {
+		"waitingNext": "已开启，正在等待：{{seams}}。一旦可用会自动启动。",
+		"dependents": "{{names}} 需要 {{id}}：它们依赖它，或者它是它们所需接口的最后一个提供者。要一起关闭吗？",
+		"enabled": "插件已开始运行。",
+		"alreadyOn": "插件本来就是开启的。",
+		"disabled": "插件已关闭，重启后仍保持关闭。可在“设置 → 插件”中重新开启。",
+		"alreadyOff": "插件本来就是关闭的。",
+		"failedNext": "插件没有运行。请先解决“设置 → 插件”中显示的错误，再重新开启。",
+		"autoOffTitle": "插件 {{id}} 已被自动关闭",
+		"autoOffBody": "{{registration}} 在 10 分钟内失败了 {{times}} 次。最后的错误：{{error}}\n解决问题后，可在“设置 → 插件”中重新开启。",
+		"jobCancelled": "已取消：插件已关闭。",
+		"configured": "新设置已生效。",
+		"configuredOff": "已保存。插件开启后使用这些设置。",
+		"invalidSettings": "未保存：有些值无效。",
+		"noSettings": "这个插件没有设置。",
+		"settingsLater": "开启插件后才会显示它的设置。",
+		"trialOn": "它的钩子现在以试用模式运行：Reelix 只记录它们会做的改动，什么也不应用。",
+		"trialOff": "它的钩子重新生效。",
+		"toolsOn": "从下一次对话起，它的专用工具会提供给助手。",
+		"toolsOff": "它的专用工具不再提供；它的操作仍可通过 reelix 工具使用。",
+		"orderSaved": "新顺序从下一次决定起生效。",
+		"approveFirst": "已安装但尚未批准：请在 设置 → 插件 中查看它声明的内容并批准。",
+		"reapprove": "它的文件在您批准之后发生了变化，因此未被加载。请在 设置 → 插件 中重新查看。",
+		"restartButton": "已保存。Reelix 重启后加载代码：请在 设置 → 插件 中点击“重启”。",
+		"restartManual": "已保存。Reelix 重启后加载代码：运行 `docker compose restart reelix`，或停止 `reelix serve` 后再启动。",
+		"incompatibleTitle": "插件 {{id}} 无法在此版本的 Reelix 上运行",
+		"incompatibleBody": "{{id}} 未加载：{{why}}。当前 Reelix 版本为 {{version}}。请在 设置 → 插件 中更新或卸载该插件。",
+		"changedTitle": "插件 {{id}} 已被改动：请重新批准",
+		"changedBody": "{{id}} 的文件与您批准时不同，因此未被加载。请在 设置 → 插件 中查看，如果改动是您做的，请重新批准。",
+		"uninstalledKept": "代码已移除。它的设置、密钥和存储的数据已保留，重新安装后会恢复。",
+		"uninstalledAll": "它的代码、设置、密钥和存储的数据都已移除。",
+		"jobPromptOn": "从下一个任务起，它的提示内容也会进入后台任务。",
+		"jobPromptOff": "它的提示内容不再进入后台任务。",
+		"modelSet": "已设置它的模型用量：每天预算 ${{usd}}，角色 {{roles}}。",
+		"modelSetUnmetered": "已设置它的模型用量：不设每日预算，角色 {{roles}}。",
+		"budgetReached": "{{id}} 今天的模型预算（${{usd}}）已用完，午夜重置。主人可以在插件页面提高预算。",
+		"roleRefused": "{{id}} 不能使用模型角色“{{role}}”；主人可以在插件页面允许。",
+		"cycle": "已拒绝：它所依赖的插件形成了循环（{{cycle}}），没有一个能先启动。请从其中一个插件中去掉这个依赖。",
+		"proposedTitle": "待审核的插件：{{id}} {{version}}",
+		"proposedBody": "由 {{by}} 提议。在你批准之前，什么都不会安装或运行：请查看它声明的内容、它的文件和改动。",
+		"proposalDeclined": "已拒绝：{{id}} 没有安装。",
+		"runtimeRefused": "它不能在独立进程中运行：它带有原始 pi 扩展或编译的依赖。",
+		"processChoiceLost": "你选择让 {{id}} 在独立进程中运行，但这个版本不能在那里运行（它带有原始 pi 扩展或编译的依赖）。在你于它的页面上选择让它在 Reelix 内运行之前，它保持关闭。",
+		"runtimeProcess": "它现在在独立进程中运行，只有自己的上下文：Node 阻止它访问 Reelix 的文件和启动程序，那里的 Reelix 代码把它的网络限制在 Reelix 的 fetch 上。恶意插件可能绕过后一部分（docs/plugins.md §11.7）。",
+		"runtimeInProcess": "它现在在 Reelix 内部运行，它的代码可以做 Reelix 能做的任何事。",
+		"screenOff": "{{id}} 没有运行；请在“设置 → 插件”中开启它，再打开它的页面。",
+		"processEnded": "它的进程已结束（{{error}}）；{{seconds}} 秒后重新启动。"
+	},
+	"hooks": {
+		"guardAlarmTitle": "插件 {{plugin}} 几乎隐藏了所有资源",
+		"guardAlarmBody": "在最近 {{calls}} 次搜索中，{{plugin}} 隐藏了 {{total}} 个资源中的 {{hidden}} 个。请检查它的设置，或在“设置 → 插件”中关闭它。"
+	},
+	"follow": {
+		"filteredTitle": "{{name}} {{episode}} 没有结果：候选资源全被插件隐藏",
+		"filteredBody_other": "{{plugins}} 隐藏了 {{count}} 个候选资源。可打开资源列表并点“显示已隐藏”，或修改插件设置。"
+	},
+	"notify": {
+		"editedBy": "由 {{plugins}} 改写"
+	},
+	"hiddenRelease": {
+		"approvalTitle": "要下载被隐藏的资源吗？",
+		"approvalBody": "{{name}} 已被插件隐藏（{{why}}）。仍要下载吗？"
+	},
+	"setting": {
+		"approvalTitle": "要更改这项设置吗？",
+		"approvalBody": "助手想更改 {{path}}。这项设置由你决定：它决定 Reelix 连接到哪里，或是助手自身的限额。\n\n当前：{{before}}\n新值：{{after}}"
+	},
+	"proposal": {
+		"summary_other": "{{plugin}} 提议执行 {{count}} 个步骤：{{totals}}",
+		"noTotals": "无可统计内容",
+		"downloads_other": "{{count}} 个下载",
+		"titles_other": "{{count}} 个作品",
+		"files_other": "{{count}} 个文件",
+		"bytes": "{{size}} 的文件",
+		"quoted": "来自插件 {{plugin}}：",
+		"openToDecide": "在 Reelix 的收件箱里取消勾选不需要的步骤，然后批准或拒绝。",
+		"declined": "已拒绝",
+		"approved_other": "已批准：{{count}} 个步骤中完成了 {{done}} 个",
+		"changed": "已跳过：提议之后情况有变。现在：{{now}}"
+	}
+}

@@ -1,0 +1,22 @@
+{
+  "name": "reelix-plugin-example-indexer",
+  "version": "0.1.0",
+  "description": "An indexer: searches one tracker for releases.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["reelix-plugin"],
+  "peerDependencies": {
+    "@reelix/plugin": "*"
+  },
+  "reelix": {
+    "api": 0,
+    "id": "example-indexer",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "uses": {
+      "provides": ["reelix:indexer@1"],
+      "network": ["tracker.example.org"],
+      "secrets": ["api_key"]
+    }
+  }
+}

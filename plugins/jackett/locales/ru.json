@@ -1,0 +1,14 @@
+{
+	"description": "Ищет релизы через один или несколько серверов Jackett.",
+	"settings": {
+		"servers": "Серверы Jackett",
+		"servers_help": "Не больше трёх. API-ключ каждого сервера — отдельный секрет ниже.",
+		"servers.url": "Адрес",
+		"servers.url_help": "Например, http://jackett:9117"
+	},
+	"secrets": {
+		"api_key": "API-ключ первого сервера",
+		"api_key_2": "API-ключ второго сервера",
+		"api_key_3": "API-ключ третьего сервера"
+	}
+}

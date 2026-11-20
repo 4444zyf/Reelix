@@ -1,0 +1,14 @@
+{
+	"description": "Signale à Jellyfin les fichiers ajoutés et retirés, et lit ce que vous y avez regardé pour les suggestions et les liens de lecture.",
+	"settings": {
+		"url": "Adresse de Jellyfin",
+		"url_help": "Par exemple http://jellyfin:8096. La correspondance de ses dossiers avec ceux de Reelix se règle dans Réglages → Serveur multimédia.",
+		"public_url": "Adresse de Jellyfin pour vos appareils",
+		"public_url_help": "L'adresse que votre téléphone et votre navigateur utilisent pour Jellyfin, si elle diffère de celle ci-dessus (par exemple un nom Docker). Sert à « Ouvrir dans Jellyfin ».",
+		"watch_users": "Historique de qui guide les suggestions",
+		"watch_users_help": "Noms d'utilisateur Jellyfin. Vide : l'unique utilisateur, sinon les administrateurs."
+	},
+	"secrets": {
+		"api_key": "Clé d'API (Jellyfin → Tableau de bord → Clés d'API)"
+	}
+}

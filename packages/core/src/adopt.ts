@@ -2,15 +2,15 @@ import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { Type } from "typebox";
 import type { Reelix } from "./app.ts";
-import { isComplete } from "./clients/qbittorrent.ts";
-import { toOurs } from "./config.ts";
 import { json, kvGet, kvSet } from "./db.ts";
-import { TAG, markFiled } from "./downloads.ts";
+import { MARK, downloader, ourPath } from "./downloader.ts";
+import { markFiled } from "./downloads.ts";
 import { addInbox } from "./inbox.ts";
-import { type Plan, applyPlan, autoPlan, planToText } from "./organiser.ts";
+import { type Plan, applyPlan, plannedByReelix, planToText } from "./organiser.ts";
 import { parseReleaseName } from "./parser.ts";
+import { tr } from "./i18n.ts";
 import { defineOperation } from "./registry.ts";
-import { findTitle, getTitle, requireTitle } from "./titles.ts";
+import { findTitle, requireTitle } from "./titles.ts";
 import { ReelixError, errorMessage, newId, nowIso, sleep } from "./util.ts";
 
 export type AdoptRow = {
@@ -49,14 +49,15 @@ export function getScan(app: Reelix, id?: string): AdoptScan {
  * before approval.
  */
 export async function adoptScan(app: Reelix, opts: { limit?: number } = {}): Promise<AdoptScan> {
-	const all = await app.qb().torrents();
+	const d = downloader(app);
+	const all = await d.call("list", [{}]);
 	const tracked = new Set((app.db.prepare("SELECT hash FROM downloads").all() as { hash: string }[]).map((r) => r.hash));
-	const candidates = all.filter((t) => !tracked.has(t.hash) && !String(t.tags).split(",").map((x) => x.trim()).includes(TAG)).slice(0, opts.limit ?? 300);
+	const candidates = all.filter((t) => !tracked.has(t.id) && !t.marks.includes(MARK)).slice(0, opts.limit ?? 300);
 	const rows: AdoptRow[] = [];
 	let n = 0;
 	for (const t of candidates) {
 		n++;
-		const row: AdoptRow = { n, hash: t.hash, name: t.name, content_path: toOurs(app.config.path_maps.qbittorrent, t.content_path), complete: isComplete(t), confident: false, problems: [], status: "pending" };
+		const row: AdoptRow = { n, hash: t.id, name: t.name, content_path: ourPath(app, d.id, t.contentPath ?? `${t.folder}/${t.name}`), complete: t.done, confident: false, problems: [], status: "pending" };
 		try {
 			const p = parseReleaseName(t.name);
 			const r = await findTitle(app, t.name, { kind: p.season !== undefined || p.episodes ? "tv" : undefined, year: p.year });
@@ -64,9 +65,9 @@ export async function adoptScan(app: Reelix, opts: { limit?: number } = {}): Pro
 				row.title_id = r.resolved.id;
 				row.title = `${r.resolved.name} (${r.resolved.year ?? "?"})`;
 				if (!row.complete) row.problems.push("not finished downloading");
-				else if (!existsSync(row.content_path)) row.problems.push(`files not found at ${row.content_path} (check path_maps.qbittorrent)`);
+				else if (!existsSync(row.content_path)) row.problems.push(`files not found at ${row.content_path} (check path_maps.downloaders.${d.id})`);
 				else {
-					const ap = autoPlan(app, r.resolved, row.content_path, { hash: t.hash, seasonHint: p.season, version: r.resolved.kind === "movie" ? p.resolution : undefined });
+					const ap = await plannedByReelix(app, r.resolved, row.content_path, { hash: t.id, seasonHint: p.season, version: r.resolved.kind === "movie" ? p.resolution : undefined });
 					row.plan = ap.plan;
 					row.problems.push(...ap.problems);
 				}
@@ -85,7 +86,7 @@ export async function adoptScan(app: Reelix, opts: { limit?: number } = {}): Pro
 }
 
 /** The agent (or owner) settles an uncertain row: a title, and optionally explicit plan items. */
-export function adoptSet(app: Reelix, scanId: string | undefined, n: number, titleId: string, plan?: Plan): AdoptRow {
+export async function adoptSet(app: Reelix, scanId: string | undefined, n: number, titleId: string, plan?: Plan): Promise<AdoptRow> {
 	const scan = getScan(app, scanId);
 	const row = scan.rows.find((r) => r.n === n);
 	if (!row) throw new ReelixError("not_found", `No row ${n}`);
@@ -96,7 +97,7 @@ export function adoptSet(app: Reelix, scanId: string | undefined, n: number, tit
 	if (plan?.items.length) row.plan = { ...plan, title_id: t.id, download_hash: row.hash };
 	else if (row.complete && existsSync(row.content_path)) {
 		const p = parseReleaseName(row.name);
-		const ap = autoPlan(app, t, row.content_path, { hash: row.hash, seasonHint: p.season });
+		const ap = await plannedByReelix(app, t, row.content_path, { hash: row.hash, seasonHint: p.season });
 		row.plan = ap.plan;
 		row.problems = ap.problems;
 	}
@@ -108,6 +109,7 @@ export function adoptSet(app: Reelix, scanId: string | undefined, n: number, tit
 
 export async function adoptApply(app: Reelix, scanId: string | undefined, ns: number[]): Promise<AdoptRow[]> {
 	const scan = getScan(app, scanId);
+	const d = downloader(app);
 	const out: AdoptRow[] = [];
 	for (const n of ns) {
 		const row = scan.rows.find((r) => r.n === n);
@@ -119,15 +121,15 @@ export async function adoptApply(app: Reelix, scanId: string | undefined, ns: nu
 			continue;
 		}
 		try {
-			await app.qb().addTags([row.hash], [TAG]);
-			app.db.prepare("INSERT INTO downloads (hash, title_id, name, release_json, reason, state, progress, content_path, added_at, completed_at) VALUES (?, ?, ?, ?, 'adopted', 'complete', 1, ?, ?, ?) ON CONFLICT(hash) DO UPDATE SET title_id = excluded.title_id").run(row.hash, row.title_id, row.name, JSON.stringify({ title: row.name, adopted: true }), row.content_path, nowIso(), nowIso());
+			await d.call("addMark", [[row.hash], MARK]);
+			app.db.prepare("INSERT INTO downloads (hash, title_id, name, release_json, reason, state, progress, content_path, added_at, completed_at, downloader) VALUES (?, ?, ?, ?, 'adopted', 'complete', 1, ?, ?, ?, ?) ON CONFLICT(hash) DO UPDATE SET title_id = excluded.title_id").run(row.hash, row.title_id, row.name, JSON.stringify({ title: row.name, adopted: true }), row.content_path, nowIso(), nowIso(), d.id);
 			const results = applyPlan(app, row.plan);
 			const bad = results.filter((r) => r.status === "failed" || r.status === "conflict");
 			if (bad.length) {
 				row.status = "failed";
 				row.error = bad.map((b) => b.error).join("; ");
 			} else {
-				await markFiled(app, row.hash, row.title_id, row.plan);
+				await markFiled(app, row.hash, row.title_id, row.plan, "adopt");
 				row.status = "applied";
 			}
 		} catch (e) {
@@ -149,13 +151,13 @@ function scanText(s: AdoptScan): string {
 
 defineOperation({
 	name: "adopt.scan",
-	summary: "Scan qBittorrent's existing torrents and plan filing them (nothing is linked until approved)",
+	summary: "Scan the downloader's existing torrents and plan filing them (nothing is linked until approved)",
 	effect: "write",
 	input: Type.Object({ limit: Type.Optional(Type.Integer()), notify: Type.Optional(Type.Boolean({ default: true })) }),
 	async run(ctx, i) {
 		const s = await adoptScan(ctx.app, { limit: i.limit });
 		if (i.notify !== false && s.rows.length) {
-			addInbox(ctx.app, { kind: "plan", title: `Adopt ${s.rows.length} existing downloads`, body: `${s.rows.filter((r) => r.confident).length} can be filed now; ${s.rows.filter((r) => !r.confident).length} need a decision. Review the table.`, payload: { adoptScan: s.id }, options: ["Approve all confident", "Review in chat"], dedupeKey: `adopt:${s.id}` });
+			addInbox(ctx.app, { kind: "plan", title: tr(ctx.app, "adopt.title", { count: s.rows.length }), body: tr(ctx.app, "adopt.body", { confident: s.rows.filter((r) => r.confident).length, unsure: s.rows.filter((r) => !r.confident).length }), payload: { adoptScan: s.id }, options: [tr(ctx.app, "adopt.approveAll"), tr(ctx.app, "adopt.reviewInChat")], dedupeKey: `adopt:${s.id}` });
 		}
 		return s;
 	},
@@ -236,5 +238,3 @@ defineOperation({
 	},
 	toText: (o: any) => `Deleted skill ${o.name}.`,
 });
-
-export { getTitle };

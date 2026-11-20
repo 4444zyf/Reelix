@@ -1,5 +1,6 @@
 import { Bot, ListTree, Loader2, MoreHorizontal, Pencil, Plus, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useChat } from "../../lib/chat";
 import { cn } from "../../lib/utils";
 import { ErrorState, Loading } from "../common/States";
@@ -11,9 +12,10 @@ import { Composer, DropZone, useAttachments } from "./Composer";
 import { MessageView } from "./MessageView";
 import { RenameThreadDialog, ThreadList, useThreads } from "./ThreadList";
 
-const SUGGESTIONS = ["What is downloading right now?", "Find the newest season of a show I follow", "Check that everything is set up (doctor)", "What did you do last night?"];
+const SUGGESTIONS = ["downloading", "newSeason", "doctor", "lastNight"] as const;
 
 function Welcome() {
+	const { t } = useTranslation("chat");
 	const { setDraft } = useChat();
 	return (
 		<div className="flex h-full flex-col items-center justify-center gap-4 px-4 text-center">
@@ -21,12 +23,12 @@ function Welcome() {
 				<Bot className="h-6 w-6" />
 			</div>
 			<div>
-				<p className="text-lg font-semibold">What should Reelix do?</p>
-				<p className="text-sm text-muted-foreground">Ask for a film or a show, a fix in the library, or anything about your setup.</p>
+				<p className="display text-3xl">{t("welcome.title")}</p>
+				<p className="text-sm text-muted-foreground">{t("welcome.subtitle")}</p>
 			</div>
 			<div className="flex max-w-lg flex-wrap justify-center gap-2">
-				{SUGGESTIONS.map((s) => (
-					<button key={s} type="button" onClick={() => setDraft(s)} className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground">
+				{SUGGESTIONS.map((k) => t(`welcome.suggestions.${k}`)).map((s) => (
+					<button key={s} type="button" onClick={() => setDraft(s)} className="rounded-control border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground">
 						{s}
 					</button>
 				))}
@@ -37,6 +39,7 @@ function Welcome() {
 
 /** The conversation, its open question and the composer. Used by the Chat screen and the dock. */
 export function ChatPane({ variant, onClose }: { variant: "screen" | "dock"; onClose?: () => void }) {
+	const { t } = useTranslation("chat");
 	const { activeId, thread, newChat } = useChat();
 	const { data: threads } = useThreads();
 	const meta = threads?.find((t) => t.id === activeId);
@@ -60,44 +63,44 @@ export function ChatPane({ variant, onClose }: { variant: "screen" | "dock"; onC
 
 	return (
 		<DropZone attachments={attachments} className="flex h-full min-h-0 flex-col">
-			<div className={cn("flex items-center gap-2 border-b border-white/5 px-3 py-2", variant === "screen" && "md:px-6 md:py-3")}>
+			<div className={cn("flex items-center gap-2 border-b border-line px-3 py-2", variant === "screen" && "md:px-6 md:py-3")}>
 				{variant === "screen" && (
-					<Button variant="ghost" size="icon" className="h-9 w-9 md:hidden" onClick={() => setListOpen(true)} aria-label="Conversations">
+					<Button variant="ghost" size="icon" className="h-9 w-9 md:hidden" onClick={() => setListOpen(true)} aria-label={t("pane.conversations")}>
 						<ListTree />
 					</Button>
 				)}
 				{variant === "dock" && (
-					<Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setListOpen(true)} aria-label="Conversations">
+					<Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setListOpen(true)} aria-label={t("pane.conversations")}>
 						<ListTree />
 					</Button>
 				)}
 				<div className="min-w-0 flex-1">
-					<p className={cn("truncate font-semibold", variant === "screen" ? "text-base md:text-lg" : "text-sm")}>{activeId ? (meta?.name ?? "Conversation") : "New chat"}</p>
+					<p className={cn("truncate", variant === "screen" ? "display text-lg md:text-xl" : "text-sm font-semibold")}>{activeId ? (meta?.name ?? t("pane.conversation")) : t("pane.newChat")}</p>
 					{thread?.running && (
 						<p className="flex items-center gap-1 text-[11px] text-primary">
-							<Loader2 className="h-3 w-3 animate-spin" /> working
+							<Loader2 className="h-3 w-3 animate-spin" /> {t("pane.working")}
 						</p>
 					)}
 				</div>
 				{activeId && meta && (
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
-							<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Conversation actions">
+							<Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("pane.actions")}>
 								<MoreHorizontal />
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
 							<DropdownMenuItem onClick={() => setRename(true)}>
-								<Pencil className="mr-2 h-4 w-4" /> Rename
+								<Pencil className="mr-2 h-4 w-4" /> {t("pane.rename")}
 							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
 				)}
-				<Button variant="ghost" size="icon" className="h-8 w-8" onClick={newChat} title="New chat" aria-label="New chat">
+				<Button variant="ghost" size="icon" className="h-8 w-8" onClick={newChat} title={t("pane.newChat")} aria-label={t("pane.newChat")}>
 					<Plus />
 				</Button>
 				{onClose && (
-					<Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose} aria-label="Close chat">
+					<Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose} aria-label={t("pane.close")}>
 						<X />
 					</Button>
 				)}
@@ -120,13 +123,13 @@ export function ChatPane({ variant, onClose }: { variant: "screen" | "dock"; onC
 				) : !thread?.loaded ? (
 					<Loading />
 				) : (
-					<div className={cn("mx-auto w-full space-y-4 px-3 py-4", variant === "screen" && "max-w-3xl md:px-6")}>
-						{items.length === 0 && <p className="py-10 text-center text-sm text-muted-foreground">No messages yet.</p>}
+					<div className={cn("mx-auto w-full space-y-4 px-3 py-4", variant === "screen" && "max-w-3xl space-y-6 md:px-6")}>
+						{items.length === 0 && <p className="py-10 text-center text-sm text-muted-foreground">{t("pane.noMessages")}</p>}
 						{items.map((it, i) => (
 							<MessageView key={i} item={it} threadId={activeId} live={!!thread.running && i === items.length - 1} />
 						))}
 						{thread.running && !thread.pending && (!lastIsAssistant || thread.thinking) && (
-							<div className="flex items-center gap-1 pl-10 text-muted-foreground" aria-label="thinking">
+							<div className="flex items-center gap-1 pl-10 text-muted-foreground" aria-label={t("pane.thinking")}>
 								<span className="typing-dot h-1.5 w-1.5 rounded-full bg-current" />
 								<span className="typing-dot h-1.5 w-1.5 rounded-full bg-current [animation-delay:0.2s]" />
 								<span className="typing-dot h-1.5 w-1.5 rounded-full bg-current [animation-delay:0.4s]" />
@@ -142,9 +145,9 @@ export function ChatPane({ variant, onClose }: { variant: "screen" | "dock"; onC
 			</div>
 
 			<Dialog open={listOpen} onOpenChange={setListOpen}>
-				<DialogContent className="glass-card flex h-[80vh] max-w-md flex-col rounded-xl px-0 pb-2">
+				<DialogContent className="surface-card flex h-[80vh] max-w-md flex-col rounded-xl px-0 pb-2">
 					<DialogHeader className="px-4">
-						<DialogTitle>Conversations</DialogTitle>
+						<DialogTitle>{t("pane.conversations")}</DialogTitle>
 					</DialogHeader>
 					<ThreadList className="min-h-0 flex-1" onOpen={() => setListOpen(false)} />
 				</DialogContent>

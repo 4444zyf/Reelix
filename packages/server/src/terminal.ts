@@ -4,9 +4,10 @@
  */
 import { createInterface } from "node:readline/promises";
 import { join } from "node:path";
-import { Reelix, addInbox, errorMessage } from "@reelix/core";
+import { Reelix, errorMessage } from "@reelix/core";
 import { acquireLock } from "@reelix/core/lock.ts";
 import { AgentHost, REPO_ROOT, type UiEvent } from "./agent/host.ts";
+import { postToInbox } from "./agent/tools.ts";
 
 const dim = (s: string) => `\x1b[2m${s}\x1b[0m`;
 const bold = (s: string) => `\x1b[1m${s}\x1b[0m`;
@@ -16,7 +17,7 @@ export async function terminalChat(args: string[]): Promise<void> {
 	const app = new Reelix();
 	const release = acquireLock(app.paths, "cli");
 	if (!release) {
-		console.error("The Reelix server is running; chat in its web UI or Telegram (terminal chat over the socket is not supported yet).");
+		console.error("The Reelix server is running; chat in its web UI or a linked chat app (terminal chat over the socket is not supported yet).");
 		process.exit(1);
 	}
 	const host = new AgentHost(app, {
@@ -24,7 +25,7 @@ export async function terminalChat(args: string[]): Promise<void> {
 		binDir: join(REPO_ROOT, "bin"),
 		skillsDir: join(REPO_ROOT, "skills"),
 		notify: async (n) => {
-			const it = addInbox(app, { kind: n.kind ?? "notice", title: n.title, body: n.body, options: n.options, image_path: n.image_path, source: n.source, job_run_id: n.jobRunId });
+			const it = postToInbox(app, n);
 			console.log(yellow(`\n[inbox ${it.id}] ${n.title}${n.body ? `: ${n.body}` : ""}`));
 			return it.id;
 		},

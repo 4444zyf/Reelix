@@ -1,0 +1,6 @@
+{
+	"description": "语言设置改变时，从 TMDB 重新读取片名、简介和海报。",
+	"jobTitle": "用新语言重新读取影片信息",
+	"refreshed_other": "已用 {{locale}} 重新读取 {{count}} 部作品。",
+	"failed_other": "{{count}} 部失败。"
+}

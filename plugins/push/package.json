@@ -1,0 +1,22 @@
+{
+  "name": "reelix-plugin-push",
+  "version": "0.1.0",
+  "description": "Native notifications for the installed web app, through the browser makers' push services.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["reelix-plugin"],
+  "peerDependencies": { "@reelix/plugin": "*" },
+  "reelix": {
+    "api": 0,
+    "id": "push",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "uses": {
+      "provides": ["reelix:notifier@1"],
+      "operations": { "devices": "read", "subscribe": "write", "unsubscribe": "write", "test": "write" },
+      "network": ["web.push.apple.com", "fcm.googleapis.com", "push.services.mozilla.com", "*.push.services.mozilla.com", "*.notify.windows.com"],
+      "secrets": ["vapid_private"]
+    }
+  }
+}

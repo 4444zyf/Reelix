@@ -1,0 +1,22 @@
+{
+	"type": "object",
+	"required": [
+		"words"
+	],
+	"properties": {
+		"words": {
+			"type": "array",
+			"items": {
+				"type": "string",
+				"minLength": 1
+			},
+			"default": [
+				"CAM",
+				"HDCAM",
+				"TS",
+				"HDTS",
+				"TELESYNC"
+			]
+		}
+	}
+}

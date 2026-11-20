@@ -1,101 +1,146 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@theme {
-  --color-background: oklch(0.145 0 0);
-  --color-foreground: oklch(0.985 0 0);
-  --color-card: oklch(0.145 0 0);
-  --color-card-foreground: oklch(0.985 0 0);
-  --color-popover: oklch(0.145 0 0);
-  --color-popover-foreground: oklch(0.985 0 0);
-  --color-primary: oklch(0.7 0.15 250);
-  --color-primary-foreground: oklch(0.145 0 0);
-  --color-secondary: oklch(0.269 0 0);
-  --color-secondary-foreground: oklch(0.985 0 0);
-  --color-muted: oklch(0.269 0 0);
-  --color-muted-foreground: oklch(0.708 0 0);
-  --color-accent: oklch(0.269 0 0);
-  --color-accent-foreground: oklch(0.985 0 0);
-  --color-destructive: oklch(0.396 0.141 25.723);
-  --color-destructive-foreground: oklch(0.637 0.237 25.331);
-  --color-border: oklch(0.269 0 0);
-  --color-input: oklch(0.269 0 0);
-  --color-ring: oklch(0.556 0 0);
-  --color-success: oklch(0.627 0.194 149.214);
-  --color-warning: oklch(0.769 0.188 70.08);
-  --color-info: oklch(0.627 0.194 249.214);
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+/* Self-hosted fonts (OFL). The CJK faces are split by unicode-range: only the slices a page uses load. */
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/fraunces";
+@import "@fontsource-variable/newsreader";
+/* Fraunces and Newsreader have no Cyrillic: Noto Serif fills in Russian (only its Cyrillic slices load). */
+@import "@fontsource-variable/noto-serif";
+@import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource-variable/noto-sans-sc";
+@import "@fontsource-variable/noto-serif-sc";
+
+/* The built-in themes, in the same format as installed ones (themes/<id>/theme.css). */
+@import "../../../../themes/marquee/theme.css";
+@import "../../../../themes/paper/theme.css";
+
+/* Tailwind names → theme tokens (themes.css). `inline` keeps them as live var() references. */
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+  --color-card: var(--card);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-fg);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-fg);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-fg);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-fg);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-fg);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-fg);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-rating: var(--rating);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-line: var(--line);
+  --color-well: var(--well);
+  --color-overlay: var(--overlay);
+  --color-nav-active: var(--nav-active);
+  --color-nav-active-foreground: var(--nav-active-fg);
+
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+  --radius-control: var(--radius-control);
+
+  --font-sans: var(--ui-font);
+  --font-mono: var(--mono-font);
 }
 
-* {
-  @apply border-border;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--ui-font);
+    font-feature-settings: "cv11", "ss01";
+  }
 }
 
-html {
-  color-scheme: dark;
+/* ---------------------------------------------------------------- recipes: themed surfaces */
+/* In the components layer, so a utility on the element (a size, a padding) still wins. */
+
+@utility glow {
+  box-shadow: var(--glow);
 }
 
-body {
-  @apply bg-background text-foreground;
-  font-family: var(--font-sans);
-}
+@layer components {
+  /* Sidebar, dock, sheets. */
+  .panel {
+    background: var(--panel-bg);
+    backdrop-filter: blur(var(--panel-blur)) saturate(150%);
+    -webkit-backdrop-filter: blur(var(--panel-blur)) saturate(150%);
+    border: 1px solid var(--panel-border);
+  }
 
-.glass {
-  background: rgba(20, 20, 20, 0.65);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-}
+  /* Cards: tool results, sections, dialogs. */
+  .surface-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+  }
 
-.glass-card {
-  background: rgba(30, 30, 30, 0.4);
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
-}
+  /* Things that float above the page: the composer, the agent's question. */
+  .raised {
+    background: var(--raised-bg);
+    border: 1px solid var(--raised-border);
+    box-shadow: var(--raised-shadow);
+  }
 
-.glass-panel {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.01) 100%
-  );
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
+  /* The light behind the app (Marquee: a projector's spill; Paper: none). */
+  .ambient {
+    background-color: var(--bg);
+    background-image: var(--ambient);
+    background-repeat: no-repeat;
+  }
 
-.glow {
-  box-shadow: 0 0 20px rgba(100, 150, 255, 0.15);
-}
+  /* Titles: the theme's display face. */
+  .display {
+    font-family: var(--display-font);
+    font-weight: var(--display-weight);
+    letter-spacing: var(--display-tracking);
+  }
 
-.glow-hover:hover {
-  box-shadow: 0 0 25px rgba(100, 150, 255, 0.25);
-  border-color: rgba(100, 150, 255, 0.3);
-}
+  /* The owner's own message: a bubble in Marquee, a quotation in Paper (tokens, so a nested data-theme previews correctly). */
+  .user-msg {
+    background: var(--user-bubble);
+    color: var(--user-bubble-fg);
+    border-radius: var(--user-radius);
+    padding: var(--user-padding);
+    font-family: var(--user-font);
+    font-style: var(--user-style);
+    font-size: var(--user-size);
+    line-height: var(--user-leading);
+  }
+  .user-msg .user-text::before {
+    content: var(--user-quote-open);
+    color: var(--primary);
+  }
+  .user-msg .user-text::after {
+    content: var(--user-quote-close);
+    color: var(--primary);
+  }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  /* The title the conversation is about: a big card in Marquee, a piece between rules in Paper. */
+  .feature {
+    background: var(--feature-bg);
+    border-style: solid;
+    border-width: var(--feature-border-width);
+    border-color: var(--feature-border-color);
+    border-radius: var(--feature-radius);
+    box-shadow: var(--feature-shadow);
+  }
 }
 
 /* ---------------------------------------------------------------- Reelix additions */
@@ -112,14 +157,18 @@ body {
 
 /* Markdown from the agent */
 .md {
-  line-height: 1.6;
+  font-family: var(--prose-font);
+  font-size: var(--prose-size);
+  line-height: var(--prose-leading);
   overflow-wrap: anywhere;
 }
 .md > * + * {
   margin-top: 0.6em;
 }
 .md h1,
-.md h2,
+.md h2 {
+  font-family: var(--display-font);
+}
 .md h3,
 .md h4 {
   font-weight: 600;
@@ -147,15 +196,15 @@ body {
   margin-top: 0.2em;
 }
 .md code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.85em;
-  background: rgba(255, 255, 255, 0.07);
+  font-family: var(--mono-font);
+  font-size: 0.82em;
+  background: var(--well);
   border-radius: 0.25rem;
   padding: 0.1em 0.35em;
 }
 .md pre {
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--well);
+  border: 1px solid var(--line);
   border-radius: 0.5rem;
   padding: 0.75em 1em;
   overflow-x: auto;

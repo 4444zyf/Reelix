@@ -1,0 +1,14 @@
+{
+	"type": "object",
+	"required": [
+		"max_body"
+	],
+	"properties": {
+		"max_body": {
+			"type": "integer",
+			"default": 140,
+			"minimum": 20,
+			"maximum": 1000
+		}
+	}
+}

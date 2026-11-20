@@ -1,0 +1,40 @@
+{
+	"description": "Exemple : trouve les téléchargements terminés qui partagent depuis plus longtemps que vous le fixez et propose de les retirer ; rien n'est retiré sans votre accord.",
+	"detail": "{{size}} · en partage depuis {{days}} jours",
+	"proposal": {
+		"title_one": "Retirer {{count}} téléchargement terminé",
+		"title_many": "Retirer {{count}} de téléchargements terminés",
+		"title_other": "Retirer {{count}} téléchargements terminés",
+		"why": "Ils sont terminés et partagent depuis {{days}} jours ou plus."
+	},
+	"card": {
+		"title": "Téléchargements terminés en partage depuis {{days}} jours ou plus",
+		"empty": "Rien ne partage depuis si longtemps.",
+		"propose": "Proposer de retirer"
+	},
+	"kinds": {
+		"all": "Films et séries",
+		"movie": "Films seulement",
+		"tv": "Séries seulement"
+	},
+	"job": "Téléchargements proposés au retrait : {{count}}",
+	"settings": {
+		"seeded_days": "En partage depuis au moins (jours)",
+		"seeded_days_help": "Compté depuis la fin du téléchargement ; 0 signifie dès qu'il est terminé.",
+		"delete_files": "Supprimer aussi les fichiers",
+		"delete_files_help": "Désactivé : seul le torrent est retiré ; ses fichiers restent, et la bibliothèque garde ses propres liens.",
+		"kind": "Seulement pour",
+		"kind_help": "Limiter le nettoyage à un type de titre.",
+		"schedule": "Vérifier",
+		"schedule_manual": "Quand je le demande",
+		"schedule_daily": "Chaque jour",
+		"at_most": "Au plus par jour",
+		"at_most_help": "Étapes d'une proposition quotidienne."
+	},
+	"buttons": {
+		"scan": "Analyser maintenant"
+	},
+	"screen": {
+		"title": "Téléchargements terminés"
+	}
+}

@@ -1,0 +1,8 @@
+{
+	"description": "示例：拒绝超过你所设大小的下载。",
+	"reason": "要下载 {{size}} GB，超过了 {{max}} GB 的上限",
+	"settings": {
+		"max_gb": "最大下载量（GB）",
+		"max_gb_help": "只计算实际会下载的文件。"
+	}
+}

@@ -16,10 +16,12 @@ export type InboxItem = {
 	job_run_id: string | null;
 	status: string; // open | answered | dismissed
 	answer: string | null;
-	telegram_message_id: number | null;
 	created_at: string;
 	answered_at: string | null;
 };
+
+/** Anything that needs the owner goes to their phone; routine notices stay in the Inbox (§7.4). */
+export const inboxNeedsOwner = (it: Pick<InboxItem, "kind" | "payload">): boolean => it.kind !== "notice" || !!it.payload?.urgent;
 
 function rowToItem(r: any): InboxItem {
 	return { ...r, options: json(r.options_json, []), payload: json(r.payload_json, {}) };
@@ -50,12 +52,26 @@ export function listInbox(app: Reelix, opts: { status?: string; limit?: number }
 	return rows.map(rowToItem);
 }
 
-/** Record the owner's answer. Parked jobs listen for the `inbox` event and resume (§4.5). */
+/** The owner, directly or on their paired chat channel. */
+export const answeredByOwner = (by: unknown): boolean => typeof by === "string" && (by.startsWith("owner:") || by.startsWith("channel:"));
+
+/** A job, an approval or an adoption goes on when this item is answered. */
+const someoneWaits = (it: InboxItem) => (!!it.job_run_id && it.kind !== "notice") || !!it.payload?.approval || !!it.payload?.adoptScan;
+
+/** Record an answer. Parked jobs listen for the `inbox` event and resume (§4.5). What something waits on is the owner's to answer. */
 export function answerInbox(app: Reelix, id: string, answer: string, by: string): InboxItem {
 	const it = getInbox(app, id);
 	if (!it) throw new ReelixError("not_found", `No inbox item ${id}`);
 	if (it.status !== "open") return it;
-	app.db.prepare("UPDATE inbox SET status = 'answered', answer = ?, answered_at = ? WHERE id = ?").run(answer, nowIso(), id);
+	if (it.payload?.pluginProposal) throw new ReelixError("use_proposal", `This is a proposed plugin: the owner approves or declines it on its screen, or with plugin.proposal_decide ${it.payload.pluginProposal}.`);
+	if (it.payload?.proposal) throw new ReelixError("use_proposal", `This is a plugin's proposal: approve or decline it in its card, or with proposal.decide ${it.payload.proposal}.`);
+	if (someoneWaits(it) && !answeredByOwner(by)) throw new ReelixError("owner_only", "This item is waiting for the owner's own answer.");
+	return recordAnswer(app, id, answer, by);
+}
+
+/** Mark an item answered. Only for callers that have made their own checks: `answerInbox`, and a proposal's decision. */
+export function recordAnswer(app: Reelix, id: string, answer: string, by: string): InboxItem {
+	app.db.prepare("UPDATE inbox SET status = 'answered', answer = ?, answered_at = ? WHERE id = ? AND status = 'open'").run(answer, nowIso(), id);
 	const updated = getInbox(app, id)!;
 	app.emit({ type: "inbox", id, status: "answered", item: updated, by });
 	return updated;

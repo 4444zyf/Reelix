@@ -2,14 +2,12 @@ import assert from "node:assert/strict";
 import { existsSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { test } from "node:test";
-import { QbClient } from "../src/clients/qbittorrent.ts";
 import { runOperation } from "../src/registry.ts";
-import { parseTorrent } from "../src/torrent.ts";
 import { makeTorrent } from "./fakes/bencode.ts";
-import { startFakeJackett } from "./fakes/jackett.ts";
-import { startFakeQb } from "./fakes/qbittorrent.ts";
+import { startFakeJackett } from "../../../plugins/jackett/test/fake-jackett.ts";
+import { startFakeQb } from "../../../plugins/qbittorrent/test/fake-qbittorrent.ts";
 import { startFakeTmdb } from "./fakes/tmdb.ts";
-import { tempApp } from "./helpers.ts";
+import { tempApp, withPlugins } from "./helpers.ts";
 
 process.chdir(tmpdir()); // never run a binary from .tools/
 
@@ -36,23 +34,23 @@ async function world() {
 		],
 	});
 	const { app } = t;
-	app.setConfig("qbittorrent", { url: qb.url, username: "admin" });
-	app.setSecret("qbittorrent.password", "pw");
-	app.setConfig("jackett", { url: jackett.url });
-	app.setSecret("jackett.api_key", "jk");
+	app.setConfig("plugins.qbittorrent.url", qb.url);
+	app.setSecret("plugins.qbittorrent.password", "pw");
+	app.setConfig("plugins.jackett.servers", [{ url: jackett.url }]);
+	app.setSecret("plugins.jackett.api_key", "jk");
+	const stopPlugins = await withPlugins(app, ["jackett", "qbittorrent"]);
 	app.setConfig("tmdb.base_url", tmdb.url);
 	app.setSecret("tmdb.api_key", tmdb.apiKey);
-	app.setConfig("path_maps", { qbittorrent: [{ theirs: qb.theirsRoot, ours: t.downloads }], jellyfin: [] });
+	app.setConfig("path_maps.downloaders.qbittorrent", [{ theirs: qb.theirsRoot, ours: t.downloads }]);
 	const run = (name: string, input: unknown) => runOperation(app, name, input, { actor: "owner:test" });
-	return { ...t, qb, run, close: async () => (app.close(), await Promise.all([qb.close(), tmdb.close(), jackett.close()])) };
+	return { ...t, qb, run, close: async () => (await stopPlugins(), app.close(), await Promise.all([qb.close(), tmdb.close(), jackett.close()])) };
 }
 
 test("adopt: an existing finished torrent is identified, planned, and filed only after approval", async () => {
 	const w = await world();
 	try {
 	const bytes = makeTorrent(SINTEL, [{ path: [`${SINTEL}.mkv`], length: 1.2 * GB }]);
-	const hash = parseTorrent(bytes).infoHash;
-	await new QbClient({ url: w.qb.url, password: "pw" }).addTorrentFile(bytes); // added by hand, untagged
+	const hash = w.qb.addOutside(bytes); // added by hand, untagged
 	w.qb.complete(hash);
 
 	const scan = (await w.run("adopt.scan", { notify: false })).output as any;

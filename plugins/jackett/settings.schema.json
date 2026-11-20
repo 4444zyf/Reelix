@@ -1,0 +1,21 @@
+{
+	"type": "object",
+	"required": [
+		"servers"
+	],
+	"properties": {
+		"servers": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"url": {
+						"type": "string"
+					}
+				}
+			},
+			"default": [],
+			"maxItems": 3
+		}
+	}
+}

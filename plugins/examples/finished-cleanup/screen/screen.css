@@ -1,0 +1,10 @@
+/* The owner's theme arrives as CSS variables (--bg, --fg, --primary, …); these are only fallbacks. */
+body { margin: 0; padding: 16px; background: var(--bg, #111); color: var(--fg, #eee); font: 14px/1.5 var(--ui-font, system-ui, sans-serif); }
+ul { list-style: none; margin: 12px 0; padding: 0; }
+li { padding: 8px 12px; margin-bottom: 6px; border: 1px solid var(--border, #333); border-radius: var(--radius, 8px); background: var(--card, #1a1a1a); }
+li small { display: block; color: var(--muted-fg, #999); }
+.row { display: flex; gap: 8px; }
+button { padding: 6px 14px; border-radius: var(--radius, 8px); border: 1px solid var(--border, #333); background: var(--secondary, #222); color: var(--secondary-fg, #eee); font: inherit; cursor: pointer; }
+button.primary { background: var(--primary, #c33); color: var(--primary-fg, #fff); border-color: transparent; }
+button:disabled { opacity: 0.5; cursor: default; }
+#note { color: var(--muted-fg, #999); }

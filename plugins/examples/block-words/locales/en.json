@@ -1,0 +1,8 @@
+{
+	"description": "Example: hides releases whose name contains a word you list.",
+	"reason": "The name contains \"{{word}}\"",
+	"settings": {
+		"words": "Words",
+		"words_help": "A release whose name contains one of these words is hidden."
+	}
+}

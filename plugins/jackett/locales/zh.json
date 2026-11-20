@@ -1,0 +1,14 @@
+{
+	"description": "通过一个或多个 Jackett 服务器查找资源。",
+	"settings": {
+		"servers": "Jackett 服务器",
+		"servers_help": "最多三个。每个服务器的 API 密钥是下面单独的一项密钥。",
+		"servers.url": "地址",
+		"servers.url_help": "例如 http://jackett:9117"
+	},
+	"secrets": {
+		"api_key": "第一个服务器的 API 密钥",
+		"api_key_2": "第二个服务器的 API 密钥",
+		"api_key_3": "第三个服务器的 API 密钥"
+	}
+}

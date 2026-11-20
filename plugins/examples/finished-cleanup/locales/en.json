@@ -1,0 +1,39 @@
+{
+	"description": "Example: finds finished downloads seeded longer than you set and proposes removing them; nothing is removed without your yes.",
+	"detail": "{{size}} · seeding for {{days}} days",
+	"proposal": {
+		"title_one": "Remove {{count}} finished download",
+		"title_other": "Remove {{count}} finished downloads",
+		"why": "They finished downloading and have been seeding for {{days}} days or more."
+	},
+	"card": {
+		"title": "Finished downloads seeded {{days}}+ days",
+		"empty": "Nothing has been seeding that long.",
+		"propose": "Propose removal"
+	},
+	"kinds": {
+		"all": "Films and series",
+		"movie": "Films only",
+		"tv": "Series only"
+	},
+	"job": "Downloads proposed for removal: {{count}}",
+	"settings": {
+		"seeded_days": "Seeding for at least (days)",
+		"seeded_days_help": "Counted from when the download finished; 0 means as soon as it has finished.",
+		"delete_files": "Delete the files too",
+		"delete_files_help": "Off: only the torrent is removed; its files stay, and the library keeps its own links.",
+		"kind": "Only for",
+		"kind_help": "Limit the cleanup to one kind of title.",
+		"schedule": "Check",
+		"schedule_manual": "When I ask",
+		"schedule_daily": "Every day",
+		"at_most": "At most per day",
+		"at_most_help": "Steps in one daily proposal."
+	},
+	"buttons": {
+		"scan": "Scan now"
+	},
+	"screen": {
+		"title": "Finished downloads"
+	}
+}

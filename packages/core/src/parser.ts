@@ -18,8 +18,6 @@ export type ParsedName = {
 	audio?: string[];
 	group?: string;
 	chineseSubs?: "simplified" | "traditional" | "bilingual" | "chinese";
-	languages?: string[];
-	sizeHint?: string;
 	confident: boolean;
 	why?: string; // when not confident
 };

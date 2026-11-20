@@ -1,0 +1,4 @@
+{
+	"description": "Exemple : les tâches de fond ne peuvent rien supprimer ; elles vous le demandent dans la boîte de réception.",
+	"reason": "les tâches de fond ne peuvent pas exécuter {{operation}} ; signalez-le au propriétaire dans la boîte de réception avec notify et laissez-le décider"
+}

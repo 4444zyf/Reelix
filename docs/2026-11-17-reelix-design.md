@@ -114,7 +114,7 @@ An npm-workspaces monorepo:
   skills/             skills the agent has written for itself (§4.4)
   sessions/           saved conversations
   pi/                 pi's own settings, sign-in and model list
-  browser-profile/    Chromium profile: cookies and logins persist
+  plugin-data/        plugins' own folders; browser/chromium-profile: cookies and logins persist
   workspace/          the agent's working folder and scratch space
   backups/            nightly copies of the database and config
 /media
@@ -132,7 +132,7 @@ The centre of `core` is a list of operations. Each is declared once:
 defineOperation({
   name: "download.add",
   summary: "Add a release to qBittorrent for a known title",
-  effect: "write",            // "read" | "write" | "destructive"
+  effect: "write",            // "read" | "write" | "destructive" | "admin"
   input: Schema, output: Schema,
   run(ctx, input) { ... },
   reconcile(ctx, input) { ... },   // optional: how to find out whether an interrupted run took effect
@@ -144,11 +144,11 @@ From that one declaration Reelix derives:
 - the **CLI command** `reelix download add …` (flags from the schema, `--json` output);
 - the **HTTP route** `POST /api/op/download.add`, which the web UI calls;
 - a **typed agent tool**, for the operations listed in §4.2;
-- the **ledger entry** (§6.2) for every `write` and `destructive` operation.
+- the **ledger entry** (§6.2) for every `write`, `destructive` and `admin` operation.
 
 Adding an operation gives all three faces at once, and they cannot drift apart.
 
-**One writer.** The running server holds a lock on `/data`. The CLI sends its request to the server over a local socket that only Reelix's user can open. The CLI runs an operation by itself only when it can take that lock, which means no server is running (early build steps, repairs).
+**One writer.** The running server holds a lock on `/data`. The CLI sends its request to the server over a local socket that only Reelix's user can open; a token says who is calling (`plugins.md` §11.3). The agent's shell uses a second socket, `agent.sock`, which needs its session's token and never counts as the owner. The CLI runs an operation by itself only when it can take that lock, which means no server is running (early build steps, repairs).
 
 ## 4. The agent
 
@@ -382,6 +382,18 @@ Checked against Jellyfin's documentation and source: the ID tag is honoured on m
 
 **Later (not v1):** aligning a subtitle to the audio automatically when the timing check fails.
 
+**Translation (agreed 2026-11-18).** When no subtitle exists in a wanted language, or the owner asks for any language or style (Klingon included), Reelix can translate an existing text subtitle into a separate styled ASS file. The full design is in [subtitle-translation.md](subtitle-translation.md); the model roles it uses are in [models.md](models.md).
+
+**Magpie configuration (agreed 2026-11-18).** With a separate admin key, Reelix can change an optional magpie gateway's routing groups, providers and other keys' limits. Every change goes plan → apply, is checked afterwards and rolled back if it breaks a role. The agent may not change the model it is running on, leave a role with no model, or touch Reelix's own keys. See [magpie.md](magpie.md).
+
+**Deployment (agreed 2026-11-18).** Docker Compose: Reelix always, with pi inside it; magpie, qBittorrent, Jackett and Jellyfin as optional services, each in its own container on one private network, with the media folder at the same path everywhere. See [deployment.md](deployment.md).
+
+**Trends and suggestions (2026-11-18).** The Search page became Trends: search on top, then "For you" (a model picks among TMDB's trending and recommended titles using the owner's notes and library, and says why) and TMDB's trending lists. Library pages show paths relative to the library, never the NAS's folders. See [trends.md](trends.md).
+
+**Installable web app (2026-11-18).** The web UI installs to the Home Screen and sends native notifications through Web Push, and library titles open in Infuse, Swiftfin or Jellyfin with one tap, from the library or chat. See [web-app.md](web-app.md).
+
+**Plugins (2026-11-18, design agreed; built phase by phase, state in plugins.md §21).** Others join the development through plugins: skill packs, providers for named seams, hooks, and operations that are at once agent tools, CLI commands and HTTP calls. Reelix's own subsystems move onto the same API. See [plugins.md](plugins.md); the systems studied are in [plugins-study.md](plugins-study.md). How to write one: [plugin-guide.md](plugin-guide.md).
+
 ### 5.6 Jellyfin
 
 Optional. **(agreed)** The library folder is the truth. With a Jellyfin address and key configured, Reelix uses the API for one thing: telling Jellyfin that a path changed, falling back to a full library scan, so new files appear at once. It uses Jellyfin's current sign-in header, not the deprecated forms. Jellyfin sees paths differently from Reelix, so the path mapping in §10 applies.
@@ -505,6 +517,8 @@ Because this API can run a shell on the NAS, it is protected beyond the password
 
 ### 7.4 Reaching the owner away from home: Telegram (agreed 2026-11-17, decision A)
 
+Today this is the `telegram` plugin on the `notifier` and `chat.channel` seams (`docs/plugins.md` §7.3, §7.4).
+
 Reelix runs a Telegram bot that the owner creates and whose token goes in the secrets file. It does three things:
 
 - **Notices with pictures.** Anything that needs the owner (verification, a plan to approve, a failed download) and the morning summary. A QR code or a screenshot is sent as an image. Routine progress is not sent.
@@ -564,17 +578,17 @@ The owner chose soft limits. **(agreed)**
 - **The spending cap**, and the time limit on shell commands.
 - **Handles instead of download links** in anything the model sees (§4.2).
 
-**The boundary** is the container: not root, two mounts, no access to Docker itself, nothing else from the NAS. pi has no sandbox of its own and says so; the mounts are the real limit on what a mistake can reach.
+**The boundary** is the container: two mounts, no access to Docker itself, nothing else from the NAS. Only the entrypoint runs as root; Reelix runs as `PUID:PGID`, and the agent's shell as a user of its own that cannot read Reelix's data (`plugins.md` §11.3, D2). pi has no sandbox of its own and says so; the mounts are the real limit on what a mistake can reach.
 
 **Accepted risks**, stated plainly:
-- The agent has a shell and can read `secrets.yaml` despite being told not to; what it reads goes to the model provider. The owner accepted this soft limit in the interview. These are home-network service passwords.
-- **Unattended jobs with full access (the owner's choice, decision B).** Background jobs read text written by strangers (release names, NFO files, web pages, subtitle files) with nobody watching, and they have a shell. A line in such text that succeeds in steering the model could delete or damage files under `/media` and `/data`, or read the secrets file and send it out. What stands against that: context files are off; the prompt marks outside text as data and tells a job to park before anything destructive; secrets are kept out of conversations; the container limits the reach to the two mounts; the database and config are backed up nightly; library entries are only links, so they can be rebuilt while the downloads exist. None of these is a guarantee. The downloaded files themselves have no backup inside Reelix.
+- Outside the Docker image the agent's shell runs as Reelix's user and can read `secrets.yaml` despite being told not to; what it reads goes to the model provider. The owner accepted this soft limit in the interview. In the image it runs as another user that cannot read it (`plugins.md` §11.3, D2).
+- **Unattended jobs with full access (the owner's choice, decision B).** Background jobs read text written by strangers (release names, NFO files, web pages, subtitle files) with nobody watching, and they have a shell. A line in such text that succeeds in steering the model could delete or damage files under `/media` and `/data`, or, outside the image, read the secrets file and send it out. What stands against that: context files are off; the prompt marks outside text as data and tells a job to park before anything destructive; secrets are kept out of conversations; the container limits the reach to the two mounts; the database and config are backed up nightly; library entries are only links, so they can be rebuilt while the downloads exist. None of these is a guarantee. The downloaded files themselves have no backup inside Reelix.
 - A removed torrent's data is gone immediately.
-- The agent's own shell can reach Reelix's local socket and run any operation. That is intended: it is the agent's command line.
+- The agent's own shell reaches Reelix through its socket and runs operations as the agent, which excludes the owner-only `admin` ones. That is intended: it is the agent's command line. In the image that is all it can do with Reelix (`plugins.md` §11.3); outside it, this prevents mistakes and does not contain a steered agent.
 
 ## 10. Settings and setup
 
-`config.yaml` is one readable file. **(agreed)** The agent and the Settings page change it through `reelix config set`, which validates and records the change. The owner can also edit the file by hand: Reelix notices, validates, and keeps the last good version if the edit is invalid, saying what was wrong. `secrets.yaml` holds passwords and keys separately.
+`config.yaml` is one readable file. **(agreed)** The agent and the Settings page change it through `reelix config set`, which validates and records the change; settings that decide where Reelix connects need the owner's yes when the agent changes them (`docs/plugins.md` §11.2). The owner can also edit the file by hand: Reelix notices, validates, and keeps the last good version if the edit is invalid, saying what was wrong. `secrets.yaml` holds passwords and keys separately.
 
 ```yaml
 media_root: /media
@@ -584,15 +598,17 @@ library:
   shows:  /media/library/Shows
   anime:  /media/library/Anime
 path_maps:                            # how other services see the same folders
-  qbittorrent: [{ theirs: /downloads, ours: /media/torrents }]
+  downloaders: { qbittorrent: [{ theirs: /downloads, ours: /media/torrents }] }   # by downloader id
   jellyfin:    [{ theirs: /data/media, ours: /media/library }]
-qbittorrent: { url: http://nas:8080, username: admin }
-jackett:     { url: http://nas:9117 }
+downloader:  qbittorrent                        # the active downloader; the owner's choice (docs/plugins.md §7.5)
 jellyfin:    { url: http://nas:8096 }          # optional
 tmdb:        { language: zh-CN, base_url: …, image_base_url: … }
 proxy:       { default: http://nas:7890, use_for: [tmdb, models, browser, subhd] }
 subtitles:   { sources: [subhd, assrt], subhd_url: https://subhd.me }
-telegram:    { owner_id: … }                   # the bot token lives in secrets.yaml
+plugins:                                       # services that are plugins; their passwords and keys live in secrets.yaml
+  qbittorrent: { url: http://nas:8080, username: admin }
+  jackett:     { servers: [{ url: http://nas:9117 }] }
+  telegram:    { api_url: … }                  # optional; the linked owner lives in the database
 models:      { main: …, background: … }
 limits:      { background_daily_usd: 1, background_daily_tokens: 2000000,
                shell_timeout_s: 120, stalled_after_h: 12 }

@@ -1,0 +1,13 @@
+{
+	"type": "object",
+	"required": [
+		"max_gb"
+	],
+	"properties": {
+		"max_gb": {
+			"type": "number",
+			"default": 60,
+			"exclusiveMinimum": 0
+		}
+	}
+}

@@ -1,0 +1,12 @@
+{
+	"description": "Example: checks free space every hour and adds one notice when it runs low.",
+	"title": "Only {{free}} GB free",
+	"body": "The download folder has {{free}} GB free; the limit you set is {{min}} GB.",
+	"enough": "{{free}} GB free.",
+	"told": "{{free}} GB free: the owner was told.",
+	"held": "{{free}} GB free: too many notices already.",
+	"unknown": "Free space is not known.",
+	"settings": {
+		"min_free_gb": "Warn below (GB free)"
+	}
+}

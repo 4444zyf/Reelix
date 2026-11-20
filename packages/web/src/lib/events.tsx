@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
 import { toast } from "../components/hooks/use-toast";
 import { useEventStream } from "./api";
+import i18n from "./i18n";
 import type { AppEvent, Download } from "./types";
 
 // ------------------------------------------------------------------ live download progress
@@ -76,7 +77,7 @@ export function AppEvents({ onThreadEvent }: { onThreadEvent?: (e: Extract<AppEv
 					qc.invalidateQueries({ queryKey: ["secrets"] });
 					break;
 				case "notice":
-					toast({ title: e.level === "error" ? "Problem" : "Notice", description: e.text, variant: e.level === "error" ? "destructive" : "default" });
+					toast({ title: e.level === "error" ? i18n.t("chat:notices.problem") : i18n.t("chat:notices.notice"), description: e.text, variant: e.level === "error" ? "destructive" : "default" });
 					break;
 				case "thread":
 					qc.invalidateQueries({ queryKey: ["threads"] });

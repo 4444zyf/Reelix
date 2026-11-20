@@ -1,0 +1,4 @@
+{
+	"description": "Example: reads HDR10, HDR10+, Dolby Vision and HLG from release names, for release-tags.",
+	"label": "HDR formats"
+}

@@ -1,5 +1,6 @@
 import { HelpCircle, KeyRound, Send } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useChat } from "../../lib/chat";
 import type { Ask } from "../../lib/types";
 import { Spinner } from "../common/States";
@@ -11,6 +12,7 @@ import { Input } from "../ui/input";
  * kind=secret. A secret goes straight to the server's secrets file and is never shown again.
  */
 export function AskPanel({ ask }: { ask: Ask }) {
+	const { t } = useTranslation(["chat", "common"]);
 	const { answer } = useChat();
 	const [value, setValue] = useState("");
 	const [busy, setBusy] = useState<string>();
@@ -22,9 +24,9 @@ export function AskPanel({ ask }: { ask: Ask }) {
 		if (ok) setValue("");
 	};
 	const isSecret = ask.kind === "secret";
-	const options = ask.options?.length ? ask.options : ask.kind === "confirm" ? ["Yes", "No"] : [];
+	const options = ask.options?.length ? ask.options : ask.kind === "confirm" ? [t("common:actions.yes"), t("common:actions.no")] : [];
 	return (
-		<div className="glass-panel rounded-xl p-3">
+		<div className="raised rounded-xl p-3">
 			<div className="mb-2 flex items-start gap-2 text-sm">
 				{isSecret ? <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> : <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
 				<p className="whitespace-pre-wrap">{ask.question}</p>
@@ -51,23 +53,23 @@ export function AskPanel({ ask }: { ask: Ask }) {
 						autoComplete={isSecret ? "new-password" : "off"}
 						value={value}
 						onChange={(e) => setValue(e.target.value)}
-						placeholder={isSecret ? (ask.secret_key ?? "secret") : "Your answer"}
+						placeholder={isSecret ? (ask.secret_key ?? t("ask.secret")) : t("ask.answerPlaceholder")}
 						className="h-9"
 						autoFocus
 					/>
 					<Button type="submit" size="sm" className="h-9" disabled={!!busy || (!isSecret && !value)}>
 						{busy ? <Spinner /> : <Send />}
-						{isSecret ? "Save" : "Send"}
+						{isSecret ? t("common:actions.save") : t("ask.send")}
 					</Button>
 					{isSecret && (
 						<Button type="button" size="sm" variant="ghost" className="h-9" disabled={!!busy} onClick={() => submit("")}>
-							Skip
+							{t("ask.skip")}
 						</Button>
 					)}
 				</form>
 			)}
-			{isSecret && <p className="mt-1.5 text-[11px] text-muted-foreground">Stored in the server's secrets file as {ask.secret_key}. The agent only learns that it was provided.</p>}
-			{!isSecret && options.length > 0 && <p className="mt-1.5 text-[11px] text-muted-foreground">Or type an answer below.</p>}
+			{isSecret && <p className="mt-1.5 text-[11px] text-muted-foreground">{t("ask.secretNote", { key: ask.secret_key })}</p>}
+			{!isSecret && options.length > 0 && <p className="mt-1.5 text-[11px] text-muted-foreground">{t("ask.orType")}</p>}
 		</div>
 	);
 }

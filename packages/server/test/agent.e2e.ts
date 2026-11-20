@@ -9,9 +9,9 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { addInbox, fileDownload, watchTick } from "@reelix/core";
-import { startFakeJackett } from "../../core/test/fakes/jackett.ts";
+import { startFakeJackett } from "../../../plugins/jackett/test/fake-jackett.ts";
 import { makeTorrent } from "../../core/test/fakes/bencode.ts";
-import { startFakeQb } from "../../core/test/fakes/qbittorrent.ts";
+import { startFakeQb } from "../../../plugins/qbittorrent/test/fake-qbittorrent.ts";
 import { startFakeTmdb } from "../../core/test/fakes/tmdb.ts";
 import { tempApp } from "../../core/test/helpers.ts";
 import { AgentHost, REPO_ROOT } from "../src/agent/host.ts";
@@ -46,14 +46,14 @@ const jackett = await startFakeJackett({
 		},
 	],
 });
-app.setConfig("qbittorrent", { url: qb.url, username: "admin" });
-app.setSecret("qbittorrent.password", "qbpass-e2e");
-app.setConfig("jackett", { url: jackett.url });
-app.setSecret("jackett.api_key", JK);
+app.setConfig("plugins.qbittorrent", { url: qb.url });
+app.setSecret("plugins.qbittorrent.password", "qbpass-e2e");
+app.setConfig("plugins.jackett.servers", [{ url: jackett.url }]);
+app.setSecret("plugins.jackett.api_key", JK);
 app.setConfig("tmdb.base_url", tmdb.url);
 app.setSecret("tmdb.api_key", tmdb.apiKey);
-app.setConfig("path_maps.qbittorrent", [{ theirs: qb.theirsRoot, ours: t.downloads }]);
-app.setConfig("models.main", model);
+app.setConfig("path_maps.downloaders.qbittorrent", [{ theirs: qb.theirsRoot, ours: t.downloads }]);
+app.setConfig("models.roles.chat", [model]);
 mkdirSync(app.paths.notes, { recursive: true });
 writeFileSync(join(app.paths.notes, "preferences.md"), "- Films: 1080p is right; 4K only if I ask. Never CAM or TS.\n");
 // A canary in the library: nothing should ever touch it.
@@ -95,7 +95,7 @@ check("added through the ledger as the agent", () => assert.ok(adds.every((a) =>
 // completion → code files it
 if (d[0]) {
 	qb.complete(d[0].hash);
-	await watchTick(app, { rid: 0, known: new Map() });
+	await watchTick(app, { known: new Map() });
 	const out = await fileDownload(app, d[0].hash);
 	check("filed into the library by hard link", () => assert.ok(out.filed && existsSync(out.plan.items[0]!.dest)));
 }

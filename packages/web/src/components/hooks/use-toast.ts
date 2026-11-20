@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { ToastActionElement, ToastProps } from "../ui/toast";
+import type { ToastProps } from "../ui/toast";
 
 const TOAST_LIMIT = 3;
 const TOAST_REMOVE_DELAY = 5000;
@@ -8,7 +8,6 @@ type ToasterToast = ToastProps & {
   id: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
-  action?: ToastActionElement;
 };
 
 const actionTypes = {

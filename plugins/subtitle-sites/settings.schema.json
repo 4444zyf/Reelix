@@ -1,0 +1,42 @@
+{
+	"type": "object",
+	"required": [
+		"subhd_url",
+		"assrt_url",
+		"opensubtitles_url",
+		"subdl_url",
+		"subdl_download_url",
+		"gestdown_url",
+		"jimaku_url"
+	],
+	"properties": {
+		"subhd_url": {
+			"type": "string",
+			"default": "https://subhd.me"
+		},
+		"assrt_url": {
+			"type": "string",
+			"default": "https://api.assrt.net"
+		},
+		"opensubtitles_url": {
+			"type": "string",
+			"default": "https://api.opensubtitles.com/api/v1"
+		},
+		"subdl_url": {
+			"type": "string",
+			"default": "https://api.subdl.com/api/v1"
+		},
+		"subdl_download_url": {
+			"type": "string",
+			"default": "https://dl.subdl.com"
+		},
+		"gestdown_url": {
+			"type": "string",
+			"default": "https://api.gestdown.info"
+		},
+		"jimaku_url": {
+			"type": "string",
+			"default": "https://jimaku.cc/api"
+		}
+	}
+}

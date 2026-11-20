@@ -1,0 +1,11 @@
+{
+	"description": "Скачивает через Web API qBittorrent (4.x и 5.x).",
+	"settings": {
+		"url": "Адрес веб-интерфейса qBittorrent",
+		"url_help": "Например, http://qbittorrent:8080. Как его папки видны Reelix, задаётся сопоставлением путей в «Настройки → Загрузки».",
+		"username": "Имя пользователя"
+	},
+	"secrets": {
+		"password": "Пароль веб-интерфейса"
+	}
+}

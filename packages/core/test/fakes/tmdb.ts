@@ -151,6 +151,17 @@ export async function startFakeTmdb(opts: { apiKey?: string } = {}): Promise<Fak
 			const hits = CANNED.filter((c) => (!kind || c.kind === kind) && matches(c, query) && (!year || c.date.startsWith(String(year))));
 			return page(hits.map((c) => (kind ? searchItem(c, lang) : { ...searchItem(c, lang), media_type: c.kind })));
 		}
+		if ((m = /^\/trending\/(all|movie|tv)\/(day|week)$/.exec(p))) {
+			const hits = CANNED.filter((c) => m![1] === "all" || c.kind === m![1]).sort((a, b) => (m![2] === "day" ? a.popularity - b.popularity : b.popularity - a.popularity));
+			return page(hits.map((c) => (m![1] === "all" ? { ...searchItem(c, lang), media_type: c.kind } : searchItem(c, lang))));
+		}
+		if ((m = /^\/(movie|tv)\/(\d+)\/recommendations$/.exec(p))) {
+			const c = CANNED.find((x) => x.kind === m![1] && x.id === Number(m![2]));
+			if (!c) return notFound();
+			// Titles sharing a genre, as TMDB would roughly do.
+			const hits = CANNED.filter((x) => x !== c && x.genres.some((g) => c.genres.includes(g)));
+			return page(hits.map((x) => ({ ...searchItem(x, lang), media_type: x.kind })));
+		}
 		if ((m = /^\/find\/(tt\d+)$/.exec(p))) {
 			const hits = sp.get("external_source") === "imdb_id" ? CANNED.filter((c) => c.imdb === m![1]) : [];
 			return sendJson(res, 200, {
@@ -208,6 +219,13 @@ export async function startFakeTmdb(opts: { apiKey?: string } = {}): Promise<Fak
 				});
 			const altKey = c.kind === "movie" ? "titles" : "results";
 			if (append.has("alternative_titles")) body.alternative_titles = { [altKey]: c.alt.map((t) => ({ iso_3166_1: "US", title: t, type: "" })) };
+			if (append.has("translations"))
+				body.translations = {
+					translations: [
+						{ iso_639_1: "en", iso_3166_1: "US", data: { [c.kind === "movie" ? "title" : "name"]: c.title } },
+						{ iso_639_1: "zh", iso_3166_1: "CN", data: { [c.kind === "movie" ? "title" : "name"]: c.zh } },
+					],
+				};
 			if (append.has("translations"))
 				body.translations = {
 					translations: [

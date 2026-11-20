@@ -1,0 +1,38 @@
+{
+	"description": "示例：找出做种时间超过你设定天数的已完成下载，并提议删除；没有你的同意不会删除任何东西。",
+	"detail": "{{size}} · 已做种 {{days}} 天",
+	"proposal": {
+		"title_other": "删除 {{count}} 个已完成的下载",
+		"why": "它们已下载完成，并已做种 {{days}} 天或更久。"
+	},
+	"card": {
+		"title": "做种 {{days}} 天以上的已完成下载",
+		"empty": "没有做种这么久的下载。",
+		"propose": "提议删除"
+	},
+	"kinds": {
+		"all": "电影和剧集",
+		"movie": "仅电影",
+		"tv": "仅剧集"
+	},
+	"job": "提议删除的下载：{{count}} 个",
+	"settings": {
+		"seeded_days": "做种至少（天）",
+		"seeded_days_help": "从下载完成时算起；0 表示一完成就算。",
+		"delete_files": "同时删除文件",
+		"delete_files_help": "关闭时只移除种子；文件保留，媒体库里的链接也不受影响。",
+		"kind": "仅限",
+		"kind_help": "只清理某一类作品。",
+		"schedule": "检查",
+		"schedule_manual": "我要求时",
+		"schedule_daily": "每天",
+		"at_most": "每天最多",
+		"at_most_help": "每天一次提议中的步骤数。"
+	},
+	"buttons": {
+		"scan": "立即扫描"
+	},
+	"screen": {
+		"title": "已完成的下载"
+	}
+}

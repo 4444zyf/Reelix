@@ -1,0 +1,39 @@
+{
+	"items": {
+		"chat": "对话",
+		"inbox": "收件箱",
+		"library": "媒体库",
+		"trends": "热门",
+		"downloads": "下载",
+		"activity": "活动",
+		"browser": "浏览器",
+		"settings": "设置"
+	},
+	"more": "更多",
+	"conversations": "对话记录",
+	"owner": "主人",
+	"signOut": "退出登录",
+	"theme": "主题",
+	"language": "语言",
+	"expandSidebar": "展开侧栏",
+	"collapseSidebar": "收起侧栏",
+	"openChat": "打开对话",
+	"spendCap": "今日后台花费已达上限。",
+	"connecting": "正在连接 Reelix…",
+	"unreachable": "无法连接 Reelix。",
+	"login": {
+		"firstRun": "为这台 Reelix 设置一个密码，之后在任何设备上都用它登录。",
+		"signInToContinue": "登录以继续。",
+		"newPassword": "新密码",
+		"password": "密码",
+		"repeat": "再输入一次",
+		"tooShort": "至少需要 8 个字符。",
+		"differ": "两次输入的密码不一致。",
+		"setPassword": "设置密码",
+		"signIn": "登录"
+	},
+	"devPlugin": "插件开发模式：{{folder}} 未经批准和文件校验即被加载。服务均为模拟，数据为临时数据。",
+	"plugins": "插件",
+	"screenFailed": "无法显示 {{id}} 的页面。",
+	"screenTitle": "{{title}} — 插件 {{id}} 的页面"
+}

@@ -11,35 +11,56 @@ import {
 	getInbox,
 	http as fetchHttp,
 	listInbox,
-	listOperations,
 	newId,
+	operationInfo,
+	originAllowed,
+	ownerLanguage,
 	proxyFor,
 	ReelixError,
 	runOperation,
+	THEME_FILE_TYPES,
+	installedThemes,
+	LANGUAGES,
+	themeDir,
 } from "@reelix/core";
+import type { OpCtx } from "@reelix/core";
 import type { AgentHost } from "./agent/host.ts";
-import { COOKIE, clearCookie, hashPassword, loginAllowed, loginFailed, loginSucceeded, makeSessionCookie, validSession, verifyPassword } from "./auth.ts";
+import { clearCookie, hashPassword, loginAllowed, loginFailed, loginSucceeded, makeSessionCookie, validSession, verifyPassword } from "./auth.ts";
 import type { JobRunner } from "./jobs.ts";
-import type { TelegramBot } from "./telegram.ts";
+import type { PluginRoutes } from "./plugins/routes.ts";
+import { currentSuggestions } from "./suggestions.ts";
 
-export type ServerDeps = { app: Reelix; host: AgentHost; jobs: JobRunner; telegram: TelegramBot; webDir?: string; extra?: (api: Hono) => void };
+/** `devPlugin`: the folder `reelix plugin dev` loads; the web UI shows a banner while it is set. */
+export type ServerDeps = { app: Reelix; host: AgentHost; jobs: JobRunner; webDir?: string; routes?: PluginRoutes; devPlugin?: string };
 
-const MIME: Record<string, string> = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".ico": "image/x-icon", ".json": "application/json", ".woff2": "font/woff2", ".txt": "text/plain" };
+const MIME: Record<string, string> = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".ico": "image/x-icon", ".json": "application/json", ".woff2": "font/woff2", ".woff": "font/woff", ".txt": "text/plain", ".webmanifest": "application/manifest+json" };
+
+/** What `Sec-Fetch-Dest` says for a document loaded into a frame. */
+const FRAME_DESTINATIONS = ["iframe", "frame", "embed", "object", "fencedframe"];
 
 function opError(c: Context, e: unknown) {
 	const code = e instanceof ReelixError ? e.code : "error";
-	const status = code === "invalid_input" || code === "unknown_operation" || code === "unknown_setting" ? 400 : code === "not_found" || code === "unknown_title" ? 404 : 500;
+	const status =
+		code === "invalid_input" || code === "unknown_operation" || code === "unknown_setting" || code === "bad_source" || code === "not_pinned" || code === "refused" || code === "incompatible" || code === "not_installed"
+			? 400
+			: code === "owner_only"
+				? 403
+				: code === "not_found" || code === "unknown_title" || code === "unknown_plugin"
+					? 404
+					: code === "exists" || code === "changed" || code === "nothing_to_approve"
+						? 409
+						: 500;
 	return c.json({ error: errorMessage(e), code }, status);
 }
 
 /** Routes shared by the web UI and the local socket. */
-function opRoutes(api: Hono, d: ServerDeps, actorOf: (c: Context) => string) {
-	api.get("/api/ops", (c) => c.json(listOperations().map((o) => ({ name: o.name, summary: o.summary, description: o.description, effect: o.effect, input: o.input, tool: o.tool, positional: o.positional }))));
+function opRoutes(api: Hono, d: ServerDeps, actorOf: (c: Context) => string, requestOf: (c: Context) => OpCtx["request"]) {
+	api.get("/api/ops", (c) => c.json(d.app.operations.list().map(operationInfo)));
 	api.post("/api/op/:name", async (c) => {
 		const name = c.req.param("name");
 		const input = await c.req.json().catch(() => ({}));
 		try {
-			const r = await runOperation(d.app, name, input, { actor: actorOf(c), requestId: c.req.header("x-request-id") ?? newId("web_") });
+			const r = await runOperation(d.app, name, input, { actor: actorOf(c), requestId: c.req.header("x-request-id") ?? newId("web_"), request: requestOf(c) });
 			return c.json({ output: r.output, text: r.text, actionId: r.actionId, repeated: r.repeated });
 		} catch (e) {
 			return opError(c, e);
@@ -47,10 +68,25 @@ function opRoutes(api: Hono, d: ServerDeps, actorOf: (c: Context) => string) {
 	});
 }
 
-/** The private socket: only Reelix's own user can open it; it is the agent's command line (§3.3). */
+/**
+ * The owner's socket: only Reelix's own user can open it (§3.3). The caller is who its token says; without a
+ * known token it counts as the agent (docs/plugins.md §11.3).
+ */
 export function socketApp(d: ServerDeps): Hono {
 	const api = new Hono();
-	opRoutes(api, d, (c) => c.req.header("x-reelix-actor") ?? "owner:cli");
+	opRoutes(api, d, (c) => d.host.tokens.actorOf(c.req.header("x-reelix-token")), () => undefined);
+	return api;
+}
+
+/**
+ * The agent's socket, the command line of the agent's shell (docs/plugins.md §11.3): in the image another
+ * user can open it, so every call needs a session's token, and the owner's token is refused here.
+ */
+export function agentSocketApp(d: ServerDeps): Hono {
+	const api = new Hono();
+	const actor = (c: Context) => d.host.tokens.sessionActor(c.req.header("x-reelix-token"));
+	api.use("*", async (c, next) => (actor(c) ? next() : c.json({ error: "This socket is for the agent's shell: it needs the token of a running session (REELIX_TOKEN).", code: "no_session" }, 401)));
+	opRoutes(api, d, (c) => actor(c)!, () => undefined);
 	return api;
 }
 
@@ -65,21 +101,20 @@ export function webApp(d: ServerDeps): Hono {
 		const origin = c.req.header("origin");
 		const host_ = c.req.header("host");
 		if (origin) {
-			const allowed = app.config.web.allowed_origins;
-			let ok = false;
-			try {
-				ok = new URL(origin).host === host_ || allowed.includes(origin);
-			} catch {}
-			if (!ok) return c.json({ error: "cross-site request refused" }, 403);
+			if (!originAllowed(app, origin, host_)) return c.json({ error: "cross-site request refused" }, 403);
 		} else if (c.req.method !== "GET" && c.req.header("sec-fetch-site") && c.req.header("sec-fetch-site") !== "same-origin") {
 			return c.json({ error: "cross-site request refused" }, 403);
 		}
-		if (path === "/api/session" || path === "/api/login" || path === "/api/setup-password" || path === "/api/telegram/webhook") return next();
+		// Reelix's API is never shown inside a frame. A plugin's screen can navigate its own sandboxed frame,
+		// and the browser would send the owner's cookie with that (docs/plugins.md §16, phase 8).
+		if (FRAME_DESTINATIONS.includes(c.req.header("sec-fetch-dest") ?? "")) return c.json({ error: "Reelix's API is not shown inside a frame" }, 403);
+		if (path === "/api/session" || path === "/api/login" || path === "/api/setup-password" || path === "/api/themes" || path.startsWith("/api/themes/")) return next(); // themes: public, the sign-in page is themed
 		if (!validSession(app, c.req.header("cookie"))) return c.json({ error: "not signed in" }, 401);
 		return next();
 	});
 
-	api.get("/api/session", (c) => c.json({ authenticated: validSession(app, c.req.header("cookie")), needsPassword: !app.secrets["web.password_hash"] }));
+	// `language` is public on purpose: the sign-in page is shown in the owner's language.
+	api.get("/api/session", (c) => c.json({ authenticated: validSession(app, c.req.header("cookie")), needsPassword: !app.secrets["web.password_hash"], language: app.config.language ?? null }));
 	api.post("/api/setup-password", async (c) => {
 		if (app.secrets["web.password_hash"]) return c.json({ error: "password already set" }, 409);
 		const { password } = await c.req.json();
@@ -113,20 +148,26 @@ export function webApp(d: ServerDeps): Hono {
 		return c.json({ ok: true });
 	});
 
-	opRoutes(api, d, () => "owner:web");
+	// The protection above has already refused any other origin; operations see only a checked one.
+	opRoutes(api, d, () => "owner:web", (c) => {
+		const origin = c.req.header("origin");
+		return { origin: origin && originAllowed(app, origin, c.req.header("host")) ? origin : undefined };
+	});
 
 	// ---------------------------------------------------------------- status
-	api.get("/api/status", (c) => {
+	api.get("/api/status", async (c) => {
+		// Reelix's spending on magpie changes as it works: read it again, at most once a minute.
+		await host.router.refreshMagpie(60_000);
 		const openInbox = (app.db.prepare("SELECT COUNT(*) n FROM inbox WHERE status = 'open'").get() as { n: number }).n;
 		return c.json({
 			spend: host.spendToday(),
 			inbox: openInbox,
 			models: host.availableModels(),
-			model: { main: app.config.models.main, background: app.config.models.background },
+			model: host.router.describe(),
 			configWarning: app.configWarning,
-			telegram: d.telegram.status(),
 			jobs: d.jobs.summary(),
 			version: "0.1.0",
+			devPlugin: d.devPlugin,
 		});
 	});
 
@@ -259,12 +300,13 @@ export function webApp(d: ServerDeps): Hono {
 		return c.json(t);
 	});
 
+	// ---------------------------------------------------------------- for you (docs/trends.md)
+	api.get("/api/suggestions", async (c) => c.json(await currentSuggestions(app, host.router)));
+	api.post("/api/suggestions/refresh", async (c) => c.json(await currentSuggestions(app, host.router, { refresh: true })));
+
 	// ---------------------------------------------------------------- jobs
 	api.get("/api/jobs", (c) => c.json(d.jobs.list()));
 	api.post("/api/jobs/:id/run", (c) => c.json(d.jobs.runNow(c.req.param("id"))));
-
-	// ---------------------------------------------------------------- telegram
-	api.post("/api/telegram/link", (c) => c.json({ code: d.telegram.newLinkCode() }));
 
 	// ---------------------------------------------------------------- files: posters, images, uploads
 	const posterDir = join(app.paths.cache, "posters");
@@ -286,6 +328,27 @@ export function webApp(d: ServerDeps): Hono {
 		}
 		c.header("cache-control", "public, max-age=604800, immutable");
 		return c.body(readFileSync(file), 200, { "content-type": MIME[extname(file)] ?? "image/jpeg" });
+	});
+	/** Installed web UI themes (manifests that pass theme.check); built-ins ship with the UI. */
+	api.get("/api/themes", (c) => {
+		c.header("cache-control", "no-cache");
+		return c.json(installedThemes(app));
+	});
+	/** A file of an installed theme: only inside its folder, only the allowed types (no SVG). */
+	api.get("/api/themes/:id/:file{.+}", (c) => {
+		const dir = themeDir(app, c.req.param("id"));
+		if (!dir) return c.text("not found", 404);
+		let real: string;
+		try {
+			real = realpathSync(resolve(dir, c.req.param("file")));
+		} catch {
+			return c.text("not found", 404);
+		}
+		const type = THEME_FILE_TYPES[extname(real).toLowerCase()];
+		if (!real.startsWith(realpathSync(dir) + "/") || !type) return c.text("not allowed", 403);
+		c.header("cache-control", "no-cache");
+		c.header("x-content-type-options", "nosniff");
+		return c.body(readFileSync(real), 200, { "content-type": type });
 	});
 	/** Images the agent shows (screenshots, frames, QR codes): only from Reelix's own working folders. */
 	api.get("/api/files", (c) => {
@@ -314,7 +377,34 @@ export function webApp(d: ServerDeps): Hono {
 		return c.json({ path, name: f.name, size: f.size, type: f.type });
 	});
 
-	d.extra?.(api);
+	// ---------------------------------------------------------------- plugin screens (docs/plugins.md §16, phase 8)
+	// The page puts the document into a sandboxed frame; the frame asks the page, which runs only the plugin's own operations, as the plugin.
+	api.get("/api/plugin-screens/:plugin", (c) => {
+		try {
+			if (!app.plugins) throw new ReelixError("not_found", "Plugins are not running.");
+			const lang = LANGUAGES.find((l) => l === c.req.query("lang")) ?? ownerLanguage(app);
+			return c.json(app.plugins.screen(c.req.param("plugin"), lang));
+		} catch (e) {
+			return opError(c, e);
+		}
+	});
+	api.post("/api/plugin-screens/:plugin/run", async (c) => {
+		const plugin = c.req.param("plugin");
+		const { operation, input } = await c.req.json().catch(() => ({}));
+		try {
+			const op = typeof operation === "string" && /^[a-z][a-z0-9_]*$/.test(operation) ? app.operations.get(`${plugin}.${operation}`) : undefined;
+			if (!op || op.plugin !== plugin) throw new ReelixError("unknown_operation", `${plugin} has no operation ${JSON.stringify(operation)}; a screen runs only its own plugin's operations.`);
+			if (!app.plugins?.list().some((p) => p.id === plugin && p.state === "active" && p.screen)) throw new ReelixError("not_found", `${plugin} is not running, or has no screen.`);
+			const r = await runOperation(app, op.name, input ?? {}, { actor: `plugin:${plugin}`, requestId: newId("screen_") });
+			return c.json({ output: r.output, text: r.text });
+		} catch (e) {
+			return opError(c, e);
+		}
+	});
+
+	// Plugins' routes (docs/plugins.md §6, §11.5): one route for all of them, behind the sign-in above.
+	const routes = d.routes;
+	if (routes) api.all("/api/plugins/:plugin/*", (c) => routes.dispatch(c));
 
 	// ---------------------------------------------------------------- the web UI (static)
 	const webDir = d.webDir;
@@ -325,6 +415,7 @@ export function webApp(d: ServerDeps): Hono {
 		if (!existsSync(p) || statSync(p).isDirectory()) p = join(webDir, "index.html"); // client-side routes
 		const ext = extname(p);
 		if (p.includes("/_astro/")) c.header("cache-control", "public, max-age=31536000, immutable");
+		else if (p.endsWith("/sw.js") || ext === ".webmanifest") c.header("cache-control", "no-cache"); // an installed app must see updates
 		const etag = `"${createHash("sha1").update(statSync(p).mtimeMs + p).digest("hex").slice(0, 16)}"`;
 		if (c.req.header("if-none-match") === etag) return c.body(null, 304);
 		c.header("etag", etag);
@@ -332,5 +423,3 @@ export function webApp(d: ServerDeps): Hono {
 	});
 	return api;
 }
-
-export { COOKIE };

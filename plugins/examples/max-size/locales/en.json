@@ -1,0 +1,8 @@
+{
+	"description": "Example: refuses a download larger than a size you set.",
+	"reason": "{{size}} GB to download, more than the limit of {{max}} GB",
+	"settings": {
+		"max_gb": "Largest download (GB)",
+		"max_gb_help": "Counts only the files that will be downloaded."
+	}
+}

@@ -1,0 +1,31 @@
+{
+  "name": "reelix-plugin-hdr-alert",
+  "version": "0.1.0",
+  "description": "Reference plugin: tells you once per title, in the Inbox, when a search finds an HDR or Dolby Vision release of it (needs release-tags and a tagger).",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "reelix-plugin"
+  ],
+  "peerDependencies": {
+    "@reelix/plugin": "*"
+  },
+  "reelix": {
+    "api": 0,
+    "id": "hdr-alert",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "requires": {
+      "plugins": {
+        "release-tags": "^0.1.0"
+      }
+    },
+    "uses": {
+      "events": [
+        "release-tags:tagged"
+      ],
+      "inbox": true
+    }
+  }
+}

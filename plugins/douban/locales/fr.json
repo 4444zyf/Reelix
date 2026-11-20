@@ -1,0 +1,5 @@
+{
+	"description": "Liens et notes de Douban, lus sur ses pages publiques ordinaires.",
+	"label": "Douban",
+	"unreadable": "Impossible de lire la page Douban (HTTP {{status}}) ; il faudra peut-être le navigateur."
+}

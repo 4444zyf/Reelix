@@ -1,0 +1,10 @@
+{
+	"description": "Relit les titres, résumés et affiches depuis TMDB quand la langue du propriétaire change.",
+	"jobTitle": "Relire les titres dans la nouvelle langue",
+	"refreshed_one": "{{count}} titre relu en {{locale}}.",
+	"refreshed_many": "{{count}} de titres relus en {{locale}}.",
+	"refreshed_other": "{{count}} titres relus en {{locale}}.",
+	"failed_one": "{{count}} échec.",
+	"failed_many": "{{count}} d’échecs.",
+	"failed_other": "{{count}} échecs."
+}

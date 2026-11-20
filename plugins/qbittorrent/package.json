@@ -1,0 +1,41 @@
+{
+  "name": "reelix-plugin-qbittorrent",
+  "version": "0.1.0",
+  "description": "Downloads through qBittorrent's Web API (4.x and 5.x).",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "reelix-plugin"
+  ],
+  "peerDependencies": {
+    "@reelix/plugin": "*"
+  },
+  "reelix": {
+    "api": 0,
+    "id": "qbittorrent",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "settings": "./settings.schema.json",
+    "env": {
+      "REELIX_DEFAULT_QBITTORRENT_URL": "url"
+    },
+    "describe": "at {url} (password {secret:password})",
+    "uses": {
+      "provides": [
+        "reelix:downloader@1"
+      ],
+      "operations": {
+        "prefs": "read",
+        "set_prefs": "admin",
+        "torrents": "read"
+      },
+      "network": [
+        "config:url"
+      ],
+      "secrets": [
+        "password"
+      ]
+    }
+  }
+}

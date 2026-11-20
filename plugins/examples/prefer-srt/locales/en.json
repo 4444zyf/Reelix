@@ -1,0 +1,4 @@
+{
+	"description": "Example: from a subtitle archive, takes SRT over ASS in the same language, for players that draw ASS styling badly.",
+	"reason": "SRT preferred over ASS in the same language"
+}

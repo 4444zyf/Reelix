@@ -103,10 +103,10 @@ test("schedules", () => {
 
 test("web API: first-run password, login, cookie, cross-site refusal, rate limit", async () => {
 	const { app } = tempApp();
-	const deps = { app, host: { listThreads: () => [] } as any, jobs: {} as any, telegram: {} as any };
+	const deps = { app, host: { listThreads: () => [] } as any, jobs: {} as any };
 	const api = webApp(deps);
 	const req = (path: string, init: RequestInit = {}) => api.request(`http://reelix.local${path}`, { ...init, headers: { host: "reelix.local", "content-type": "application/json", ...(init.headers as any) } });
-	assert.deepEqual(await (await req("/api/session")).json(), { authenticated: false, needsPassword: true });
+	assert.deepEqual(await (await req("/api/session")).json(), { authenticated: false, needsPassword: true, language: null });
 	assert.equal((await req("/api/threads")).status, 401);
 	const setup = await req("/api/setup-password", { method: "POST", body: JSON.stringify({ password: "correct horse" }) });
 	const cookie = setup.headers.get("set-cookie")!;

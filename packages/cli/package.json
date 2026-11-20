@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@reelix/core": "*",
+    "@reelix/plugin-testing": "*",
     "@reelix/server": "*"
   }
 }

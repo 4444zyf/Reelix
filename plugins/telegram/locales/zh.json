@@ -1,0 +1,25 @@
+{
+	"description": "Telegram：带按钮和图片的通知，并可与智能体聊天。",
+	"linked": "已绑定。通知会发到这里，你也可以在这个对话里直接和我聊。",
+	"gotIt": "收到。",
+	"answered": "已回答：{{answer}}",
+	"alreadyHandled": "已处理过了",
+	"questionClosed": "这个问题已经关闭",
+	"approveInWeb": "这个聊天不能批准此操作，请到网页应用中批准。",
+	"replyToAnswer": "（回复这条消息即可作答。）",
+	"test": "Reelix 测试消息：通知会发到这里。",
+	"answeredStatus": "已回答",
+	"dismissedStatus": "已忽略",
+	"settings": {
+		"api_url": "Bot API 地址",
+		"api_url_help": "除非你自己运行 Bot API 服务器，否则保持不变。"
+	},
+	"secrets": {
+		"bot_token": "机器人令牌（来自 @BotFather）"
+	},
+	"buttons": {
+		"status": "检查机器人",
+		"link": "获取绑定码",
+		"test": "发送测试消息"
+	}
+}

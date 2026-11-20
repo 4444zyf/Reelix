@@ -1,0 +1,8 @@
+{
+	"description": "来自 Bangumi 的动画资料：条目、剧集和播出日期（用于对齐季度），以及正在播出的作品。",
+	"perSeason": "Bangumi 每一季是一个条目；请确认它对应 TMDB 的哪一季。",
+	"settings": {
+		"base_url": "Bangumi API 地址",
+		"base_url_help": "除非使用镜像，否则为 https://api.bgm.tv。"
+	}
+}

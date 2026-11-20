@@ -1,15 +1,24 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, LogOut, Menu, Settings, User } from "lucide-react";
+import { ChevronLeft, Languages, LayoutPanelLeft, LogOut, Menu, Palette, Settings, User } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router";
 import { ThreadList } from "../components/chat/ThreadList";
 import { Button } from "../components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
 import { endpoints } from "../lib/api";
+import { LanguagePickerItems } from "../components/common/LanguageMenu";
+import { localized, useTheme } from "../lib/theme";
 import { cn } from "../lib/utils";
 import { NAV, isActive } from "./nav";
 
 export function useStatus() {
 	return useQuery({ queryKey: ["status"], queryFn: endpoints.status, refetchInterval: 60_000 });
+}
+
+/** Plugins' screens, while their plugin runs (docs/plugins.md §16, phase 8). */
+export function usePluginScreens() {
+	const { data } = useQuery({ queryKey: ["plugins"], queryFn: endpoints.plugins, staleTime: 30_000 });
+	return (data ?? []).flatMap((p) => (p.state === "active" && p.screen ? [{ id: p.id, title: p.screen.title, href: `/plugins/${encodeURIComponent(p.id)}` }] : []));
 }
 
 export function CountBadge({ n, className }: { n?: number; className?: string }) {
@@ -22,16 +31,21 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
 	const navigate = useNavigate();
 	const qc = useQueryClient();
 	const { data: status } = useStatus();
+	const screens = usePluginScreens();
+	const theme = useTheme();
+	const { t } = useTranslation(["nav", "appearance"]);
 	const logout = async () => {
 		await endpoints.logout().catch(() => undefined);
 		qc.clear();
 		window.location.href = "/";
 	};
 	return (
-		<div className={cn("glass relative flex h-full flex-col border-r-0 transition-all duration-300", collapsed ? "w-16" : "w-64")}>
+		<div className={cn("panel relative flex h-full flex-col border-0 border-r transition-all duration-300", collapsed ? "w-16" : "w-64")}>
 			<div className="flex h-16 shrink-0 items-center justify-between px-4">
-				{!collapsed && <span className="text-xl font-bold tracking-tight text-white drop-shadow-md">Reelix</span>}
-				<Button variant="ghost" size="icon" onClick={onToggle} className={cn("ml-auto", collapsed && "mx-auto")} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
+				{!collapsed && <span className="display text-2xl leading-none">
+						Reelix<span className="text-primary">.</span>
+					</span>}
+				<Button variant="ghost" size="icon" onClick={onToggle} className={cn("ml-auto", collapsed && "mx-auto")} aria-label={collapsed ? t("expandSidebar") : t("collapseSidebar")}>
 					{collapsed ? <Menu className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
 				</Button>
 			</div>
@@ -45,14 +59,14 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
 							key={item.href}
 							to={item.href}
 							className={cn(
-								"relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-								active ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+								"relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+								active ? "bg-nav-active font-semibold text-nav-active-foreground" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
 								collapsed && "justify-center px-2",
 							)}
-							title={collapsed ? item.title : undefined}
+							title={collapsed ? t(`items.${item.key}`) : undefined}
 						>
 							<item.icon className="h-4 w-4" />
-							{!collapsed && <span className="flex-1">{item.title}</span>}
+							{!collapsed && <span className="flex-1">{t(`items.${item.key}`)}</span>}
 							{!collapsed && <CountBadge n={count} />}
 							{collapsed && count ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary" /> : null}
 						</Link>
@@ -60,24 +74,45 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
 				})}
 			</nav>
 
+			{screens.length > 0 && (
+				<nav className="grid shrink-0 gap-1 border-t border-border px-2 py-2" aria-label={t("plugins")}>
+					{!collapsed && <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">{t("plugins")}</p>}
+					{screens.map((s) => (
+						<Link
+							key={s.href}
+							to={s.href}
+							className={cn(
+								"flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+								isActive(pathname, s.href) ? "bg-nav-active font-semibold text-nav-active-foreground" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+								collapsed && "justify-center px-2",
+							)}
+							title={collapsed ? s.title : undefined}
+						>
+							<LayoutPanelLeft className="h-4 w-4" />
+							{!collapsed && <span className="flex-1 truncate">{s.title}</span>}
+						</Link>
+					))}
+				</nav>
+			)}
+
 			{!collapsed ? (
-				<div className="mt-2 flex min-h-0 flex-1 flex-col border-t border-white/10 pt-3">
-					<p className="px-4 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Conversations</p>
+				<div className="mt-2 flex min-h-0 flex-1 flex-col border-t border-border pt-3">
+					<p className="px-4 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">{t("conversations")}</p>
 					<ThreadList className="min-h-0 flex-1" onOpen={(id) => navigate(id ? `/chat/${encodeURIComponent(id)}` : "/chat")} />
 				</div>
 			) : (
 				<div className="flex-1" />
 			)}
 
-			<div className="shrink-0 border-t border-white/10 p-2">
-				{status?.spend.reached && !collapsed && <p className="mb-2 rounded-md bg-warning/15 px-2 py-1 text-[11px] text-warning">Background spending cap reached for today.</p>}
+			<div className="shrink-0 border-t border-border p-2">
+				{status?.spend.reached && !collapsed && <p className="mb-2 rounded-md bg-warning/15 px-2 py-1 text-[11px] text-warning">{t("spendCap")}</p>}
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<Button variant="ghost" className={cn("w-full justify-start gap-3 text-muted-foreground hover:bg-accent hover:text-foreground", collapsed && "justify-center px-2")}>
 							<span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary">
 								<User className="h-4 w-4" />
 							</span>
-							{!collapsed && <span>Owner</span>}
+							{!collapsed && <span>{t("owner")}</span>}
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent side="top" align={collapsed ? "center" : "start"} className="w-48">
@@ -86,13 +121,38 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
 						<DropdownMenuItem asChild>
 							<Link to="/settings" className="cursor-pointer">
 								<Settings className="mr-2 h-4 w-4" />
-								Settings
+								{t("items.settings")}
 							</Link>
 						</DropdownMenuItem>
+						<DropdownMenuSub>
+							<DropdownMenuSubTrigger>
+								<Palette className="mr-2 h-4 w-4" />
+								{t("theme")}
+							</DropdownMenuSubTrigger>
+							<DropdownMenuSubContent>
+								<DropdownMenuRadioGroup value={theme.choice} onValueChange={theme.setTheme}>
+									{theme.themes.map((m) => (
+										<DropdownMenuRadioItem key={m.id} value={m.id}>
+											{localized(m.name) || m.id}
+										</DropdownMenuRadioItem>
+									))}
+									<DropdownMenuRadioItem value="auto">{t("appearance:matchDevice")}</DropdownMenuRadioItem>
+								</DropdownMenuRadioGroup>
+							</DropdownMenuSubContent>
+						</DropdownMenuSub>
+						<DropdownMenuSub>
+							<DropdownMenuSubTrigger>
+								<Languages className="mr-2 h-4 w-4" />
+								{t("language")}
+							</DropdownMenuSubTrigger>
+							<DropdownMenuSubContent>
+								<LanguagePickerItems />
+							</DropdownMenuSubContent>
+						</DropdownMenuSub>
 						<DropdownMenuSeparator />
 						<DropdownMenuItem onClick={logout} className="text-destructive-foreground focus:text-destructive-foreground">
 							<LogOut className="mr-2 h-4 w-4" />
-							Sign out
+							{t("signOut")}
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>

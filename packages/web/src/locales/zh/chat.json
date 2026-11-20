@@ -1,0 +1,141 @@
+{
+	"welcome": {
+		"title": "今天看点什么？",
+		"subtitle": "找一部电影或剧集、整理媒体库，或者问问关于设置的任何事。",
+		"suggestions": {
+			"downloading": "现在在下载什么？",
+			"newSeason": "帮我找一部追更剧集的最新一季",
+			"doctor": "检查一下所有设置是否正常（自检）",
+			"lastNight": "你昨晚做了什么？"
+		}
+	},
+	"pane": {
+		"conversations": "对话",
+		"conversation": "对话",
+		"newChat": "新对话",
+		"working": "处理中",
+		"actions": "对话操作",
+		"rename": "重命名",
+		"close": "关闭对话",
+		"noMessages": "还没有消息。",
+		"thinking": "思考中"
+	},
+	"threads": {
+		"renameTitle": "重命名对话",
+		"archive": "归档",
+		"waiting": "等待回答",
+		"running": "运行中",
+		"empty": "还没有对话。"
+	},
+	"ask": {
+		"answerPlaceholder": "你的回答",
+		"secret": "密钥",
+		"send": "发送",
+		"skip": "跳过",
+		"secretNote": "已作为 {{key}} 保存在服务器的密钥文件中。助手只会知道它已提供。",
+		"orType": "也可以在下方输入回答。"
+	},
+	"composer": {
+		"pastedImage": "粘贴的图片",
+		"imageTooLarge": "图片过大",
+		"imageTooLargeDetail": "{{name}}：{{size}}（上限 {{limit}}）",
+		"droppedFile": "我上传了一个文件到 {{path}}（{{name}}，{{size}}）。",
+		"uploadFailed": "上传失败：{{name}}",
+		"dropHint": "松开即可上传并告诉助手",
+		"removeImage": "移除图片",
+		"uploading": "上传中…",
+		"attach": "添加附件",
+		"placeholderRunning": "补充点什么；会在当前步骤完成后送达",
+		"placeholderAnswer": "输入回答…",
+		"placeholder": "问问 Reelix…",
+		"stop": "停止",
+		"send": "发送"
+	},
+	"message": {
+		"from": "来自 {{source}}",
+		"images_other": "{{count}} 张图片",
+		"queued": "将在当前步骤完成后送达",
+		"answered": "已回答：{{text}}"
+	},
+	"tools": {
+		"earlier_other": "之前的 {{count}} 个步骤"
+	},
+	"notices": {
+		"stopped": "已停止。",
+		"failed": "出了点问题。",
+		"messageNotSent": "消息未发送",
+		"noteFailed": "无法通知助手",
+		"answerFailed": "回答未被接受",
+		"stopFailed": "无法停止",
+		"problem": "问题",
+		"notice": "通知"
+	},
+	"cards": {
+		"candidates": {
+			"none": "没有找到匹配项",
+			"count_other": "{{count}} 个可能的匹配",
+			"tv": "剧集",
+			"movie": "电影",
+			"chosen": "已选择",
+			"pick": "就是这个"
+		},
+		"agent": {
+			"candidate": "是 {{name}}，{{id}}。",
+			"candidateYear": "是 {{name}}（{{year}}），{{id}}。",
+			"downloaded": "我从列表中下载了资源 {{handle}}（“{{title}}”）。Hash：{{hash}}。",
+			"downloadedAdopted": "我从列表中下载了资源 {{handle}}（“{{title}}”）（它已在下载器中，已接管）。Hash：{{hash}}。",
+			"planApplied": "我批准了方案，已执行：\n{{text}}",
+			"planEdit": "关于上面的方案，请这样修改：",
+			"subtitle": "使用字幕 {{ref}}。",
+			"subtitleTitled": "使用字幕 {{ref}}（“{{title}}”）。",
+			"pressed": "我在 {{plugin}} 的卡片上点了“{{label}}”：{{text}}"
+		},
+		"subtitles": {
+			"title": "字幕",
+			"titleFor": "{{title}} 的字幕",
+			"use": "用这个"
+		},
+		"downloads": {
+			"none": "没有下载。"
+		},
+		"image": {
+			"alt": "来自助手的图片"
+		},
+		"verification": {
+			"title": "需要验证",
+			"alt": "验证",
+			"code": "验证码",
+			"codeSent": "验证码已发送。还有一个？",
+			"send": "发送",
+			"liveView": "打开实时画面"
+		},
+		"plan": {
+			"title_other": "方案：{{count}} 项",
+			"titleApplied_other": "方案：{{count}} 项（已执行）",
+			"applied": "方案已执行",
+			"notApplied": "方案未执行",
+			"approve": "批准"
+		},
+		"progress": {
+			"checking": "正在检查下载…",
+			"unknown": "找不到这个下载（可能已被移除）。"
+		},
+		"releases": {
+			"count_other": "{{count}} 个资源",
+			"countOf_other": "{{count}} 个资源（共 {{total}} 个）",
+			"pick": "推荐：",
+			"pickHandle": "推荐 {{handle}}：",
+			"showFewer": "收起",
+			"showAll": "显示全部 {{n}} 个"
+		},
+		"title": {
+			"inLibrary_other": "已在媒体库 · {{count}} 个文件",
+			"followed": "追更中",
+			"releases": "资源"
+		},
+		"plugin": {
+			"from": "来自插件 {{plugin}}",
+			"more_other": "还有 {{count}} 项"
+		}
+	}
+}

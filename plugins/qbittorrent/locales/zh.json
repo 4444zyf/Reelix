@@ -1,0 +1,11 @@
+{
+	"description": "通过 qBittorrent 的 Web API 下载（4.x 和 5.x）。",
+	"settings": {
+		"url": "qBittorrent Web UI 地址",
+		"url_help": "例如 http://qbittorrent:8080。它的文件夹在 Reelix 这边对应哪里，见“设置 → 下载”中的路径映射。",
+		"username": "用户名"
+	},
+	"secrets": {
+		"password": "Web UI 密码"
+	}
+}

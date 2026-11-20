@@ -1,0 +1,4 @@
+{
+	"description": "Пример: читает HDR10, HDR10+, Dolby Vision и HLG из названий релизов для release-tags.",
+	"label": "Форматы HDR"
+}

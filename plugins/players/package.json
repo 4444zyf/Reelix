@@ -1,0 +1,19 @@
+{
+  "name": "reelix-plugin-players",
+  "version": "0.1.0",
+  "description": "Play links for Infuse, Swiftfin and Jellyfin in the browser.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["reelix-plugin"],
+  "peerDependencies": { "@reelix/plugin": "*" },
+  "reelix": {
+    "api": 0,
+    "id": "players",
+    "entry": "./src/index.ts",
+    "runtime": "in-process",
+    "uses": {
+      "provides": ["reelix:player@1"]
+    }
+  }
+}

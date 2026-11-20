@@ -1,8 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Clock, FolderInput, Pause, Play, Trash2, Users } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { runOp } from "../../lib/api";
+import i18n from "../../lib/i18n";
 import { useLiveDownload, withLive } from "../../lib/events";
 import type { Download } from "../../lib/types";
 import { cn, formatBytes, formatEta, formatSpeed, percent, timeAgo } from "../../lib/utils";
@@ -14,13 +16,13 @@ import { toast } from "../hooks/use-toast";
 import { Button } from "../ui/button";
 import { Progress } from "../ui/progress";
 
-const PAUSED = /paused|stopped/i;
-
 export function downloadDescription(d: Download): string {
-	return `download ${d.hash.slice(0, 10)} "${d.name}"${d.title_name ? ` for ${d.title_name}` : ""} (state ${d.state}, ${percent(d.live?.progress ?? d.progress)}%)`;
+	const vars = { hash: d.hash.slice(0, 10), name: d.name, state: d.state, pct: percent(d.live?.progress ?? d.progress) };
+	return d.title_name ? i18n.t("media:download.describeFor", { ...vars, title: d.title_name }) : i18n.t("media:download.describe", vars);
 }
 
 export function DownloadRow({ download, compact, onChanged }: { download: Download; compact?: boolean; onChanged?: () => void }) {
+	const { t } = useTranslation(["media", "common"]);
 	const qc = useQueryClient();
 	const live = useLiveDownload(download.hash);
 	const d = withLive(download, live);
@@ -28,7 +30,7 @@ export function DownloadRow({ download, compact, onChanged }: { download: Downlo
 	const [confirm, setConfirm] = useState(false);
 	const [deleteData, setDeleteData] = useState(false);
 	const pct = percent(live?.progress ?? d.live?.progress ?? d.progress);
-	const paused = !!d.live && PAUSED.test(d.live.state);
+	const paused = d.live?.state === "stopped";
 	const active = !["removed", "gone", "filed"].includes(d.state);
 
 	const act = async (name: string, input: object, done: string) => {
@@ -40,7 +42,7 @@ export function DownloadRow({ download, compact, onChanged }: { download: Downlo
 			qc.invalidateQueries({ queryKey: ["download", d.hash] });
 			onChanged?.();
 		} catch (e) {
-			toast({ title: "Failed", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+			toast({ title: t("shared.failed"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });
 			throw e;
 		} finally {
 			setBusy(undefined);
@@ -48,7 +50,7 @@ export function DownloadRow({ download, compact, onChanged }: { download: Downlo
 	};
 
 	return (
-		<div className={cn("glass-card rounded-xl p-3 md:p-4", compact && "p-3 md:p-3")}>
+		<div className={cn("surface-card rounded-xl p-3 md:p-4", compact && "p-3 md:p-3")}>
 			<div className="flex items-start justify-between gap-3">
 				<div className="min-w-0 flex-1">
 					<p className="break-all text-sm font-medium leading-snug">{d.name}</p>
@@ -60,7 +62,7 @@ export function DownloadRow({ download, compact, onChanged }: { download: Downlo
 							</Link>
 						)}
 						<span>{formatBytes(d.size)}</span>
-						<span>added {timeAgo(d.added_at)}</span>
+						<span>{t("download.added", { ago: timeAgo(d.added_at) })}</span>
 					</div>
 				</div>
 				<span className="shrink-0 text-sm font-semibold tabular-nums">{pct}%</span>
@@ -70,46 +72,47 @@ export function DownloadRow({ download, compact, onChanged }: { download: Downlo
 				<div className="mt-1.5 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
 					<span className="inline-flex items-center gap-1">
 						<ArrowDown className="h-3 w-3" />
-						{formatSpeed(d.live.dlspeed)}
+						{formatSpeed(d.live.downSpeed)}
 					</span>
 					<span className="inline-flex items-center gap-1">
 						<ArrowUp className="h-3 w-3" />
-						{formatSpeed(d.live.upspeed)}
+						{formatSpeed(d.live.upSpeed)}
 					</span>
 					<span className="inline-flex items-center gap-1">
 						<Users className="h-3 w-3" />
-						{d.live.num_seeds}
+						{d.live.peersSending ?? "?"}
 					</span>
 					<span className="inline-flex items-center gap-1">
 						<Clock className="h-3 w-3" />
-						{formatEta(d.live.eta)}
+						{formatEta(d.live.etaSeconds)}
 					</span>
 				</div>
 			)}
+			{d.live?.problem && <p className="mt-1.5 text-xs text-warning">{t(d.live.problem.kind === "tracker" ? "download.trackerProblem" : "download.localProblem", { message: d.live.problem.message })}</p>}
 			{d.note && <p className="mt-1.5 text-xs text-warning">{d.note}</p>}
 			<div className="mt-1.5">
 				<Why reason={d.reason} />
 			</div>
 			<div className="mt-2 flex flex-wrap items-center gap-1">
 				{active && d.state !== "complete" && (
-					<Button variant="outline" size="sm" className="h-8" disabled={!!busy} onClick={() => act(paused ? "download.resume" : "download.pause", { hash: d.hash }, paused ? "Resumed" : "Paused").catch(() => undefined)}>
+					<Button variant="outline" size="sm" className="h-8" disabled={!!busy} onClick={() => act(paused ? "download.resume" : "download.pause", { hash: d.hash }, paused ? t("download.resumed") : t("download.paused")).catch(() => undefined)}>
 						{busy === "download.pause" || busy === "download.resume" ? <Spinner /> : paused ? <Play /> : <Pause />}
-						{paused ? "Resume" : "Pause"}
+						{paused ? t("shared.resume") : t("shared.pause")}
 					</Button>
 				)}
 				{(d.state === "complete" || d.state === "needs_agent") && (
-					<Button variant="outline" size="sm" className="h-8" disabled={!!busy} onClick={() => act("download.file", { hash: d.hash }, "Filing done").catch(() => undefined)}>
+					<Button variant="outline" size="sm" className="h-8" disabled={!!busy} onClick={() => act("download.file", { hash: d.hash }, t("download.filingDone")).catch(() => undefined)}>
 						{busy === "download.file" ? <Spinner /> : <FolderInput />}
-						File now
+						{t("download.fileNow")}
 					</Button>
 				)}
 				{d.state !== "removed" && (
 					<Button variant="ghost" size="sm" className="h-8 text-destructive-foreground" disabled={!!busy} onClick={() => setConfirm(true)}>
 						<Trash2 />
-						Remove
+						{t("common:actions.remove")}
 					</Button>
 				)}
-				<AskAbout text={`About ${downloadDescription(d)}: `} className="ml-auto" />
+				<AskAbout text={t("download.askAbout", { desc: downloadDescription(d) })} className="ml-auto" />
 			</div>
 			<ConfirmDialog
 				open={confirm}
@@ -117,17 +120,17 @@ export function DownloadRow({ download, compact, onChanged }: { download: Downlo
 					setConfirm(o);
 					if (!o) setDeleteData(false);
 				}}
-				title="Remove this download?"
+				title={t("download.removeTitle")}
 				description={d.name}
 				destructive
-				confirmLabel={deleteData ? "Remove and delete data" : "Remove torrent"}
-				onConfirm={() => act("download.remove", { hash: d.hash, delete_data: deleteData }, "Removed")}
+				confirmLabel={deleteData ? t("download.removeAndDelete") : t("download.removeTorrent")}
+				onConfirm={() => act("download.remove", { hash: d.hash, delete_data: deleteData }, t("download.removed"))}
 			>
 				<label className="flex items-start gap-2 text-sm">
 					<input type="checkbox" className="mt-1 accent-[var(--color-primary)]" checked={deleteData} onChange={(e) => setDeleteData(e.target.checked)} />
 					<span>
-						Also delete the downloaded data.
-						<span className="block text-xs text-muted-foreground">Files already linked into the library stay; data only in the download folder is gone at once.</span>
+						{t("download.alsoDelete")}
+						<span className="block text-xs text-muted-foreground">{t("download.alsoDeleteHint")}</span>
 					</span>
 				</label>
 			</ConfirmDialog>

@@ -1,6 +1,20 @@
 import { useEffect, useRef } from "react";
 import type {
 	AdoptScan,
+	ChatChannelInfo,
+	PlayTarget,
+	PluginActionResult,
+	PluginInfo,
+	PluginReview,
+	PluginRuntime,
+	PluginSettings,
+	PluginUpdates,
+	HookView,
+	Proposal,
+	PluginCardData,
+	PushInfo,
+	Suggestions,
+	TrendItem,
 	BrowserTab,
 	FollowRow,
 	PlacedSubtitle,
@@ -104,7 +118,14 @@ export const endpoints = {
 
 	jobs: () => api<{ jobs: Job[]; runs: JobRun[] }>("/api/jobs"),
 	runJob: (id: string) => api<{ id: string }>(`/api/jobs/${encodeURIComponent(id)}/run`, { method: "POST" }),
-	telegramLink: () => api<{ code: string }>("/api/telegram/link", { method: "POST" }),
+	// The server checks `origin` against the request itself; links and the push signature are built from it.
+	push: () => op<PushInfo>("push.devices"),
+	pushSubscribe: (subscription: PushSubscriptionJSON, label: string) => op<PushInfo>("push.subscribe", { subscription, label, origin: location.origin }),
+	pushUnsubscribe: (by: { id?: string; endpoint?: string }) => op<PushInfo>("push.unsubscribe", by),
+	pushTest: (endpoint: string) => op<{ results: { id: string; ok: boolean; error?: string }[] }>("push.test", { endpoint }),
+	channels: () => op<ChatChannelInfo[]>("channel.list"),
+	allowChannelApproval: (id: string, allowed: boolean) => op<ChatChannelInfo>("channel.allow_approval", { id, allowed }),
+	unlinkChannel: (id: string) => op<ChatChannelInfo>("channel.unlink", { id }),
 
 	upload: (file: File) => {
 		const form = new FormData();
@@ -114,6 +135,11 @@ export const endpoints = {
 
 	// operations used by the screens
 	libraryList: () => op<LibraryList>("library.list"),
+	trending: (kind: "all" | "movie" | "tv", window: "day" | "week") => op<{ items: TrendItem[] }>("title.trending", { kind, window }),
+	suggestions: () => api<Suggestions>("/api/suggestions"),
+	refreshSuggestions: () => api<Suggestions>("/api/suggestions/refresh", { method: "POST" }),
+	playLinks: () => op<{ targets: Record<string, PlayTarget>; media_server_error?: string }>("library.play_links"),
+	titlePlay: (id: string) => op<PlayTarget>("title.play", { id }),
 	titleShow: (id: string) => op<TitleShow>("title.show", { id }),
 	titleFind: (input: { query?: string; id?: string; kind?: string; year?: number }) => op<TitleFind>("title.find", input),
 	releaseSearch: (input: { title_id?: string; query?: string; season?: number; episode?: number; sort?: string; limit?: number }) => op<ReleaseSearch>("release.search", input),
@@ -122,6 +148,30 @@ export const endpoints = {
 	activity: (input: { limit?: number; title_id?: string; status?: string } = {}) => op<LedgerRow[]>("activity", input),
 	doctor: (quick = false) => op<DoctorCheck[]>("doctor", { quick }),
 	secrets: () => op<SecretInfo[]>("secret.list"),
+	plugins: () => op<PluginInfo[]>("plugin.list"),
+	setPluginEnabled: (id: string, on: boolean, withDependents?: boolean) => op<PluginActionResult>(on ? "plugin.enable" : "plugin.disable", on ? { id } : { id, with_dependents: withDependents }),
+	pluginSettings: (id: string, lang: string) => op<PluginSettings>("plugin.settings", { id, lang }),
+	configurePlugin: (id: string, settings: Record<string, unknown>) => op<PluginActionResult>("plugin.configure", { id, settings }),
+	pluginHooks: () => op<HookView[]>("plugin.hooks"),
+	setHookOrder: (hook: string, plugins: string[]) => op<{ next: string }>("plugin.hook_order", { hook, plugins }),
+	setPluginTrial: (id: string, on: boolean) => op<{ next: string }>("plugin.trial", { id, on }),
+	setPluginTools: (id: string, on: boolean) => op<{ next: string }>("plugin.tools", { id, on }),
+	setPluginJobPrompt: (id: string, on: boolean) => op<{ next: string }>("plugin.job_prompt", { id, on }),
+	setPluginRuntime: (id: string, runtime: PluginRuntime) => op<PluginActionResult>("plugin.runtime", { id, runtime }),
+	pluginScreen: (id: string, lang: string) => api<{ title: string; html: string }>(`/api/plugin-screens/${encodeURIComponent(id)}?lang=${encodeURIComponent(lang)}`),
+	runScreenOperation: (id: string, operation: string, input: unknown) => api<{ output: unknown; text: string }>(`/api/plugin-screens/${encodeURIComponent(id)}/run`, { body: { operation, input } }),
+	installPlugin: (source: string) => op<PluginReview>("plugin.install", { source }),
+	reviewPlugin: (id: string) => op<PluginReview>("plugin.review", { id }),
+	approvePlugin: (id: string, hash: string) => op<PluginActionResult>("plugin.approve", { id, hash }),
+	uninstallPlugin: (id: string, deleteData: boolean) => op<PluginActionResult & { deleted: boolean }>("plugin.uninstall", { id, delete_data: deleteData }),
+	pluginUpdates: (id: string) => op<PluginUpdates[]>("plugin.check_updates", { id }),
+	updatePlugin: (id: string, to: string) => op<PluginReview>("plugin.update", { id, to }),
+	pluginProposal: (id: string) => op<PluginReview>("plugin.proposal", { id }),
+	decidePluginProposal: (id: string, approve: boolean, hash?: string) => op<PluginActionResult>("plugin.proposal_decide", { id, approve, hash }),
+	restart: () => op<{ next: string }>("server.restart"),
+	proposal: (id: string) => op<Proposal>("proposal.show", { id }),
+	decideProposal: (id: string, approve: boolean, steps?: number[]) => op<Proposal>("proposal.decide", { id, approve, steps }),
+	pressCard: (card: string, button: number) => runOp<{ operation: string; text: string; card?: PluginCardData }>("plugin.press", { card, button }),
 	config: () => op<{ summary: string; config: Record<string, any>; warning?: string }>("config.show"),
 
 	subtitleSearch: (title_id: string, season?: number) => op<SubtitleSearch>("subtitle.search", { title_id, season }),
@@ -130,9 +180,9 @@ export const endpoints = {
 	adoptShow: () => op<AdoptScan>("adopt.show"),
 	skills: () => op<Skill[]>("skills.list"),
 
-	browserTabs: () => api<BrowserTab[]>("/api/browser/tabs"),
-	browserOpen: (url: string) => api<{ id: string }>("/api/browser/open", { body: { url } }),
-	browserInput: (tab: string, input: Record<string, unknown>) => api<unknown>(`/api/browser/${encodeURIComponent(tab)}/input`, { body: input }),
+	browserTabs: () => api<BrowserTab[]>("/api/plugins/browser/tabs"),
+	browserOpen: (url: string) => api<{ id: string }>("/api/plugins/browser/open", { body: { url } }),
+	browserInput: (tab: string, input: Record<string, unknown>) => api<unknown>(`/api/plugins/browser/${encodeURIComponent(tab)}/input`, { body: input }),
 };
 
 // ------------------------------------------------------------------ server-sent events

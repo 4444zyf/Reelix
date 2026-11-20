@@ -1,0 +1,81 @@
+/* Paper — light and editorial: off-white paper, ink, one vermilion accent, serif reading type.
+ * Same format as any installed theme: see docs/ui-themes.md. */
+[data-theme="paper"],
+[data-base="paper"] {
+	color-scheme: light;
+
+	--bg: #f5f1ea;
+	--fg: #1d1b18;
+	--card: #fffdf9;
+	--card-fg: #1d1b18;
+	--popover: #fffdf9;
+	--popover-fg: #1d1b18;
+	--primary: #c8432b;
+	--primary-fg: #fffdf9;
+	--secondary: #ebe5da;
+	--secondary-fg: #1d1b18;
+	--muted: #ece6dc;
+	--muted-fg: #6b645a;
+	--accent: #ebe5da;
+	--accent-fg: #1d1b18;
+	--destructive: #f6dcd5;
+	--destructive-fg: #a3271a;
+	--border: #ddd6c9;
+	--input: #cfc7b8;
+	--ring: #1d1b18;
+	--success: #2f7d4a;
+	--warning: #a8650c;
+	--info: #2c6a8c;
+	--rating: #b7791f;
+
+	--surface: rgb(60 45 25 / 0.035);
+	--surface-hover: rgb(60 45 25 / 0.07);
+	--line: #e6e0d5;
+	--well: #efeadf;
+	--overlay: rgb(40 32 22 / 0.35);
+
+	--nav-active: transparent;
+	--nav-active-fg: #1d1b18;
+	--user-bubble: transparent;
+	--user-bubble-fg: #4a443c;
+	--user-radius: 0;
+	--user-padding: 0.25rem 0;
+	--user-font: var(--prose-font);
+	--user-style: italic;
+	--user-size: 1.25rem;
+	--user-leading: 1.35;
+	--user-quote-open: "“";
+	--user-quote-close: "”";
+
+	--ui-font: "Inter Variable", "Noto Sans SC Variable", ui-sans-serif, system-ui, sans-serif;
+	--display-font: "Newsreader Variable", "Noto Serif Variable", "Noto Serif SC Variable", ui-serif, Georgia, serif;
+	--prose-font: "Newsreader Variable", "Noto Serif Variable", "Noto Serif SC Variable", ui-serif, Georgia, serif;
+	--mono-font: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+	--prose-size: 1.0625rem;
+	--prose-leading: 1.7;
+	--display-weight: 600;
+	--display-tracking: -0.015em;
+
+	--radius: 0.25rem;
+	--radius-control: 0.125rem;
+
+	--panel-bg: #f5f1ea;
+	--panel-border: #e3ddd2;
+	--panel-shadow: 0 10px 40px rgb(60 40 20 / 0.12);
+	--panel-blur: 0px;
+	--card-bg: #fffdf9;
+	--card-border: #e3ddd2;
+	--card-shadow: 0 1px 0 rgb(60 40 20 / 0.04);
+	--feature-bg: transparent;
+	--feature-border-width: 2px 0 1px;
+	--feature-border-color: var(--fg) transparent var(--border);
+	--feature-radius: 0;
+	--feature-shadow: none;
+	--raised-bg: #fffdf9;
+	--raised-border: #d9d2c5;
+	--raised-shadow: 0 10px 30px rgb(60 40 20 / 0.08);
+	--glow: 0 6px 20px rgb(200 67 43 / 0.25);
+	--ambient: none;
+	--scrollbar: rgb(60 45 25 / 0.2);
+	--theme-color: #f5f1ea;
+}
