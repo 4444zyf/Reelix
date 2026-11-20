@@ -17,4 +17,5 @@ This is a hard restriction, not a preference.
 - **Four languages.** Every user-visible string exists in en, zh, fr and ru (`docs/i18n.md`).
 - **No code from `references/MoviePilot*`.** It is GPL-3.0: read for ideas only.
 - **Secrets** go through the secret field or `secrets.yaml`; never print them, log them or put them in a document.
+- **README, skills, website and screenshots follow the code.** Before a commit or push, check `README.md`, `.claude/skills/` and `skills/`, `website/` (four languages) and the screenshots in `website/assets/shots` against the change, and retake the screenshots when a captured screen changed. In Claude Code a hook (`.claude/hooks/docs-sync.sh`) blocks `git commit` and `git push` until this is done; run `bash .claude/hooks/docs-sync.sh ack` only after checking.
 - **Checks before calling work done:** `npm run typecheck` and `npm test`.

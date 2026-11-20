@@ -6,7 +6,7 @@ import { DOWNLOADER, MARK, downloaderOf } from "../downloader.ts";
 import { addDownload, downloadLine, fileDownload, getDownload, listDownloads, markFiled, reconcileAdd, setDownloadState } from "../downloads.ts";
 import { MEDIA_SERVER, tellMediaServer } from "../media-server.ts";
 import { type EnrichResult, enrichTitle } from "../metadata.ts";
-import { haveInLibrary, libraryOverview, listRemoved, removeFromLibrary, restoreRemoved, titleFiles } from "../library.ts";
+import { haveInLibrary, libraryOverview, listRemoved, mediaFolders, removeFromLibrary, restoreRemoved, titleFiles } from "../library.ts";
 import { applyPlan, checkWrittenItems, plannedByReelix, planToText, type Plan } from "../organiser.ts";
 import { grabFrame, probe, probeToText } from "../probe.ts";
 import { defineOperation } from "../registry.ts";
@@ -487,6 +487,18 @@ defineOperation({
 });
 
 // ------------------------------------------------------------------ library
+
+defineOperation({
+	name: "media.folders",
+	summary: "List the folders directly inside a folder of the media folder (for choosing the download and library folders)",
+	effect: "read",
+	input: Type.Object({ path: Type.Optional(Type.String({ description: "a folder inside media_root; default media_root itself" })) }),
+	positional: ["path"],
+	async run(ctx, i) {
+		return mediaFolders(ctx.app, i.path);
+	},
+	toText: (o: any) => `${o.path}${o.parent ? ` (up: ${o.parent})` : ""}\n${o.folders.map((f: any) => `  ${f.name}/`).join("\n") || "  (no folders)"}${o.truncated ? "\n  …" : ""}`,
+});
 
 defineOperation({
 	name: "library.list",

@@ -415,5 +415,14 @@
 		"unlinkBody": "The bot stops answering you until you link it again with a new code.",
 		"notChanged": "Not changed",
 		"sendFailed": "The last message could not be sent ({{ago}}): {{error}}"
+	},
+	"folderPicker": {
+		"browse": "Browse",
+		"title": "Choose a folder",
+		"description": "Folders inside the media folder ({{root}}), as Reelix sees them. Open a folder, then choose it.",
+		"up": "Up one level",
+		"empty": "No folders here.",
+		"truncated": "Only the first 1000 folders are shown.",
+		"choose": "Choose this folder"
 	}
 }

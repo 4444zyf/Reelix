@@ -11,7 +11,7 @@ You talk to it. It finds the title, picks a release, downloads it, files it into
 ![Status: pre-release](https://img.shields.io/badge/status-pre--release-ff8a73)
 ![Plugin API: 0](https://img.shields.io/badge/plugin%20API-0%20(unstable)-7cc4e0)
 
-[Introduction](#introduction) · [Features](#features) · [Quick start](#quick-start) · [Plugins](#plugins) · [Documentation](#documentation) · [Contributing](#contributing)
+[Introduction](#introduction) · [Features](#features) · [Installation](#installation) · [Plugins](#plugins) · [Documentation](#documentation) · [Contributing](#contributing)
 
 English · 简体中文 · Français · Русский in the app
 
@@ -84,19 +84,77 @@ Most tools in this space are rule systems with a chat box added. Reelix is the o
 
 Downloads and the library sit under **one** mount, because hard links do not cross mount points. The pre-flight script checks this on your NAS before anything is installed.
 
-## Quick start
+## Installation
 
-### On a NAS, with Docker Compose
+Reelix runs in one container, next to qBittorrent, Jackett and Jellyfin. It can use the ones you already run or start its own. There are two ways to install it: do it yourself, or hand it to a coding agent.
+
+### For humans
+
+You need a NAS or Linux server with Docker and Docker Compose v2, and an account with a model provider.
+
+**1. Note what you already run.** For each of qBittorrent, Jackett and Jellyfin (optional): do you have it, and where? Reelix connects to an existing one and only starts those that are missing.
+
+**2. Get the code and check your folders.**
 
 ```sh
 git clone https://github.com/4444zyf/Reelix.git && cd Reelix
-sudo bash preflight/reelix-preflight.sh   # finds your qBittorrent, Jackett and Jellyfin, tests hard links, prints a .env
-cp .env.example .env                      # then put in what the pre-flight printed
-docker compose up -d                      # Reelix is at http://<nas>:7878; the first visit sets the password
-docker compose exec reelix pi             # sign in to a model provider
+sudo bash preflight/reelix-preflight.sh
 ```
 
-`COMPOSE_PROFILES` in `.env` switches on the services you do not already run (`magpie`, `qbittorrent`, `jackett`, `jellyfin`); each runs in its own container. Inside the containers, services reach each other by name (`http://qbittorrent:8080`), never `localhost`. No image is published yet: the NAS builds Reelix from the repository. Details are in [docs/deployment.md](docs/deployment.md).
+The pre-flight check finds your containers, tries a real hard link between your download and library folders, and prints the lines for `.env`. It changes nothing. Downloads and library must sit under **one** folder, because a hard link cannot cross mounts or shared folders; if they do not, it says how to fix that. On a fresh machine with no downloads yet, skip it: pick one folder and create `torrents/` and `library/` inside.
+
+**3. Write `.env`.**
+
+```sh
+cp .env.example .env
+```
+
+Put in what the pre-flight printed. The lines that matter:
+
+| Variable | What to put |
+| --- | --- |
+| `MEDIA_ROOT` | the one folder that holds downloads and library |
+| `PUID`, `PGID` | the user and group qBittorrent runs as |
+| `COMPOSE_PROFILES` | only the services you do **not** have yet: `qbittorrent`, `jackett`, `jellyfin`, and `magpie` (an optional model gateway) |
+| `QBITTORRENT_URL`, `JACKETT_URL`, `JELLYFIN_URL` | where each service is. Never `localhost`: inside a container that is the container itself. `.env.example` lists the forms. |
+
+**4. Start it.**
+
+```sh
+docker compose up -d --build     # the first build takes a few minutes
+```
+
+No image is published yet: your machine builds Reelix from the repository.
+
+**5. Finish in the browser.**
+
+- Open `http://<nas>:7878`. The first visit sets your password.
+- Sign in to a model provider (use the `PUID` and `PGID` from `.env`): `docker compose exec -u <PUID>:<PGID> reelix pi`
+- In Reelix's chat, say "Set yourself up." It asks for the service addresses, takes logins through a secret field, and tests each connection.
+
+Something wrong? `docker compose exec -u <PUID>:<PGID> reelix reelix doctor` checks every connection and the hard link. The full guide is [docs/deployment.md](docs/deployment.md).
+
+### For agents
+
+Give this to a coding agent (Claude Code, or any agent with a shell) that can reach the machine:
+
+```text
+Install Reelix on this machine: https://github.com/4444zyf/Reelix
+
+Clone the repository, then read .claude/skills/install-reelix/SKILL.md in it
+and follow it step by step.
+
+Before you start anything, find out what is already installed: Docker, Docker
+Compose, qBittorrent, Jackett and Jellyfin. Check the machine; ask me about
+whatever you cannot check. Show me what you found and wait for my yes.
+
+Do not stop or change my existing containers, do not move my media, and do not
+ask me to paste passwords or API keys here.
+```
+
+If the agent runs on your laptop instead, replace the first line with `Install Reelix on my NAS; reach it with: ssh <user>@<nas>`.
+
+The agent does the checking, the `.env` and the start. The password, the model sign-in and the logins of your services stay with you.
 
 ### From source
 
@@ -183,6 +241,7 @@ A plugin that runs in the server process is trusted like Reelix itself. The sepa
 | `skills/` · `themes/` | Built-in agent skills and UI themes. |
 | `preflight/` · `docker/` | The NAS pre-flight check and the container entrypoint. |
 | `website/` | The project website (`website/README.md`). |
+| `.claude/` | For coding agents: the installation skill and the hook that keeps the README, skills, website and screenshots in step with the code. |
 
 ## Development
 
@@ -192,6 +251,8 @@ npm test            # core, server and plugins against fake qBittorrent, Jackett
 npm run web:dev     # the web UI with hot reload
 REELIX_PI_DIR=~/.pi/agent REELIX_TEST_MODEL=provider/model node --no-warnings packages/server/test/agent.e2e.ts   # agent behaviour; spends tokens
 ```
+
+Coding agents working in this repository (Claude Code) are stopped before every `git commit` and `git push` until they have checked that the README, the skills, the website and the screenshots still match the code (`.claude/hooks/docs-sync.sh`).
 
 ## Status and roadmap
 

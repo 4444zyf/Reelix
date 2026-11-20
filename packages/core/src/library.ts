@@ -1,10 +1,10 @@
-import { existsSync, linkSync, lstatSync, mkdirSync, readdirSync, renameSync, rmSync, rmdirSync, statSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, relative } from "node:path";
+import { existsSync, linkSync, lstatSync, mkdirSync, readdirSync, realpathSync, renameSync, rmSync, rmdirSync, statSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import type { Reelix } from "./app.ts";
 import { downloaderOf } from "./downloader.ts";
 import { getDownload } from "./downloads.ts";
 import { tellMediaServer } from "./media-server.ts";
-import { libraryRoots } from "./organiser.ts";
+import { ignoredName, libraryRoots } from "./organiser.ts";
 import { type Title, requireTitle } from "./titles.ts";
 import { ReelixError, nowIso } from "./util.ts";
 
@@ -202,4 +202,51 @@ export function haveInLibrary(app: Reelix, title: Title): { folder?: string; epi
 		}
 	}
 	return { folder, episodes, files: files.map((f) => f.dest) };
+}
+
+const FOLDER_LIMIT = 1000;
+
+export type FolderListing = { root: string; path: string; parent: string | null; folders: { name: string; path: string }[]; truncated: boolean };
+
+/** The folders directly inside `path`, for the folder picker. Only inside `media_root`, after following links. */
+export function mediaFolders(app: Reelix, path?: string): FolderListing {
+	const root = app.config.media_root;
+	let rootReal: string;
+	try {
+		rootReal = realpathSync(root);
+	} catch {
+		throw new ReelixError("not_found", `The media folder ${root} does not exist (setting media_root).`);
+	}
+	const wanted = resolve(path || root);
+	let real: string;
+	try {
+		real = realpathSync(wanted);
+	} catch {
+		throw new ReelixError("not_found", `${wanted} does not exist.`);
+	}
+	if (real !== rootReal && !real.startsWith(rootReal + sep)) throw new ReelixError("invalid_input", `${wanted} is outside the media folder ${root}; only folders inside it can be chosen.`);
+	if (!statSync(real).isDirectory()) throw new ReelixError("invalid_input", `${wanted} is not a folder.`);
+	const shown = (p: string) => join(root, relative(rootReal, p)); // paths as the settings write them: under media_root
+	const folders = readdirSync(real, { withFileTypes: true })
+		.filter((e) => !e.name.startsWith(".") && !ignoredName(e.name))
+		.filter((e) => {
+			if (e.isDirectory()) return true;
+			if (!e.isSymbolicLink()) return false;
+			try {
+				const target = realpathSync(join(real, e.name));
+				return (target === rootReal || target.startsWith(rootReal + sep)) && statSync(target).isDirectory();
+			} catch {
+				return false;
+			}
+		})
+		.map((e) => e.name)
+		.sort((a, b) => a.localeCompare(b));
+	const here = shown(real);
+	return {
+		root,
+		path: here,
+		parent: real === rootReal ? null : dirname(here),
+		folders: folders.slice(0, FOLDER_LIMIT).map((name) => ({ name, path: join(here, name) })),
+		truncated: folders.length > FOLDER_LIMIT,
+	};
 }

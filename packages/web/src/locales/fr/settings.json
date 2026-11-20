@@ -422,5 +422,14 @@
 		"unlinkBody": "Le bot ne vous répondra plus tant que vous ne l’aurez pas lié à nouveau avec un nouveau code.",
 		"notChanged": "Non modifié",
 		"sendFailed": "Le dernier message n’a pas pu être envoyé ({{ago}}) : {{error}}"
+	},
+	"folderPicker": {
+		"browse": "Parcourir",
+		"title": "Choisir un dossier",
+		"description": "Les dossiers du dossier multimédia ({{root}}), tels que Reelix les voit. Ouvrez un dossier, puis choisissez-le.",
+		"up": "Remonter d'un niveau",
+		"empty": "Aucun dossier ici.",
+		"truncated": "Seuls les 1000 premiers dossiers sont affichés.",
+		"choose": "Choisir ce dossier"
 	}
 }

@@ -408,5 +408,14 @@
 		"unlinkBody": "在你用新的绑定码重新绑定之前，机器人不会再回复你。",
 		"notChanged": "未更改",
 		"sendFailed": "上一条消息发送失败（{{ago}}）：{{error}}"
+	},
+	"folderPicker": {
+		"browse": "浏览",
+		"title": "选择文件夹",
+		"description": "媒体文件夹（{{root}}）里的文件夹，按 Reelix 看到的路径显示。打开一个文件夹，然后选择它。",
+		"up": "上一级",
+		"empty": "这里没有文件夹。",
+		"truncated": "只显示前 1000 个文件夹。",
+		"choose": "选择此文件夹"
 	}
 }

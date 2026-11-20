@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Bell, Bot, CheckCircle2, CircleDashed, Cpu, Download, FolderTree, Gauge, Globe, KeyRound, Lock, MessageSquare, Plug, Puzzle, Send, Stethoscope, Trash2, Tv, XCircle } from "lucide-react";
+import { AlertTriangle, Bell, Bot, CheckCircle2, CircleDashed, Cpu, Download, FolderOpen, FolderTree, Gauge, Globe, KeyRound, Lock, MessageSquare, Plug, Puzzle, Send, Stethoscope, Trash2, Tv, XCircle } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useStatus } from "../app/Sidebar";
@@ -7,6 +7,7 @@ import { Badge } from "../components/common/Badge";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { Screen } from "../components/common/Screen";
 import { AppearanceSection } from "../components/common/ThemePicker";
+import { FolderPicker } from "../components/settings/FolderPicker";
 import { Plugins, SecretRow } from "../components/settings/Plugins";
 import { ErrorState, Loading, Spinner } from "../components/common/States";
 import { toast } from "../components/hooks/use-toast";
@@ -45,7 +46,7 @@ export function Section({ id, icon, title, description, children }: { id: string
 	);
 }
 
-type FieldType = "text" | "number" | "list" | "json" | "select" | "bool";
+type FieldType = "text" | "number" | "list" | "json" | "select" | "bool" | "folder";
 
 function toText(v: unknown, type: FieldType): string {
 	if (v === undefined || v === null) return "";
@@ -73,6 +74,7 @@ function Field({ config, path, label, help, type = "text", options, placeholder 
 	const [text, setText] = useState(toText(current, type));
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string>();
+	const [picking, setPicking] = useState(false);
 	useEffect(() => setText(toText(current, type)), [JSON.stringify(current), type]);
 	const dirty = text !== toText(current, type);
 
@@ -126,6 +128,15 @@ function Field({ config, path, label, help, type = "text", options, placeholder 
 							<textarea id={path} value={text} onChange={(e) => setText(e.target.value)} rows={Math.min(8, Math.max(2, text.split("\n").length))} spellCheck={false} placeholder={placeholder} className="min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring" />
 						) : (
 							<Input id={path} type={type === "number" ? "number" : "text"} value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder} onKeyDown={(e) => e.key === "Enter" && dirty && onSave()} />
+						)}
+						{type === "folder" && (
+							<>
+								<Button variant="outline" className="shrink-0" disabled={busy} onClick={() => setPicking(true)}>
+									<FolderOpen />
+									{t("folderPicker.browse")}
+								</Button>
+								<FolderPicker open={picking} onOpenChange={setPicking} start={text} onChoose={(p) => void save(p)} />
+							</>
 						)}
 						{dirty && (
 							<Button onClick={onSave} disabled={busy} className="shrink-0">
@@ -564,10 +575,10 @@ export function SettingsScreen() {
 
 					<Section id="paths" icon={<FolderTree />} title={t("paths.title")} description={t("paths.description")}>
 						<Field config={c} path="media_root" label={t("paths.mediaRoot")} />
-						<Field config={c} path="downloads" label={t("paths.downloads")} />
-						<Field config={c} path="library.movies" label={t("paths.films")} />
-						<Field config={c} path="library.shows" label={t("paths.shows")} />
-						<Field config={c} path="library.anime" label={t("paths.anime")} />
+						<Field config={c} path="downloads" label={t("paths.downloads")} type="folder" />
+						<Field config={c} path="library.movies" label={t("paths.films")} type="folder" />
+						<Field config={c} path="library.shows" label={t("paths.shows")} type="folder" />
+						<Field config={c} path="library.anime" label={t("paths.anime")} type="folder" />
 					</Section>
 
 					<Section id="downloaders" icon={<Download />} title={t("downloader.title")} description={t("downloader.description")}>
