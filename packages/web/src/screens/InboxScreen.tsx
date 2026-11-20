@@ -169,7 +169,7 @@ export function InboxScreen() {
 					{status === "open" ? t("inbox.emptyOpenHint") : null}
 				</Empty>
 			) : (
-				<div className="mx-auto max-w-3xl space-y-3">
+				<div className="max-w-3xl space-y-3">
 					{data.map((it) => (
 						<InboxCard key={it.id} item={it} highlighted={it.id === wanted} />
 					))}

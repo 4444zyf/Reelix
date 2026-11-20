@@ -522,7 +522,7 @@ export function SettingsScreen() {
 			) : config.error ? (
 				<ErrorState error={config.error} onRetry={() => config.refetch()} />
 			) : (
-				<div className="mx-auto max-w-4xl space-y-4">
+				<div className="max-w-4xl space-y-4">
 					<Section id="status" icon={<Gauge />} title={t("status.title")}>
 						{(config.data?.warning || status?.configWarning) && (
 							<p className="flex items-start gap-2 rounded-md bg-warning/15 p-3 text-sm text-warning">

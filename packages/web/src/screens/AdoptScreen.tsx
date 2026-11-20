@@ -176,7 +176,7 @@ export function AdoptScreen() {
 				</>
 			)}
 		>
-			<div className="mx-auto max-w-4xl space-y-2">
+			<div className="max-w-4xl space-y-2">
 				{scan.isLoading ? (
 					<Loading />
 				) : noScan || (!scan.error && !rows.length) ? (

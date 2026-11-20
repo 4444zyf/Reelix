@@ -15,7 +15,7 @@ You talk to it. It finds the title, picks a release, downloads it, files it into
 
 English · 简体中文 · Français · Русский in the app
 
-<img src="website/assets/shots/chat.webp" alt="Reelix chat: the agent finds a film, lists its releases and downloads one" width="860">
+<img src="website/assets/shots/en/marquee/chat.webp" alt="Reelix chat: the agent finds a film, lists its releases and downloads one" width="860">
 
 </div>
 
@@ -57,8 +57,8 @@ Most tools in this space are rule systems with a chat box added. Reelix is the o
 | **Any model** | Every model is reached through pi. Roles with fallback, and an optional [magpie](https://github.com/yetone/magpie) gateway. |
 
 <p align="center">
-<img src="website/assets/shots/trends.webp" alt="Trends" width="49%"> <img src="website/assets/shots/downloads.webp" alt="Downloads" width="49%">
-<img src="website/assets/shots/plugins.webp" alt="Plugins in Settings" width="49%"> <img src="website/assets/shots/paper.webp" alt="The Paper theme" width="49%">
+<img src="website/assets/shots/en/marquee/trends.webp" alt="Trends" width="49%"> <img src="website/assets/shots/en/marquee/downloads.webp" alt="Downloads" width="49%">
+<img src="website/assets/shots/en/marquee/plugins.webp" alt="Plugins in Settings" width="49%"> <img src="website/assets/shots/en/paper/library.webp" alt="The library in the Paper theme" width="49%">
 </p>
 
 ## How it works

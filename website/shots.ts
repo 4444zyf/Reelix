@@ -1,24 +1,43 @@
 /**
- * Takes the site's screenshots from a running demo Reelix (scripts/demo.ts), into website/assets/shots/*.webp.
+ * Takes the site's screenshots from a running demo Reelix (scripts/demo.ts), in one language and both built-in
+ * themes, into website/assets/shots/<lang>/<theme>/<name>.webp. Run it once per language, each on a fresh demo:
  *
- *   SHOTS_URL=http://127.0.0.1:7993 SHOTS_PASSWORD=… node --no-warnings website/shots.ts [chat trends title downloads inbox plugins paper]
+ *   SHOTS_URL=http://127.0.0.1:7993 SHOTS_PASSWORD=… SHOTS_LANG=zh node --no-warnings website/shots.ts [chat trends …]
  *
- * "chat" reuses a conversation that is already there.
- * With no names, every shot is taken, in an order that makes sense on a fresh demo: the chat asks the agent
- * for a film (this spends model tokens), which starts the download the other screens show.
- * The demo's TMDB has no pictures, so posters are drawn here (a gradient and the title) and never reach the product.
+ * It sets the owner's language first, so titles, the agent's answers and Inbox questions are in that language.
+ * The chat asks the agent for a film (this spends model tokens), which starts the download whose finish brings
+ * the subtitle question the Inbox shows. The demo's TMDB has no pictures, so posters are drawn here (a gradient
+ * and the title) and never reach the product.
  */
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { chromium, type Page } from "playwright-core";
+import { chromium } from "playwright-core";
 import sharp from "sharp";
 
 const url = (process.env.SHOTS_URL ?? "http://127.0.0.1:7878").replace(/\/+$/, "");
 const password = process.env.SHOTS_PASSWORD ?? "";
-const out = join(dirname(fileURLToPath(import.meta.url)), "assets", "shots");
-const ASK = "Get me Sintel, the 2010 Blender film.";
-const ALL = ["chat", "trends", "title", "downloads", "inbox", "plugins", "paper"];
+const LANGS = ["en", "zh", "fr", "ru"] as const;
+const THEMES = ["marquee", "paper"] as const;
+const lang = (process.env.SHOTS_LANG ?? "en") as (typeof LANGS)[number];
+if (!LANGS.includes(lang)) throw new Error(`SHOTS_LANG must be one of ${LANGS.join(", ")}`);
+const out = join(dirname(fileURLToPath(import.meta.url)), "assets", "shots", lang);
+/** What the owner asks, in their language (the website's hero shows the same request). */
+const ASK = {
+	en: "Get me Sintel, the 2010 Blender film.",
+	zh: "帮我找《辛特尔》，2010 年 Blender 的那部短片。",
+	fr: "Trouve-moi Sintel, le film Blender de 2010.",
+	ru: "Найди мне Sintel, фильм Blender 2010 года.",
+}[lang];
+/** The demo's magnet-only Frieren release (packages/server/src/demo.ts), whose files the fake qBittorrent knows. */
+const FRIEREN_MAGNET = `magnet:?xt=urn:btih:5f0f1a1e7c3b2d4a6e8f9a0b1c2d3e4f5a6b7c8d&dn=${encodeURIComponent("[Erai-raws] Sousou no Frieren - 01 [1080p]")}`;
+/** This checkout, as it appears in paths the agent mentions. */
+const REPO = `${join(dirname(fileURLToPath(import.meta.url)), "..")}/`;
+/** The chat's Stop button, as packages/web/src/locales/<lang>/chat.json names it. */
+const STOP = Object.fromEntries(
+	LANGS.map((l) => [l, (JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "packages", "web", "src", "locales", l, "chat.json"), "utf8")) as { composer?: { stop?: string } }).composer?.stop]),
+) as Record<string, string>;
+const ALL = ["chat", "trends", "library", "title", "downloads", "inbox", "plugins"];
 const wanted = process.argv.slice(2).length ? process.argv.slice(2) : ALL;
 
 /** Poster art by TMDB id: the demo's four titles; anything else gets a neutral card. */
@@ -54,11 +73,11 @@ ${lines}
 }
 
 const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, locale: "en-US" });
-await context.addInitScript(() => {
-	localStorage.setItem("reelix.lang", "en");
-	if (!localStorage.getItem("reelix.theme")) localStorage.setItem("reelix.theme", "marquee");
-});
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, locale: lang });
+await context.addInitScript((l) => {
+	localStorage.setItem("reelix.lang", l);
+	localStorage.setItem("reelix.theme", "marquee");
+}, lang);
 await context.route("**/api/poster*", async (route) => {
 	const q = new URL(route.request().url()).searchParams;
 	const id = (q.get("path") ?? "").replace(/\D/g, "");
@@ -67,20 +86,35 @@ await context.route("**/api/poster*", async (route) => {
 });
 const page = await context.newPage();
 
+/** One screenshot per built-in theme, switched in place so nothing on the page moves between them. */
 async function save(name: string): Promise<void> {
 	await page.waitForLoadState("networkidle").catch(() => {});
-	await page.waitForTimeout(600);
-	mkdirSync(out, { recursive: true });
-	await sharp(await page.screenshot({ type: "png" })).webp({ quality: 82 }).toFile(join(out, `${name}.webp`));
-	console.log(`${name}.webp`);
+	// The agent's steps can name files by their full path on this machine; show them from the repository instead.
+	await page.evaluate((root) => {
+		const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+		for (let n = walk.nextNode(); n; n = walk.nextNode()) if (n.nodeValue?.includes(root)) n.nodeValue = n.nodeValue.replaceAll(root, "");
+	}, REPO);
+	for (const theme of THEMES) {
+		await page.evaluate((t) => {
+			document.documentElement.dataset.theme = t;
+			document.documentElement.style.colorScheme = t === "paper" ? "light" : "dark";
+		}, theme);
+		await page.waitForTimeout(700);
+		mkdirSync(join(out, theme), { recursive: true });
+		await sharp(await page.screenshot({ type: "png" })).webp({ quality: 82 }).toFile(join(out, theme, `${name}.webp`));
+	}
+	console.log(`${lang}/*/${name}.webp`);
 }
 
 async function go(path: string): Promise<void> {
 	await page.goto(url + path, { waitUntil: "networkidle" });
 }
 
-async function setTheme(page: Page, theme: string): Promise<void> {
-	await page.evaluate((t) => localStorage.setItem("reelix.theme", t), theme);
+/** Runs an operation the way the web UI does (docs/api.md). */
+async function op<T>(name: string, input: object): Promise<T> {
+	const res = await page.request.post(`${url}/api/op/${name}`, { data: input, headers: { "x-request-id": crypto.randomUUID() } });
+	if (!res.ok()) throw new Error(`${name}: ${res.status()} ${await res.text()}`);
+	return ((await res.json()) as { output: T }).output;
 }
 
 await go("/");
@@ -89,6 +123,8 @@ if (await page.locator("#pw").count()) {
 	await page.keyboard.press("Enter");
 	await page.waitForURL(/\/chat/);
 }
+await op("config.set", { path: "language", value: lang });
+await go("/");
 
 const shots: Record<string, () => Promise<void>> = {
 	/** Asks the agent for Sintel and waits for it to finish; this is what starts the demo's download. */
@@ -104,7 +140,7 @@ const shots: Record<string, () => Promise<void>> = {
 			await box.press("Enter");
 			await page.waitForURL(/\/chat\/.+/, { timeout: 30_000 });
 			// The Stop button is there while the agent works.
-			const stop = page.locator('button[title="Stop"]');
+			const stop = page.locator(`button[title="${STOP[lang]}"]`);
 			await stop.waitFor({ timeout: 30_000 }).catch(() => {});
 			await stop.waitFor({ state: "detached", timeout: 300_000 });
 		}
@@ -120,21 +156,44 @@ const shots: Record<string, () => Promise<void>> = {
 		await page.locator(".animate-spin").first().waitFor({ state: "detached", timeout: 120_000 }).catch(() => {});
 		await save("trends");
 	},
+	/** Waits until the chat's film is filed (the demo's downloads finish in about 30 s). */
+	async library() {
+		for (let i = 0; i < 40; i++) {
+			await go("/library");
+			if (await page.locator('a[href^="/library/"]:not([href="/library/adopt"])').count()) break;
+			await page.waitForTimeout(5_000);
+		}
+		await save("library");
+	},
 	async title() {
 		await go("/library");
-		await page.locator('a[href^="/library/"]:not([href="/library/adopt"])').first().click();
+		// Opened by its address: a poster can be covered while the wall settles, which makes a click wait forever.
+		const href = await page.locator('a[href^="/library/"]:not([href="/library/adopt"])').first().getAttribute("href");
+		await go(href ?? "/library");
 		await save("title");
 	},
+	/** Starts a download the way the agent would, so the shot shows one part-way (the demo's finish in about 30 s). */
 	async downloads() {
-		// Start one from Trends so the shot shows a download part-way (the demo's finish in about 30 s).
-		await go("/trends");
-		await page.getByText("Oppenheimer", { exact: true }).first().click();
-		await page.getByRole("button", { name: "Download", exact: true }).first().click();
-		await page.waitForTimeout(10_000);
+		const found = await op<{ id?: string; title_id?: string; candidates?: { id: string }[] }>("title.find", { query: "Oppenheimer 2023" });
+		const titleId = found.title_id ?? found.id ?? found.candidates?.[0]?.id;
+		const releases = await op<{ releases?: { handle: string }[]; items?: { handle: string }[] }>("release.search", { title_id: titleId });
+		const handle = (releases.releases ?? releases.items)?.[0]?.handle;
+		await op("download.add", { handle, title_id: titleId, reason: "For the website's screenshots." });
+		await page.waitForTimeout(8_000);
 		await go("/downloads");
 		await save("downloads");
 	},
+	/**
+	 * A download that was already on the NAS before Reelix (added to the demo's qBittorrent directly, as the owner
+	 * once did), then a real adoption scan: its plan is filed in the Inbox in the owner's language.
+	 */
 	async inbox() {
+		const qb = (await op<{ value: { url: string } }>("config.get", { path: "plugins.qbittorrent" })).value;
+		const form = (f: Record<string, string>) => ({ form: f });
+		await page.request.post(`${qb.url}/api/v2/auth/login`, form({ username: "admin", password: "demo-qb" }));
+		await page.request.post(`${qb.url}/api/v2/torrents/add`, form({ urls: FRIEREN_MAGNET }));
+		await page.waitForTimeout(3_000);
+		await op("adopt.scan", {});
 		await go("/inbox");
 		await save("inbox");
 	},
@@ -142,12 +201,6 @@ const shots: Record<string, () => Promise<void>> = {
 		await go("/settings");
 		await page.locator("#plugins").evaluate((el) => el.scrollIntoView({ block: "start" }));
 		await save("plugins");
-	},
-	async paper() {
-		await setTheme(page, "paper");
-		await go("/library");
-		await save("paper");
-		await setTheme(page, "marquee");
 	},
 };
 

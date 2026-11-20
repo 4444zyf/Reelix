@@ -220,7 +220,7 @@ export function ActivityScreen() {
 				</Tabs>
 			}
 		>
-			<div className="mx-auto max-w-4xl">{tab === "ledger" ? <Ledger /> : <Jobs />}</div>
+			<div className="max-w-4xl">{tab === "ledger" ? <Ledger /> : <Jobs />}</div>
 		</Screen>
 	);
 }

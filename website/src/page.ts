@@ -5,6 +5,8 @@ export type Strings = typeof en;
 export const LANGS = ["en", "zh", "fr", "ru"] as const;
 export type Lang = (typeof LANGS)[number];
 
+/** The screenshots exist once per language and built-in theme (website/shots.ts); the page shows the pair matching its own. */
+const THEMES = ["marquee", "paper"] as const;
 const LANG_NAMES: Record<Lang, string> = { en: "English", zh: "简体中文", fr: "Français", ru: "Русский" };
 const HTML_LANG: Record<Lang, string> = { en: "en", zh: "zh-Hans", fr: "fr", ru: "ru" };
 const REPO = "https://github.com/4444zyf/Reelix";
@@ -33,6 +35,7 @@ function shell(lines: [string, string?][], t: Strings): string {
 const ICONS = {
 	check: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`,
 	arrow: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
+	globe: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg>`,
 	theme: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4v16" /><path d="M12 4a8 8 0 010 16z" fill="currentColor" stroke="none"/></svg>`,
 	replay: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 108-8H7M10 1L7 4l3 3"/></svg>`,
 	github: `<svg viewBox="0 0 24 24" aria-hidden="true" class="solid"><path d="M12 2a10 10 0 00-3.2 19.5c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.2-3.4-1.2-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.4 1.1 2.9.8.1-.6.4-1.1.6-1.3-2.2-.3-4.600-1.100-4.600-5a3.900 3.900 0 011-2.700c-.1-.3-.4-1.300.1-2.600 0 0 .8-.3 2.800 1a9.500 9.500 0 015 0c1.900-1.300 2.700-1 2.700-1 .6 1.300.2 2.300.1 2.600a3.900 3.900 0 011 2.700c0 3.900-2.300 4.700-4.600 5 .4.300.7.900.7 1.900v2.800c0 .300.200.600.700.500A10 10 0 0012 2z"/></svg>`,
@@ -53,7 +56,7 @@ export function render(t: Strings, lang: Lang): string {
 <meta property="og:title" content="${e(t.meta.title)}">
 <meta property="og:description" content="${e(t.meta.description)}">
 <meta property="og:type" content="website">
-<meta property="og:image" content="${base}assets/shots/chat.webp">
+<meta property="og:image" content="${base}assets/shots/${lang}/marquee/chat.webp">
 <meta name="theme-color" content="#0c0a08">
 <link rel="icon" href="${base}assets/icon.png" type="image/png">
 ${LANGS.filter((l) => l !== lang).map((l) => `<link rel="alternate" hreflang="${HTML_LANG[l]}" href="${href(l)}">`).join("\n")}
@@ -74,7 +77,7 @@ ${LANGS.filter((l) => l !== lang).map((l) => `<link rel="alternate" hreflang="${
 	</nav>
 	<div class="tools">
 		<details class="lang">
-			<summary aria-label="${e(t.nav.language)}">${LANG_NAMES[lang]}</summary>
+			<summary aria-label="${e(t.nav.language)}">${ICONS.globe}<span>${LANG_NAMES[lang]}</span></summary>
 			<ul>${LANGS.map((l) => `<li><a href="${href(l)}" lang="${HTML_LANG[l]}"${l === lang ? ' aria-current="true"' : ""}>${LANG_NAMES[l]}</a></li>`).join("")}</ul>
 		</details>
 		<button class="icon" type="button" id="theme" aria-label="${e(t.nav.theme)}" title="${e(marquee)} / ${e(paper)}">${ICONS.theme}</button>
@@ -164,7 +167,7 @@ ${LANGS.filter((l) => l !== lang).map((l) => `<link rel="alternate" hreflang="${
 		${t.screens.tabs
 			.map(
 				(s, i) => `<figure data-pane="shot" data-id="${s.id}"${i ? " hidden" : ""}>
-			<img src="${base}assets/shots/${s.id}.webp" alt="${e(s.name)}" width="1440" height="900" loading="lazy" decoding="async">
+			${THEMES.map((theme) => `<img class="shot-${theme}" src="${base}assets/shots/${lang}/${theme}/${s.id}.webp" alt="${e(s.name)}" width="1440" height="900" loading="lazy" decoding="async">`).join("\n\t\t\t")}
 			<figcaption>${e(s.caption)}</figcaption>
 		</figure>`,
 			)

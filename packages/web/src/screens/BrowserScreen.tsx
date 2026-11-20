@@ -170,7 +170,7 @@ export function BrowserScreen() {
 				</Button>
 			)}
 		>
-			<div className="mx-auto max-w-6xl space-y-4">
+			<div className="max-w-6xl space-y-4">
 				{tabs.isLoading ? (
 					<Loading />
 				) : tabs.error ? (

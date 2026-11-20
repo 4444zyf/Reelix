@@ -144,6 +144,11 @@
 				"caption": "Les tendances, les animes en cours de diffusion et des suggestions d'après ce que vous avez regardé."
 			},
 			{
+				"id": "library",
+				"name": "Bibliothèque",
+				"caption": "Votre collection en mur d'affiches : films, séries, animes, et ce que vous suivez."
+			},
+			{
 				"id": "title",
 				"name": "Titre",
 				"caption": "Un titre et ses versions, venues de tous les indexeurs."
@@ -162,11 +167,6 @@
 				"id": "plugins",
 				"name": "Plugins",
 				"caption": "Activez et désactivez les plugins, vérifiez ce que chacun déclare."
-			},
-			{
-				"id": "paper",
-				"name": "Thème Paper",
-				"caption": "Un second thème intégré. Un thème est un dossier ; créez le vôtre."
 			}
 		]
 	},

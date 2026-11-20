@@ -52,7 +52,7 @@ export function DownloadsScreen() {
 					{t("downloads.emptyHint")}
 				</Empty>
 			) : (
-				<div className="mx-auto grid max-w-5xl gap-3 xl:grid-cols-2">
+				<div className="grid max-w-5xl gap-3 xl:grid-cols-2">
 					{list.map((d) => (
 						<DownloadRow key={d.hash} download={d} />
 					))}

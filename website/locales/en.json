@@ -144,6 +144,11 @@
 				"caption": "What is trending, anime airing now, and suggestions from what you watched."
 			},
 			{
+				"id": "library",
+				"name": "Library",
+				"caption": "Your collection as a poster wall: films, shows, anime, and what you follow."
+			},
+			{
 				"id": "title",
 				"name": "Title",
 				"caption": "A title with its releases, from every indexer."
@@ -162,11 +167,6 @@
 				"id": "plugins",
 				"name": "Plugins",
 				"caption": "Switch plugins on and off, review what each one declares."
-			},
-			{
-				"id": "paper",
-				"name": "Paper theme",
-				"caption": "A second built-in theme. A theme is a folder; make your own."
 			}
 		]
 	},
