@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 type Listing = { root: string; path: string; parent: string | null; folders: { name: string; path: string }[]; truncated: boolean };
 
 /** Browse the folders inside the media folder (operation media.folders) and choose one. */
-export function FolderPicker({ open, onOpenChange, start, onChoose }: { open: boolean; onOpenChange: (open: boolean) => void; start?: string; onChoose: (path: string) => void }) {
+export function FolderPicker({ open, onOpenChange, start, onChoose, level }: { open: boolean; onOpenChange: (open: boolean) => void; start?: string; onChoose: (path: string) => void; level: "downloads" | "library" }) {
 	const { t } = useTranslation(["settings", "common"]);
 	const [path, setPath] = useState<string | undefined>(start || undefined);
 	useEffect(() => {
@@ -27,6 +27,8 @@ export function FolderPicker({ open, onOpenChange, start, onChoose }: { open: bo
 		if (listing.error && path && path === start) setPath(undefined);
 	}, [listing.error, path, start]);
 	const here = listing.data;
+	// A title's own folder ([tmdbid-N]) or a season folder is never a download or library folder.
+	const tooDeep = !!here && /\[tmdbid-\d+\]|^(Season \d+|extras)$/i.test(here.path.split("/").pop() ?? "");
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -35,6 +37,7 @@ export function FolderPicker({ open, onOpenChange, start, onChoose }: { open: bo
 					<DialogTitle>{t("folderPicker.title")}</DialogTitle>
 					<DialogDescription>{t("folderPicker.description", { root: here?.root ?? "/media" })}</DialogDescription>
 				</DialogHeader>
+				<p className="text-sm">{t(`folderPicker.level.${level}`)}</p>
 				<p className="break-all rounded-md bg-well px-3 py-2 font-mono text-xs">{here?.path ?? path ?? "…"}</p>
 				<div className="max-h-80 min-h-40 overflow-y-auto rounded-md border border-input">
 					{listing.isLoading ? (
@@ -67,12 +70,13 @@ export function FolderPicker({ open, onOpenChange, start, onChoose }: { open: bo
 						</ul>
 					)}
 				</div>
+				{tooDeep && <p className="text-sm text-destructive-foreground">{t("folderPicker.tooDeep")}</p>}
 				<DialogFooter className="gap-2">
 					<Button variant="ghost" onClick={() => onOpenChange(false)}>
 						{t("common:actions.cancel")}
 					</Button>
 					<Button
-						disabled={!here}
+						disabled={!here || tooDeep}
 						onClick={() => {
 							onChoose(here!.path);
 							onOpenChange(false);

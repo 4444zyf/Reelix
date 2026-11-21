@@ -135,7 +135,7 @@ function Field({ config, path, label, help, type = "text", options, placeholder 
 									<FolderOpen />
 									{t("folderPicker.browse")}
 								</Button>
-								<FolderPicker open={picking} onOpenChange={setPicking} start={text} onChoose={(p) => void save(p)} />
+								<FolderPicker open={picking} onOpenChange={setPicking} start={text} onChoose={(p) => void save(p)} level={path === "downloads" ? "downloads" : "library"} />
 							</>
 						)}
 						{dirty && (

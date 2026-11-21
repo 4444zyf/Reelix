@@ -148,6 +148,26 @@ test("a refused login and an unreachable qBittorrent are outcomes, not failures 
 	}
 });
 
+test("after a refused login no more logins are sent, until the owner tests the connection", async () => {
+	const w = await world({ password: "wrong" });
+	try {
+		const logins = () => w.qb.calls.filter((c) => c.path === "auth/login").length;
+		await assert.rejects(w.p().call("list", [{}]), (e: any) => e.code === "needs_auth");
+		assert.equal(logins(), 1);
+		for (let i = 0; i < 5; i++) assert.deepEqual(await w.p().call("add", [{ magnet: `magnet:?xt=urn:btih:${"e".repeat(40)}` }, { paused: true, mark: "reelix" }]), { outcome: "needs_auth" });
+		await assert.rejects(w.p().call("list", [{}]), (e: any) => e.code === "needs_auth");
+		assert.equal(logins(), 1, "the watcher's and the agent's calls send no login while it is refused");
+		const check = (await doctor(w.app, { quick: true })).find((c) => c.name === "qbittorrent")!;
+		assert.equal(check.ok, false);
+		assert.match(check.detail, /refused the login.*sends no more logins until the username or password is changed/);
+		assert.equal(logins(), 2, "the Doctor check tries once more");
+		await assert.rejects(w.p().call("list", [{}]), (e: any) => e.code === "needs_auth");
+		assert.equal(logins(), 2);
+	} finally {
+		await w.close();
+	}
+});
+
 test("operations and the Doctor check go through the plugin; set_prefs is admin, the agent may, a plugin may not", async () => {
 	const w = await world();
 	try {

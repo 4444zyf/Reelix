@@ -230,6 +230,7 @@ export default definePlugin({
 			if (!url) return { ok: false, detail: "not configured", fix: "reelix config set plugins.qbittorrent.url http://host:8080" };
 			try {
 				const c = await qb();
+				c.retryLogin(); // the owner asked: one login, even after a refused one
 				const v = await c.version(ctx.signal);
 				const save = await c.defaultSavePath(ctx.signal);
 				const prefs = await c.preferences(ctx.signal);

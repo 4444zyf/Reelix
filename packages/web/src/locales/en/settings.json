@@ -423,6 +423,11 @@
 		"up": "Up one level",
 		"empty": "No folders here.",
 		"truncated": "Only the first 1000 folders are shown.",
-		"choose": "Choose this folder"
+		"choose": "Choose this folder",
+		"level": {
+			"downloads": "Choose the folder your downloader saves into. It must be on the same disk and shared folder as the library, so files can be hard-linked.",
+			"library": "Choose the folder Jellyfin scans as this library: the one that holds a folder per title, not a title's own folder. For now each media type has one library folder."
+		},
+		"tooDeep": "This is a single title's folder (or one of its season folders). Go up to the folder that holds all the titles."
 	}
 }

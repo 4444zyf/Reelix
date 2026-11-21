@@ -430,6 +430,11 @@
 		"up": "Remonter d'un niveau",
 		"empty": "Aucun dossier ici.",
 		"truncated": "Seuls les 1000 premiers dossiers sont affichés.",
-		"choose": "Choisir ce dossier"
+		"choose": "Choisir ce dossier",
+		"level": {
+			"downloads": "Choisissez le dossier où votre client de téléchargement enregistre. Il doit être sur le même disque et le même dossier partagé que la bibliothèque, pour que les fichiers puissent être liés physiquement.",
+			"library": "Choisissez le dossier que Jellyfin analyse comme cette bibliothèque : celui qui contient un dossier par titre, pas le dossier d'un titre. Pour l'instant, chaque type de média a un seul dossier de bibliothèque."
+		},
+		"tooDeep": "Ceci est le dossier d'un seul titre (ou d'une de ses saisons). Remontez jusqu'au dossier qui contient tous les titres."
 	}
 }

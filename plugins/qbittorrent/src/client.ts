@@ -72,6 +72,12 @@ export class QbClient {
 	private username: string;
 	private password: string;
 	private sid?: string;
+	/**
+	 * Set when qBittorrent refused the login or banned this address. No further login is sent until
+	 * the plugin starts again (a change of its settings or password) or a test calls `retryLogin`:
+	 * qBittorrent bans an address after a few failed logins, and the watcher asks it every few seconds.
+	 */
+	private stopped?: QbError;
 	private versions?: { app: string; api: string; major: number };
 
 	constructor(fetch: Fetch, opts: { url: string; username: string; password: string }) {
@@ -81,7 +87,25 @@ export class QbClient {
 		this.password = opts.password;
 	}
 
+	/** Allow one more login after a refused one: the owner tests the connection. */
+	retryLogin(): void {
+		this.stopped = undefined;
+	}
+
 	private async login(signal?: AbortSignal): Promise<void> {
+		if (this.stopped) throw this.stopped;
+		try {
+			await this.tryLogin(signal);
+		} catch (e) {
+			if (e instanceof QbError && e.kind !== "refused") {
+				this.stopped = new QbError(e.kind, `${e.message} Reelix sends no more logins until the username or password is changed, or the connection is tested (Settings → Doctor).`);
+				throw this.stopped;
+			}
+			throw e;
+		}
+	}
+
+	private async tryLogin(signal?: AbortSignal): Promise<void> {
 		const res = await this.fetch(`${this.url}/api/v2/auth/login`, {
 			method: "POST",
 			headers: { "content-type": "application/x-www-form-urlencoded", referer: this.url, origin: this.url },
