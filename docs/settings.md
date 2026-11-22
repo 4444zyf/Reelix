@@ -414,7 +414,7 @@ Each section above was checked against the code and in a browser on a demo serve
 | Copy fixes | Built: push on HTTP says the Inbox works, links to the HTTPS guide (`docs/web-app.md`), gives the Tailscale command and names a linked chat app. |
 | Acceptance cases | Each has a test (core, server or plugin tests), and the browser walk-through above. |
 
-Telegram's card was walked in a browser, in English and Chinese, against the plugin's fake Bot API: optional and not connected, the token saved, the bot checked, the code sent from "Telegram" and the account linked (the card follows it by itself), the test message received, connected. Each step's answer is worded in the owner's language. What needs the owner's own accounts was not tried: Telegram's real servers with a real bot, and push on a real iPhone (docs/web-app.md).
+Telegram's card was walked in a browser, in English and Chinese, against the plugin's fake Bot API: optional and not connected, the token saved, the bot checked, the code sent from "Telegram" and the account linked (the card follows it by itself), the test message received, connected. Each step's answer is worded in the owner's language. What needs the owner's own accounts was not tried: Telegram's real servers with a real bot, and push on a real iPhone (docs/web-app.md). The owner accepted these two as untested on 2026-11-22.
 
 Different from the text above, and why:
 - Proxy and Limits are sections of their own, and the nightly time and time zone are under Limits, not Advanced: the owner sets them, they are not tuning. A plugin's endpoint overrides, runtime and tools are under its card's Advanced and How it runs, where they belong to it, not under the page's Advanced.
