@@ -4,6 +4,8 @@
 	"testTitle": "Reelix notifications are on",
 	"testBody": "This device will be told when Reelix needs you.",
 	"secrets": {
-		"vapid_private": "Reelix's own key for signing notifications (made automatically; changing it turns notifications off on every device)"
+		"vapid_private": "Reelix's own key for signing notifications (made automatically; changing it turns notifications off on every device)",
+		"vapid_private_set": "Created automatically. The devices that get notifications are under Notifications.",
+		"vapid_private_unset": "Created when the first device turns notifications on."
 	}
 }

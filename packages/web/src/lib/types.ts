@@ -236,6 +236,8 @@ export type PluginInfo = {
 	/** Secrets it makes itself: shown as a state, never as a field. */
 	managedSecrets: string[];
 	network: boolean;
+	/** Hosts it may reach, `config:<setting>` or `*`. */
+	reach: string[];
 	/** Optional and nothing of it set up yet: shown as "optional, not connected". */
 	unused: boolean;
 	/** Required settings and secrets that are empty, by name (`servers.0.api_key`); empty while it is off. */

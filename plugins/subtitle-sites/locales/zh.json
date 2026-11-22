@@ -17,7 +17,9 @@
 		"opensubtitles_password": "OpenSubtitles.com 密码（可选，与用户名一起）",
 		"opensubtitles_token": "OpenSubtitles.com 登录令牌（Reelix 会用用户名和密码自动获取）",
 		"subdl_api_key": "SubDL API 密钥（subdl.com，账户 → API）",
-		"jimaku_api_key": "Jimaku API 密钥（jimaku.cc，账户 → API；日本动画字幕）"
+		"jimaku_api_key": "Jimaku API 密钥（jimaku.cc，账户 → API；日本动画字幕）",
+		"opensubtitles_token_set": "已登录。Reelix 每天用用户名和密码续期登录。",
+		"opensubtitles_token_unset": "尚未登录：Reelix 会在下次下载时用用户名和密码登录。如果一直如此，请检查它们。"
 	},
 	"checks": {
 		"subhd_ok": "SubHD 有响应",

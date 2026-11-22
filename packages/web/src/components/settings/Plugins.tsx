@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { endpoints, op, runOp } from "../../lib/api";
+import { useStatus } from "../../app/Sidebar";
 import { useChat } from "../../lib/chat";
 import type { PluginInfo, PluginReview, PluginSettings, SettingSchema } from "../../lib/types";
 import { formatDateTime } from "../../lib/utils";
@@ -202,7 +203,7 @@ export type SecretGroup = { id: string; title: ReactNode; note?: ReactNode; owns
  * A plugin's settings and secrets as one form with one Save (docs/settings.md, "Forms and saving"): the plugin
  * restarts once. Fields marked advanced go under Advanced; secrets it makes itself show as a state.
  */
-export function PluginForm({ data, footer, also, groups }: { data: PluginSettings; footer?: ReactNode; also?: AlsoInForm; groups?: SecretGroup[] }) {
+export function PluginForm({ data, footer, also, groups, onSaved }: { data: PluginSettings; footer?: ReactNode; also?: AlsoInForm; groups?: SecretGroup[]; onSaved?: (state: PluginInfo["state"]) => void }) {
 	const { t } = useTranslation(["settings", "common"]);
 	const qc = useQueryClient();
 	const schema = data.schema;
@@ -249,7 +250,8 @@ export function PluginForm({ data, footer, also, groups }: { data: PluginSetting
 			setErrors(Object.fromEntries((r.errors ?? []).map((e) => [e.path, e.message])));
 			toast({ title: t(r.result === "applied" ? "plugins.saved" : "plugins.notSaved", { id: data.id }), description: r.next, variant: r.result === "applied" ? undefined : "destructive" });
 			if (r.result === "applied") await qc.invalidateQueries({ queryKey: ["plugin-settings", data.id] });
-			qc.invalidateQueries({ queryKey: ["plugins"] });
+			await qc.invalidateQueries({ queryKey: ["plugins"] });
+			if (r.result === "applied") onSaved?.(r.state);
 			qc.invalidateQueries({ queryKey: ["status"] });
 		} catch (e) {
 			toast({ title: t("plugins.notSaved", { id: data.id }), description: message(e), variant: "destructive" });
@@ -263,7 +265,7 @@ export function PluginForm({ data, footer, also, groups }: { data: PluginSetting
 		if (s.managed)
 			return (
 				<Row key={s.key} label={label} technical={s.key}>
-					<p className="flex min-h-10 items-center text-sm text-muted-foreground">{t(s.set ? "form.managedSet" : "form.managedNotYet")}</p>
+					<p className="flex min-h-10 items-center text-sm text-muted-foreground">{data.strings[`secrets.${s.name}_${s.set ? "set" : "unset"}`] ?? t(s.set ? "form.managedSet" : "form.managedNotYet")}</p>
 				</Row>
 			);
 		return (
@@ -440,6 +442,7 @@ export function PluginTechnical({ p }: { p: PluginInfo }) {
 		[t("plugins.events"), p.events],
 		[t("plugins.runs"), p.runs],
 		[t("plugins.skills"), p.skills],
+		[t("plugins.toolIds"), p.tools],
 		[t("plugins.hooksLabel"), p.hooks],
 	] as const;
 	return (
@@ -464,13 +467,14 @@ const ROLES = ["chat", "background", "glossary", "translate", "review"] as const
 function ModelUse({ p, change }: { p: PluginInfo; change: (fn: () => Promise<{ next: string }>) => Promise<void> }) {
 	const { t } = useTranslation("settings");
 	const m = p.model!;
+	const { data: status } = useStatus();
 	const [budget, setBudget] = useState(String(m.budgetUsd));
 	const set = (input: Record<string, unknown>) => change(() => op<{ next: string }>("plugin.model", { id: p.id, ...input }));
 	return (
 		<div className="space-y-2 text-sm">
 			<p className="font-medium">{t("plugins.model.title")}</p>
 			<p className={`text-xs ${m.reached ? "text-warning" : "text-muted-foreground"}`}>
-				{m.unmetered ? t("plugins.model.spentUnmetered", { usd: m.spentUsd.toFixed(2), tokens: m.tokens }) : t("plugins.model.spent", { usd: m.spentUsd.toFixed(2), budget: m.budgetUsd, tokens: m.tokens })}
+				{m.unmetered ? t("plugins.model.spentUnmetered", { usd: m.spentUsd.toFixed(2), tokens: m.tokens, background: status?.spend.capUsd ?? "?" }) : t("plugins.model.spent", { usd: m.spentUsd.toFixed(2), budget: m.budgetUsd, tokens: m.tokens })}
 				{m.reached && ` ${t("plugins.model.reached")}`}
 			</p>
 			<div className="flex items-center gap-3">
@@ -593,13 +597,20 @@ function SetupOffer({ p, offered }: { p: PluginInfo; offered: boolean }) {
 	);
 }
 
-/** What stops a plugin, in words, or nothing. */
-export function PluginProblem({ p }: { p: PluginInfo }) {
+/** What a plugin may reach on the network, in words: its consequence for the owner, not the manifest's terms. */
+function Reach({ p }: { p: PluginInfo }) {
 	const { t } = useTranslation("settings");
-	const label = (name: string) => name.replace(/\.(\d+)\./g, (_m, n) => ` #${Number(n) + 1} `).replace(/_/g, " ");
+	if (!p.reach.length) return null;
+	const words = [...new Set(p.reach.map((r) => (r === "*" ? t("plugins.anyHost") : r.startsWith("config:") ? t("plugins.reachSetting") : r)))];
+	return <p className="break-words text-xs text-muted-foreground">{t("plugins.canReach", { what: words.join(", ") })}</p>;
+}
+
+/** What stops a plugin, in words, or nothing. */
+export function PluginProblem({ p, setup = true }: { p: PluginInfo; setup?: boolean }) {
+	const { t } = useTranslation("settings");
 	return (
 		<>
-			{p.needsSetup.length > 0 && <p className="text-xs text-warning">{t("plugins.needsSetup", { what: p.needsSetup.map(label).join(", ") })}</p>}
+			{setup && p.needsSetup.length > 0 && <p className="text-xs text-warning">{t("plugins.needsSetupOpen")}</p>}
 			{p.waitingFor.length > 0 && <p className="break-words text-xs text-warning">{t("plugins.waitingFor", { seams: p.waitingFor.join(", ") })}</p>}
 			{p.waitingForPlugins.map((q) => (
 				<p key={q.id} className="break-words text-xs text-warning" data-testid={`waits-${p.id}-${q.id}`}>
@@ -659,6 +670,12 @@ export function Plugins() {
 				return;
 			}
 			setSetupOffer(on && r.state === "active" && data?.find((x) => x.id === id)?.setup ? id : undefined);
+			// Switched on but missing what it needs: its settings open, so "needs setup" is never a surprise.
+			if (on) {
+				await qc.invalidateQueries({ queryKey: ["plugins"] });
+				const now = qc.getQueryData<PluginInfo[]>(["plugins"])?.find((x) => x.id === id);
+				if (now?.needsSetup.length) setOpen(id);
+			}
 			toast({ title: t(r.result === "applied" ? "plugins.applied" : "plugins.failed", { id }), description: r.next, variant: r.result === "applied" ? undefined : "destructive" });
 		} catch (e) {
 			toast({ title: t("plugins.failed", { id }), description: message(e), variant: "destructive" });
@@ -699,6 +716,7 @@ export function Plugins() {
 									{p.failures > 0 && <Badge tone="warning">{t("plugins.failures", { count: p.failures })}</Badge>}
 								</p>
 								{p.description && <p className="text-xs text-muted-foreground">{p.description}</p>}
+								<Reach p={p} />
 								{view.technical && <Technical>{`${p.id} ${p.version}`}</Technical>}
 								<PluginProblem p={p} />
 								{p.source && <InstalledActions p={p} onReview={setReview} />}

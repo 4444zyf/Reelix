@@ -17,7 +17,9 @@
 		"opensubtitles_password": "OpenSubtitles.com password (optional, with the username)",
 		"opensubtitles_token": "OpenSubtitles.com login token (Reelix gets it itself with the username and password)",
 		"subdl_api_key": "SubDL API key (subdl.com, account → API)",
-		"jimaku_api_key": "Jimaku API key (jimaku.cc, account → API; Japanese anime subtitles)"
+		"jimaku_api_key": "Jimaku API key (jimaku.cc, account → API; Japanese anime subtitles)",
+		"opensubtitles_token_set": "Signed in. Reelix renews the sign-in each day with the username and password.",
+		"opensubtitles_token_unset": "Not signed in yet: Reelix signs in with the username and password at the next download. If this stays, check them."
 	},
 	"checks": {
 		"subhd_ok": "SubHD answers",

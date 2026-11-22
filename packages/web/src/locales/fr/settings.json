@@ -115,7 +115,10 @@
 			"keyHelp": "Une clé magpie dont le plafond de dépense est réglé dans magpie.",
 			"adminKey": "Clé d'administration",
 			"adminKeyHelp": "Seulement pour laisser Reelix gérer magpie (groupes de routage et fournisseurs). Elle peut changer ce que chaque clé peut dépenser ; laissez-la vide sinon."
-		}
+		},
+		"needs": "Encore nécessaire : {{what}}.",
+		"fillIn": "Le remplir",
+		"notTested": "Pas testé depuis le démarrage de Reelix ou le changement de ses réglages. « Tester la connexion » le vérifie maintenant."
 	},
 	"secrets": {
 		"stored": "Enregistré",
@@ -182,7 +185,8 @@
 		"testRole": "Tester le modèle de chat",
 		"testRoleHelp": "Une courte question par le rôle chat : la réponse, le modèle qui l'a donnée et le temps qu'il a pris.",
 		"providers": "Fournisseurs",
-		"providersHelp": "D'où viennent les modèles. Connectez-vous ou saisissez une clé ici ; se déconnecter arrête ses modèles."
+		"providersHelp": "D'où viennent les modèles. Connectez-vous ou saisissez une clé ici ; se déconnecter arrête ses modèles.",
+		"restingWhy": "{{model}} est au repos jusqu'à {{until}} : {{reason}}."
 	},
 	"limits": {
 		"title": "Limites et planification",
@@ -245,8 +249,11 @@
 		"denied": "Les notifications de Reelix sont bloquées. Autorisez-les dans les réglages du système ou du navigateur, puis revenez.",
 		"pluginOff": "Le plugin de notifications est désactivé. Activez-le dans Plugins.",
 		"thisDevice": "Cet appareil",
-		"needsHttpsInbox": "Les notifications du navigateur nécessitent HTTPS (voir docs/deployment.md, « HTTPS »). La boîte de réception fonctionne sans.",
-		"inboxWorks": "La boîte de réception fonctionne sans notifications."
+		"needsHttpsInbox": "Les notifications du navigateur nécessitent HTTPS. La boîte de réception fonctionne sans.",
+		"inboxWorks": "La boîte de réception fonctionne sans notifications.",
+		"httpsHow": "Le plus rapide est Tailscale sur le NAS et cet appareil (la commande ci-dessous donne une adresse https et n'ouvre rien sur Internet).",
+		"httpsGuide": "Le guide HTTPS",
+		"otherChannels": "Les notifications vous parviennent aussi dans {{channels}}."
 	},
 	"plugins": {
 		"title": "Plugins",
@@ -402,7 +409,7 @@
 		"model": {
 			"title": "Vos modèles",
 			"spent": "Aujourd'hui : {{usd}} $ sur {{budget}} $ ({{tokens}} jetons). Repart à minuit.",
-			"spentUnmetered": "Aujourd'hui : {{usd}} $ ({{tokens}} jetons), sans budget quotidien.",
+			"spentUnmetered": "Aujourd'hui : {{usd}} $ ({{tokens}} jetons). Pas de limite propre ; la limite de fond ({{background}} $ par jour) s'applique toujours.",
 			"reached": "Le budget est épuisé : ses appels de modèle attendent minuit.",
 			"unmetered": "Sans budget quotidien",
 			"budget": "Budget quotidien (USD)",
@@ -439,13 +446,16 @@
 			"on": "Activés ({{count}})",
 			"off": "Désactivés ({{count}})"
 		},
-		"needsSetup": "Requis : {{what}}",
 		"howItRuns": "Fonctionnement",
 		"idVersion": "Identifiant et version",
 		"hooksLabel": "Participe à",
 		"installIntro": "Rien ne s'exécute avant que vous n'approuviez ce qu'il déclare.",
 		"installHow": "Comment désigner un plugin",
-		"installPlaceholder": "D'où vient le plugin"
+		"installPlaceholder": "D'où vient le plugin",
+		"needsSetupOpen": "Il doit être configuré avant de fonctionner : ouvrez ses réglages.",
+		"canReach": "Peut joindre : {{what}}",
+		"reachSetting": "les adresses de ses réglages",
+		"toolIds": "Outils de l'assistant"
 	},
 	"channels": {
 		"title": "Canaux de discussion",

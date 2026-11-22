@@ -391,7 +391,37 @@ Built:
 - **Telegram** says a model's failure and the next model's answer in words, as the web chat does.
 - **Other operations:** `library.players`, `proxy.services`, `preferences.show`, `preferences.set`.
 
+### Audit against this document (2026-11-22)
+
+Each section above was checked against the code and in a browser on a demo server (desktop, and a phone width for Services and Folders), in the four languages for Status, Services, Doctor, Notifications and a plugin card:
+
+| Section | State |
+| --- | --- |
+| Principles | Held: no config keys, JSON or capability ids in the default view; every unavailable state has cause, effect and action; Switch, Test and "ask the assistant" only when they can work. |
+| Page structure | Built, with Proxy and Limits as sections of their own (below). |
+| Credentials Reelix manages | Built: shown as a state, worded by the plugin (push: "Created automatically", the devices under Notifications; OpenSubtitles: signed in or not); refused by `plugin.configure` and the agent; `secret.list` marks them. |
+| Core credentials | Built: TMDB and magpie on their cards; the one-time provider key never a field; labelled password fields. |
+| Search and filter | Built and checked (a section hidden by one search comes back with the next). |
+| Forms and saving | Built: one Save per section and card; a card saved is checked once and shows the result. |
+| Layout fixes | Built, except the media folder's Browse (below). |
+| Services and States | Built: Not used, Off, Paused, Needs setup (the missing fields named, a button to the first), Not reachable, Connected (what the check found), Not tested; the last check, from Doctor or the card, shows on the card. |
+| Folders | Built: labels, folder checks, path-map editor with its checks, and the same-path check from Doctor. |
+| Subtitles, proxy, playback | Built. |
+| Models | Built: the no-model flow with sign-in in the page, roles with the model each uses and why a model rests and until when, the test, failure classes in chat, chat apps and jobs. |
+| Limits and the assistant | Built: each limit's effect; a plugin with no budget of its own names the background limit that still applies. |
+| Plugin cards | Built: purpose, state, problem, switch, what it may reach in plain words; How it runs and Technical details collapsed; switching on a plugin that needs setup opens its settings. |
+| Status and Doctor | Built. |
+| Copy fixes | Built: push on HTTP says the Inbox works, links to the HTTPS guide (`docs/web-app.md`), gives the Tailscale command and names a linked chat app. |
+| Acceptance cases | Each has a test (core, server or plugin tests), and the browser walk-through above. |
+
+Not checked by hand: Telegram's messages with a real bot (the plugin's tests run against a fake Bot API), and a real iPhone for push (as before, docs/web-app.md).
+
 Different from the text above, and why:
+- Proxy and Limits are sections of their own, and the nightly time and time zone are under Limits, not Advanced: the owner sets them, they are not tuning. A plugin's endpoint overrides, runtime and tools are under its card's Advanced and How it runs, where they belong to it, not under the page's Advanced.
+- The media folder has no Browse button: the folder picker browses inside the media folder, so it cannot choose it.
+- Lists are ordered with up and down buttons, not drag handles: the same on a phone and with a keyboard.
+- Models are not offered in "use the proxy for": nothing routes model traffic through Reelix's proxy (pi's providers make their own requests). The old help text named it; it no longer does.
+- A stored secret's Remove is a button inside its field, not a menu: one click fewer, and still apart from Save.
 - Technical details is one switch for the page, not a disclosure per field: one disclosure per field doubled the clutter it was meant to remove.
 - The switch "main model reads images" is gone instead of becoming "Image reading": nothing read it (`models.main_reads_images` is dropped from old settings).
 - `KNOWN_SECRETS` keeps its English descriptions: the command line and the agent read them. The web UI has its own labels in four languages.

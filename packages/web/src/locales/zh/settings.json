@@ -115,7 +115,10 @@
 			"keyHelp": "在 magpie 中设置了花费上限的密钥。",
 			"adminKey": "管理密钥",
 			"adminKeyHelp": "仅用于让 Reelix 管理 magpie（路由组和服务商）。它能改变每个密钥的花费上限；除非你需要，否则留空。"
-		}
+		},
+		"needs": "还需要：{{what}}。",
+		"fillIn": "去填写",
+		"notTested": "自 Reelix 启动或设置更改以来尚未测试。“测试连接”会立即检查。"
 	},
 	"secrets": {
 		"stored": "已保存",
@@ -180,7 +183,8 @@
 		"testRole": "测试聊天模型",
 		"testRoleHelp": "通过聊天角色问一个简短问题：回答、回答的模型和用时。",
 		"providers": "服务商",
-		"providersHelp": "模型的来源。在这里登录或输入密钥；退出登录后它的模型停止使用。"
+		"providersHelp": "模型的来源。在这里登录或输入密钥；退出登录后它的模型停止使用。",
+		"restingWhy": "{{model}} 暂停使用到 {{until}}：{{reason}}。"
 	},
 	"limits": {
 		"title": "限额与计划",
@@ -243,8 +247,11 @@
 		"denied": "Reelix 的通知已被阻止。请在系统或浏览器设置中允许后再回来。",
 		"pluginOff": "通知插件已关闭。请在“插件”中开启。",
 		"thisDevice": "本设备",
-		"needsHttpsInbox": "浏览器通知需要 HTTPS（见 docs/deployment.md 的“HTTPS”）。没有它，收件箱也能用。",
-		"inboxWorks": "没有通知，收件箱也能用。"
+		"needsHttpsInbox": "浏览器通知需要 HTTPS。没有它，收件箱也能用。",
+		"inboxWorks": "没有通知，收件箱也能用。",
+		"httpsHow": "最快的办法是在 NAS 和这台设备上用 Tailscale（下面的命令会给出一个 https 地址，且不对互联网开放任何东西）。",
+		"httpsGuide": "HTTPS 指南",
+		"otherChannels": "通知也会发到 {{channels}}。"
 	},
 	"plugins": {
 		"title": "插件",
@@ -390,7 +397,7 @@
 		"model": {
 			"title": "你的模型",
 			"spent": "今天：${{usd}} / ${{budget}}（{{tokens}} 个 token）。午夜重置。",
-			"spentUnmetered": "今天：${{usd}}（{{tokens}} 个 token），无每日预算。",
+			"spentUnmetered": "今天：${{usd}}（{{tokens}} 个 token）。它没有自己的限额；后台限额（每天 ${{background}}）仍然适用。",
 			"reached": "预算已用完：它的模型调用会等到午夜。",
 			"unmetered": "不设每日预算",
 			"budget": "每日预算（美元）",
@@ -427,13 +434,16 @@
 			"on": "已开启（{{count}}）",
 			"off": "已关闭（{{count}}）"
 		},
-		"needsSetup": "需要：{{what}}",
 		"howItRuns": "运行方式",
 		"idVersion": "ID 和版本",
 		"hooksLabel": "参与的环节",
 		"installIntro": "在你批准它声明的内容之前，什么都不会运行。",
 		"installHow": "如何写插件来源",
-		"installPlaceholder": "插件的来源"
+		"installPlaceholder": "插件的来源",
+		"needsSetupOpen": "它需要先设置才能工作：请打开它的设置。",
+		"canReach": "可以访问：{{what}}",
+		"reachSetting": "它设置中的地址",
+		"toolIds": "助手工具"
 	},
 	"channels": {
 		"title": "聊天渠道",

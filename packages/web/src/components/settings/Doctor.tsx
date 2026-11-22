@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, CircleDashed, CircleDot, MessageSquare, RefreshCw, Stethoscope, XCircle } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -110,6 +110,7 @@ export function Doctor() {
 	const { t, word, title } = useWording();
 	const { askAbout } = useChat();
 	const { data: status } = useStatus();
+	const qc = useQueryClient();
 	const [checks, setChecks] = useState<DoctorCheck[]>();
 	const [quick, setQuick] = useState(false);
 	const [busy, setBusy] = useState(false);
@@ -120,6 +121,9 @@ export function Doctor() {
 		setError(undefined);
 		try {
 			setChecks(await endpoints.doctor(q));
+			// Each plugin's result is now its last check: the service cards and Status show it.
+			void qc.invalidateQueries({ queryKey: ["plugins"] });
+			void qc.invalidateQueries({ queryKey: ["doctor-quick"] });
 		} catch (e) {
 			setError(e instanceof Error ? e.message : String(e));
 		} finally {

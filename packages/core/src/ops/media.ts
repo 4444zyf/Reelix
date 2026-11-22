@@ -81,9 +81,11 @@ defineOperation({
 		// A plugin's secrets are named by the plugin; their labels come from its strings.
 		const declared = ctx.app.plugins?.list().flatMap((p) => p.secrets) ?? [];
 		const names = new Set([...Object.keys(KNOWN_SECRETS), ...declared, ...Object.keys(ctx.app.secrets)]);
-		return [...names].sort().map((k) => ({ key: k, what: KNOWN_SECRETS[k] ?? ctx.app.plugins?.secretLabel(k) ?? "", set: !!ctx.app.secrets[k] }));
+		// A secret a plugin makes itself is listed as such: nobody is asked for it (docs/settings.md, "Credentials").
+		const managed = new Set(ctx.app.plugins?.list().flatMap((p) => p.managedSecrets) ?? []);
+		return [...names].sort().map((k) => ({ key: k, what: KNOWN_SECRETS[k] ?? ctx.app.plugins?.secretLabel(k) ?? "", set: !!ctx.app.secrets[k], ...(managed.has(k) ? { managed: true } : {}) }));
 	},
-	toText: (o: any[]) => o.map((s) => `${s.set ? "set    " : "missing"} ${s.key}${s.what ? ` — ${s.what}` : ""}`).join("\n"),
+	toText: (o: any[]) => o.map((s) => `${s.set ? "set    " : "missing"} ${s.key}${s.what ? ` — ${s.what}` : ""}${s.managed ? " (made by its plugin; not asked for)" : ""}`).join("\n"),
 });
 
 defineOperation({

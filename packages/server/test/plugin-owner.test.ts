@@ -295,6 +295,9 @@ test("what a plugin needs before it works, and the secrets it makes itself, are 
 		assert.deepEqual([info("push").secrets, info("push").managedSecrets], [[], ["plugins.push.vapid_private"]]);
 		const push = (await runOperation(t.app, "plugin.settings", { id: "push" }, { actor: "owner:web" })).output as any;
 		assert.equal(push.secrets[0].managed, true);
+		t.app.setSecret("plugins.push.vapid_private", "made-by-push-0123");
+		const listed = (await runOperation(t.app, "secret.list", {}, { actor: "owner:web" })).output as any[];
+		assert.equal(listed.find((s) => s.key === "plugins.push.vapid_private")?.managed, true, "listed as made by its plugin");
 		const refused = (await runOperation(t.app, "plugin.configure", { id: "push", secrets: { vapid_private: "x" } }, { actor: "owner:web" })).output as any;
 		assert.deepEqual([refused.result, refused.errors[0].message], ["failed", "made by the plugin itself"]);
 		await t.manager.disable("jellyfin");

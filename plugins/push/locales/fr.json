@@ -4,6 +4,8 @@
 	"testTitle": "Les notifications Reelix sont activées",
 	"testBody": "Cet appareil sera prévenu quand Reelix aura besoin de vous.",
 	"secrets": {
-		"vapid_private": "Clé propre à Reelix pour signer les notifications (créée automatiquement ; la changer coupe les notifications sur tous les appareils)"
+		"vapid_private": "Clé propre à Reelix pour signer les notifications (créée automatiquement ; la changer coupe les notifications sur tous les appareils)",
+		"vapid_private_set": "Créée automatiquement. Les appareils qui reçoivent les notifications sont sous Notifications.",
+		"vapid_private_unset": "Créée quand le premier appareil active les notifications."
 	}
 }

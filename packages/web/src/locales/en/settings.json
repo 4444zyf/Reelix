@@ -133,7 +133,10 @@
 			"keyHelp": "A magpie key with a spending limit set in magpie.",
 			"adminKey": "Admin key",
 			"adminKeyHelp": "Only to let Reelix manage magpie (routing groups and providers). It can change what every key may spend; leave it empty unless you want that."
-		}
+		},
+		"needs": "Still needed: {{what}}.",
+		"fillIn": "Fill it in",
+		"notTested": "Not tested since Reelix started or since its settings changed. Test connection checks it now."
 	},
 	"secrets": {
 		"stored": "Stored",
@@ -199,7 +202,8 @@
 		"testRole": "Test the chat model",
 		"testRoleHelp": "One short question through the chat role: the answer, the model that gave it, and how long it took.",
 		"providers": "Providers",
-		"providersHelp": "Where the models come from. Sign in or enter a key here; signing out stops its models."
+		"providersHelp": "Where the models come from. Sign in or enter a key here; signing out stops its models.",
+		"restingWhy": "{{model}} rests until {{until}}: {{reason}}."
 	},
 	"limits": {
 		"title": "Limits and schedule",
@@ -262,8 +266,11 @@
 		"denied": "Notifications are blocked for Reelix. Allow them in the system or browser settings, then come back.",
 		"pluginOff": "The notifications plugin is switched off. Switch it on under Plugins.",
 		"thisDevice": "This device",
-		"needsHttpsInbox": "Browser notifications need HTTPS (see docs/deployment.md, \"HTTPS\"). The Inbox works without them.",
-		"inboxWorks": "The Inbox works without notifications."
+		"needsHttpsInbox": "Browser notifications need HTTPS. The Inbox works without them.",
+		"inboxWorks": "The Inbox works without notifications.",
+		"httpsHow": "The quickest way is Tailscale on the NAS and this device (the command below gives an https address and opens nothing to the internet).",
+		"httpsGuide": "The HTTPS guide",
+		"otherChannels": "Notices also reach you in {{channels}}."
 	},
 	"plugins": {
 		"title": "Plugins",
@@ -414,7 +421,7 @@
 		"model": {
 			"title": "Your models",
 			"spent": "Today: ${{usd}} of ${{budget}} ({{tokens}} tokens). Resets at midnight.",
-			"spentUnmetered": "Today: ${{usd}} ({{tokens}} tokens), no daily budget.",
+			"spentUnmetered": "Today: ${{usd}} ({{tokens}} tokens). No limit of its own; the background limit (${{background}} a day) still applies.",
 			"reached": "The budget is used up: its model calls wait until midnight.",
 			"unmetered": "No daily budget",
 			"budget": "Daily budget (USD)",
@@ -451,13 +458,16 @@
 			"on": "On ({{count}})",
 			"off": "Off ({{count}})"
 		},
-		"needsSetup": "Needs: {{what}}",
 		"howItRuns": "How it runs",
 		"idVersion": "Id and version",
 		"hooksLabel": "Takes part in",
 		"installIntro": "Nothing runs until you approve what it declares.",
 		"installHow": "How to name a plugin",
-		"installPlaceholder": "Where the plugin comes from"
+		"installPlaceholder": "Where the plugin comes from",
+		"needsSetupOpen": "It needs setting up before it works: open its settings.",
+		"canReach": "Can reach: {{what}}",
+		"reachSetting": "the addresses in its settings",
+		"toolIds": "Assistant tools"
 	},
 	"channels": {
 		"title": "Chat channels",

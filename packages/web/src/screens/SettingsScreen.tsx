@@ -24,7 +24,8 @@ import { ApiError, endpoints, op, runOp } from "../lib/api";
 import { useChat } from "../lib/chat";
 import { disablePush, enablePush, isIos, pushState, testPush, type PushState } from "../lib/push";
 import { intlLocale } from "../lib/i18n";
-import type { DoctorCheck } from "../lib/types";
+import type { ModelFailure } from "../lib/types";
+import { failureReason } from "../components/common/ModelFailure";
 import { cn, formatNumber, timeAgo } from "../lib/utils";
 
 /** A dollar amount in the UI language's format (magpie limits are in USD). */
@@ -194,7 +195,9 @@ function ModelsSection({ config }: { config: Record<string, unknown> }) {
 							help={
 								<>
 									{t(`models.roleHelp.${r}`)} {uses.length > 0 && (inherits ? t("models.usesInherited", { models: uses.join(" › "), role: t(`models.role.${INHERITS[r as keyof typeof INHERITS]}`) }) : t("models.uses", { models: uses.join(" › ") }))}
-									{resting.length > 0 && <span className="block text-warning">{t("models.resting", { models: resting.join(", ") })}</span>}
+									{resting.map((m) => (
+										<RestingNote key={m} model={m} rest={status?.model.rests.find((x) => x.model === m)} />
+									))}
 								</>
 							}
 							attention={r === "chat" && !uses.length}
@@ -243,6 +246,17 @@ function ModelsSection({ config }: { config: Record<string, unknown> }) {
 				</Searchable>
 			)}
 		</Section>
+	);
+}
+
+/** A model resting after a failure: why, and from when it is tried again. */
+function RestingNote({ model, rest }: { model: string; rest?: { until: string } & ModelFailure }) {
+	const { t } = useTranslation("settings");
+	const { t: tm } = useTranslation("models");
+	return (
+		<span className="block text-warning">
+			{rest ? t("models.restingWhy", { model, reason: failureReason(tm, rest), until: new Date(rest.until).toLocaleTimeString(intlLocale(), { hour: "2-digit", minute: "2-digit" }) }) : t("models.resting", { models: model })}
+		</span>
 	);
 }
 
@@ -488,11 +502,12 @@ function Notifications() {
 				<p className="text-sm text-muted-foreground">{t("notifications.pluginOff")}</p>
 			</Searchable>
 		);
-	const hint = state === "needs_https" ? t("notifications.needsHttpsInbox") : state === "needs_install" ? t("notifications.needsInstall") : state === "unsupported" ? t(isIos() ? "notifications.unsupportedIos" : "notifications.unsupported") : state === "denied" ? t("notifications.denied") : null;
+	const hint = state === "needs_https" ? null : state === "needs_install" ? t("notifications.needsInstall") : state === "unsupported" ? t(isIos() ? "notifications.unsupportedIos" : "notifications.unsupported") : state === "denied" ? t("notifications.denied") : null;
 	return (
 		<Row label={t("notifications.thisDevice")} badge={<Badge tone={state === "on" ? "success" : state === "off" ? "muted" : "warning"}>{state === "on" ? t("notifications.on") : state === "off" ? t("notifications.off") : t("notifications.notReady")}</Badge>} search={[hint ?? undefined]}>
 			<div className="space-y-2">
 				{hint && <p className="text-sm text-muted-foreground">{hint}</p>}
+				{state === "needs_https" && <HttpsHelp />}
 				<div className="flex flex-wrap items-center gap-2">
 					{state === "off" && (
 						<Button variant="outline" disabled={!!busy} onClick={() => run("on", enablePush)}>
@@ -531,6 +546,26 @@ function Notifications() {
 				)}
 			</div>
 		</Row>
+	);
+}
+
+/** Why this device gets no notifications over plain HTTP, what still works, and how to get HTTPS (docs/web-app.md). */
+function HttpsHelp() {
+	const { t } = useTranslation("settings");
+	const channels = useQuery({ queryKey: ["channels"], queryFn: endpoints.channels });
+	const linked = channels.data?.filter((c) => c.linked) ?? [];
+	return (
+		<div className="space-y-1 text-sm text-muted-foreground">
+			<p>{t("notifications.needsHttpsInbox")}</p>
+			<p>
+				{t("notifications.httpsHow")}{" "}
+				<a href="https://github.com/4444zyf/Reelix/blob/main/docs/web-app.md" target="_blank" rel="noreferrer noopener" className="text-primary hover:underline">
+					{t("notifications.httpsGuide")}
+				</a>
+			</p>
+			<p className="font-mono text-xs">tailscale serve --bg 7878</p>
+			{linked.length > 0 && <p>{t("notifications.otherChannels", { channels: linked.map((c) => c.label).join(", ") })}</p>}
+		</div>
 	);
 }
 

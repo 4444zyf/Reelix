@@ -185,6 +185,8 @@ export type PluginInfo = {
 	managedSecrets: string[];
 	/** Optional and nothing of it set up: "not used", not "needs setup" (`needsSetup` is empty then). */
 	unused: boolean;
+	/** What it may reach on the network, as declared (`uses.network`): hosts, `config:<setting>` (the address in that setting), `*` (any site). */
+	reach: string[];
 	/** It declares network access (`uses.network`) or asked for its proxy: its requests can go through the proxy. */
 	network: boolean;
 	/** What it cannot work without and is not filled in yet: settings (paths, `servers`) and secret names. Empty for a plugin that is off. */

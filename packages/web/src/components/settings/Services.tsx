@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useStatus } from "../../app/Sidebar";
 import { endpoints, op, runOp } from "../../lib/api";
-import type { DoctorCheck, PluginInfo } from "../../lib/types";
+import type { DoctorCheck, PluginInfo, PluginSettings } from "../../lib/types";
 import { CheckRow } from "./Doctor";
 import { cn } from "../../lib/utils";
 import { Badge, type Tone } from "../common/Badge";
@@ -103,7 +103,8 @@ export function PluginService({ plugin, title, effect, children, also, groups }:
 	const state = pluginServiceState(p, test.results);
 	return (
 		<ServiceCard id={plugin} title={title} state={state} effect={effect(state)} search={[plugin, p.description]}>
-			<PluginProblem p={p} />
+			<PluginProblem p={p} setup={false} />
+			{settings.data && p.state !== "disabled" && <SetupNeeds p={p} data={settings.data} />}
 			{p.state === "disabled" ? (
 				<Button
 					variant="outline"
@@ -127,6 +128,8 @@ export function PluginService({ plugin, title, effect, children, also, groups }:
 						data={settings.data}
 						also={also}
 						groups={groups}
+						// Saved and started again: checked once, and the card shows what the check found.
+						onSaved={(s) => s === "active" && void test.run()}
 						footer={
 							<div className="space-y-2">
 								<Button type="button" variant="outline" disabled={test.busy || p.needsSetup.length > 0} onClick={() => void test.run()}>
@@ -134,7 +137,7 @@ export function PluginService({ plugin, title, effect, children, also, groups }:
 									{t("services.test")}
 								</Button>
 								{p.needsSetup.length > 0 && <p className="text-xs text-muted-foreground">{t("services.testAfterSetup")}</p>}
-								<TestResults results={test.results} rerun={() => void test.run()} />
+								<TestResults results={test.results ?? p.lastCheck?.results} rerun={() => void test.run()} />
 							</div>
 						}
 					/>
@@ -143,6 +146,36 @@ export function PluginService({ plugin, title, effect, children, also, groups }:
 				</>
 			)}
 		</ServiceCard>
+	);
+}
+
+/** What the plugin still needs, by the names its form shows, with a button to the first one. */
+function SetupNeeds({ p, data }: { p: PluginInfo; data: PluginSettings }) {
+	const { t } = useTranslation("settings");
+	if (!p.needsSetup.length) return null;
+	const secretNames = new Set([...data.secrets.map((s) => s.name), ...data.perEntry.map((s) => s.name)]);
+	const named = p.needsSetup.map((path) => {
+		const parts = path.split(".");
+		const entry = parts.find((x) => /^\d+$/.test(x));
+		const n = entry === undefined ? "" : ` #${Number(entry) + 1}`;
+		const last = parts.at(-1)!;
+		if (secretNames.has(last) && (parts.length === 1 || data.perEntry.some((s) => s.per === parts[0] && s.name === last)))
+			return { label: `${data.strings[`secrets.${last}`] ?? last}${n}`, anchor: `secret-plugins.${p.id}.${path}` };
+		const key = parts.filter((x) => !/^\d+$/.test(x)).join(".");
+		return { label: `${data.strings[`settings.${key}`] ?? last.replace(/_/g, " ")}${n}`, anchor: `field-plugins.${p.id}.${path}` };
+	});
+	const go = () => {
+		const el = document.getElementById(named[0]!.anchor);
+		el?.scrollIntoView({ behavior: "smooth", block: "center" });
+		(el?.matches("input, select, textarea") ? el : el?.querySelector<HTMLElement>("input, select, textarea"))?.focus({ preventScroll: true });
+	};
+	return (
+		<div className="flex flex-wrap items-center gap-2 rounded-md bg-warning/10 px-3 py-2 text-sm">
+			<span className="min-w-0 flex-1 text-warning">{t("services.needs", { what: named.map((x) => x.label).join(", ") })}</span>
+			<Button type="button" size="sm" variant="outline" onClick={go}>
+				{t("services.fillIn")}
+			</Button>
+		</div>
 	);
 }
 
@@ -450,7 +483,7 @@ function IndexersCard() {
 /** Settings → Services: one card per connection (docs/settings.md, "Services: one card per connection"). */
 export function Services({ config }: { config: Record<string, unknown> }) {
 	const { t } = useTranslation("settings");
-	const effect = (kind: "downloads" | "mediaServer") => (state: ServiceState) => (state === "connected" ? t(`services.${kind}.ok`) : state === "off" || state === "unused" ? t(`services.${kind}.off`) : t(`services.${kind}.broken`));
+	const effect = (kind: "downloads" | "mediaServer") => (state: ServiceState) => (state === "not_tested" ? t("services.notTested") : state === "connected" ? t(`services.${kind}.ok`) : state === "off" || state === "unused" ? t(`services.${kind}.off`) : t(`services.${kind}.broken`));
 	return (
 		<div className="space-y-4">
 			<ActiveProvider config={config} setting="downloader" operation="download.downloaders" kind="downloader" mapSetting="path_maps.downloaders" example={{ theirs: "/downloads", ours: "/media/torrents" }} effect={effect("downloads")} />

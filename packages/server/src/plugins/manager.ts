@@ -260,6 +260,7 @@ export class PluginManager implements PluginControl {
 					runs: p.manifest?.uses.runs ?? [],
 					secrets: this.secretRows(p).filter((s) => !s.managed).map((s) => s.key),
 					managedSecrets: this.secretRows(p).filter((s) => s.managed).map((s) => s.key),
+					reach: p.manifest?.uses.network ?? [],
 					network: (p.manifest?.uses.network.length ?? 0) > 0 || readsProxy.has(p.id),
 					...this.setupState(p),
 					tools: (p.manifest?.uses.tools ?? []).map((t) => `${p.id}_${t}`),

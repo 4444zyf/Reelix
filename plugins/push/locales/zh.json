@@ -4,6 +4,8 @@
 	"testTitle": "Reelix 通知已开启",
 	"testBody": "Reelix 需要你时，这台设备会收到提醒。",
 	"secrets": {
-		"vapid_private": "Reelix 用来签名通知的密钥（自动生成；更改后所有设备上的通知都会关闭）"
+		"vapid_private": "Reelix 用来签名通知的密钥（自动生成；更改后所有设备上的通知都会关闭）",
+		"vapid_private_set": "已自动生成。接收通知的设备在“通知”中。",
+		"vapid_private_unset": "在第一台设备开启通知时生成。"
 	}
 }
