@@ -221,6 +221,8 @@ A plugin that runs in the server process is trusted like Reelix itself. The sepa
 | [Deployment](docs/deployment.md) | Docker Compose, services, users and files, pre-flight. |
 | [Plugins: design](docs/plugins.md) | Seams, hooks, effects, trust, distribution. |
 | [Plugins: guide](docs/plugin-guide.md) · [reference](docs/plugin-reference.md) | Writing a plugin, with recipes; everything a plugin can use. |
+| [Settings](docs/settings.md) | The Settings page: service cards, credentials, states, Doctor. |
+| [Library folders](docs/library-folders.md) | Several folders per media type, and the rules that choose one. |
 | [Web API](docs/api.md) | The HTTP API behind the web UI. |
 | [Models](docs/models.md) · [magpie](docs/magpie.md) | Roles, fallback, and the optional gateway. |
 | [Subtitle translation](docs/subtitle-translation.md) | When and how a subtitle is translated. |
@@ -256,7 +258,7 @@ Coding agents working in this repository (Claude Code) are stopped before every 
 
 ## Status and roadmap
 
-- **Built:** the media loop (identify, search, download, organise, subtitles), follows, adoption of existing downloads, the web UI and installable web app, Telegram, background jobs, trends, subtitle translation, the plugin system with its process runtime and separate system users in the container.
+- **Built:** the media loop (identify, search, download, organise, subtitles), follows, adoption of existing downloads, the web UI and installable web app, Telegram, background jobs, trends, subtitle translation, the plugin system with its process runtime and separate system users in the container, several library folders per media type, and Settings with a card per service, a Doctor in your language and model sign-in in the page.
 - **Next:** a long run on a real NAS under Compose; the owner's review of the plugin API before it is declared `api: 1`.
 - **Reserved, not built:** a plugin index, published images and packages, an MCP plugin runtime, standing approvals.
 
