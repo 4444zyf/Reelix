@@ -3,7 +3,27 @@
 		"photo": "(photo)",
 		"secretInWeb": "Les mots de passe et les clés se saisissent dans le champ secret de l’application web : répondez-y dans l’application web.",
 		"error": "Erreur : {{message}}",
-		"hiddenBy": "masquée par {{plugins}}"
+		"hiddenBy": "masquée par {{plugins}}",
+		"model": {
+			"fallback": "({{from}} n'a pas pu répondre : {{reason}}. {{to}}, le modèle suivant de votre liste, a répondu.)",
+			"failed": "{{model}} n'a pas pu répondre : {{reason}}. {{action}}",
+			"reason": {
+				"signed_out": "déconnecté, ou sa clé a expiré",
+				"timeout": "pas de réponse à temps",
+				"rate_limited": "trop de requêtes pour le moment",
+				"budget": "son plafond de dépense est atteint",
+				"capability_images": "il ne lit pas les images",
+				"capability_context": "la conversation est trop longue pour lui",
+				"other": "il a répondu par une erreur"
+			},
+			"action": {
+				"reconnect": "Reconnectez son fournisseur dans Réglages → Modèles.",
+				"retry": "Envoyez votre message à nouveau.",
+				"wait": "Attendez un peu, puis réessayez.",
+				"waitUntil": "Utilisable à nouveau à partir de {{time}}.",
+				"choose_model": "Choisissez un modèle qui en est capable dans Réglages → Modèles."
+			}
+		}
 	},
 	"watcher": {
 		"downloaderUnreachableTitle": "{{name}} est injoignable",

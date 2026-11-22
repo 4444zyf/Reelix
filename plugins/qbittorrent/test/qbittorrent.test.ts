@@ -177,7 +177,7 @@ test("after a refused login no more logins are sent, until the owner tests the c
 test("operations and the Doctor check go through the plugin; set_prefs is admin, the agent may, a plugin may not", async () => {
 	const w = await world();
 	try {
-		w.qb.addOutside(torrent("Someone.Elses.Film", [["x.mkv", GB]]));
+		const outside = w.qb.addOutside(torrent("Someone.Elses.Film", [["x.mkv", GB]]));
 		assert.match((await w.run("qbittorrent.prefs", {})).text, /save_path: "\/downloads"/);
 		assert.equal(w.app.operations.get("qbittorrent.set_prefs")!.effect, "admin");
 		await w.run("qbittorrent.set_prefs", { prefs: { max_ratio: 2 } });
@@ -193,6 +193,15 @@ test("operations and the Doctor check go through the plugin; set_prefs is admin,
 		w.app.setConfig("path_maps.downloaders.qbittorrent", [{ theirs: "/downloads", ours: w.downloads }]);
 		const mapped = (await doctor(w.app, { quick: true })).find((c) => c.name === "downloader")!;
 		assert.deepEqual([mapped.state, mapped.raw], ["passed", `qBittorrent (qbittorrent) saves to /downloads (${w.downloads} here)`], "a plugin from a folder, so its label names it");
+		// A finished download is where the path map says: the same folder on both sides.
+		w.qb.complete(outside);
+		assert.equal((await doctor(w.app, { quick: true })).find((c) => c.name === "downloader")!.state, "passed");
+		// The same path names another folder here (both sides "/downloads", two disks): its downloads are not there.
+		const elsewhere = join(w.downloads, "..", "another-disk");
+		mkdirSync(elsewhere, { recursive: true });
+		w.app.setConfig("path_maps.downloaders.qbittorrent", [{ theirs: "/downloads", ours: elsewhere }]);
+		const other = (await doctor(w.app, { quick: true })).find((c) => c.name === "downloader")!;
+		assert.deepEqual([other.state, other.cause.key, other.action], ["failed", "downloader_other_folder", { label: { key: "actions.set_path_map" }, anchor: "field-path_maps.downloaders.qbittorrent" }]);
 	} finally {
 		await w.close();
 	}

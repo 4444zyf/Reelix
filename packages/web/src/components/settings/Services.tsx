@@ -190,16 +190,23 @@ function ProviderSwitch({ config, setting, operation, kind }: { config: Record<s
 }
 
 /** A provider's path map, saved with the Save of its card (it belongs to the active provider, not to the plugin's settings). */
-function usePathMap(config: Record<string, unknown>, path: string, service: string, example: { theirs: string; ours: string }): AlsoInForm {
+function usePathMap(config: Record<string, unknown>, path: string, service: string, example: { theirs: string; ours: string }, check?: string): AlsoInForm {
 	const { t } = useTranslation("settings");
 	const draft = useConfigDraft(config, [path]);
+	// Doctor's view of it (the same quick run as Status): a folder Reelix cannot see, or the same path naming another folder here.
+	const quick = useQuery({ queryKey: ["doctor-quick"], queryFn: () => endpoints.doctor(true), staleTime: 60_000, enabled: !!check });
+	const problem = quick.data?.find((c) => c.name === check && c.state === "failed" && c.action && "anchor" in c.action && c.action.anchor === `field-${path}`);
 	return {
 		dirty: draft.dirty,
-		save: draft.save,
+		save: async () => {
+			await draft.save();
+			void quick.refetch();
+		},
 		discard: draft.discard,
 		node: (
 			<Row label={t("pathMap.title")} help={t("pathMap.help", { service })} technical={path} error={draft.errors[path]}>
 				<PathMapEditor service={service} value={(draft.get(path) as PathMap | undefined) ?? []} onChange={(v) => draft.set(path, v.length ? v : undefined)} example={example} />
+				{problem && !draft.dirty && <CheckRow check={{ ...problem, action: undefined }} onRerun={() => void quick.refetch()} />}
 			</Row>
 		),
 	};
@@ -227,7 +234,7 @@ function ActiveProvider({ config, setting, operation, kind, mapSetting, example,
 
 function ProviderCard({ config, setting, operation, kind, plugin, name, mapPath, example, effect }: { config: Record<string, unknown>; setting: "downloader" | "media_server"; operation: string; kind: "downloader" | "mediaServer"; plugin: string; name: string; mapPath: string; example: { theirs: string; ours: string }; effect: (state: ServiceState) => ReactNode }) {
 	const { t } = useTranslation("settings");
-	const map = usePathMap(config, mapPath, name, example);
+	const map = usePathMap(config, mapPath, name, example, setting === "media_server" ? "media server" : "downloader");
 	return (
 		<PluginService plugin={plugin} title={t(`${kind}.cardTitle`, { name })} effect={effect} also={map}>
 			<ProviderSwitch config={config} setting={setting} operation={operation} kind={kind} />

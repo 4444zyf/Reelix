@@ -144,5 +144,6 @@
 		"server_unverified": "Non vérifié : {{server}} n'est pas connecté",
 		"server_sees": "{{server}} a une bibliothèque ici",
 		"server_unseen": "Aucune bibliothèque de {{server}} ne contient ce dossier"
-	}
+	},
+	"downloader_other_folder": "{{name}} enregistre dans {{folder}} et Reelix a {{ours}}, mais ses téléchargements terminés n'y sont pas : ce sont deux dossiers différents. Indiquez dans la correspondance de chemins où se trouve ici le dossier de {{name}}."
 }

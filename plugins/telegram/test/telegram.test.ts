@@ -176,6 +176,28 @@ test("chat: a long reply is split, not cut; cards are text; photos reach the age
 	}
 });
 
+test("a model that failed is said in the chat app: which, why, and the model that answered instead", async () => {
+	const { t, tg, stop } = await start();
+	try {
+		tg.message(OWNER, "hi");
+		await until("the message", () => t.conversation.received.length === 1);
+		const thread = threadOf(t);
+		const failed = { model: "acme/big", class: "rate_limited", action: "wait", message: "429" };
+		t.conversation.emit(thread, { type: "assistant_start", model: "acme/small", fallback: failed });
+		t.conversation.emit(thread, { type: "text_delta", delta: "Here it is." });
+		t.conversation.emit(thread, { type: "assistant_end" });
+		await until("the answer", () => tg.sent("sendMessage").some((c) => /Here it is\./.test(c.body.text)));
+		const answer = tg.sent("sendMessage").find((c) => /Here it is\./.test(c.body.text))!.body.text;
+		assert.match(answer, /acme\/big could not answer: too many requests for now\. acme\/small, the next model in your list, answered\./);
+		t.conversation.emit(thread, { type: "assistant_start", model: "acme/small" });
+		t.conversation.emit(thread, { type: "assistant_end", failure: { model: "acme/small", class: "signed_out", action: "reconnect", message: "401" } });
+		await until("the failure", () => tg.sent("sendMessage").some((c) => /acme\/small could not answer/.test(c.body.text)));
+		assert.match(tg.sent("sendMessage").at(-1)!.body.text, /signed out, or its key expired\. Sign in to its provider again in Settings → Models\./);
+	} finally {
+		await stop();
+	}
+});
+
 test("a question asking for a secret is never sent; the channel is sent to the web app", async () => {
 	const { t, tg, stop } = await start();
 	try {

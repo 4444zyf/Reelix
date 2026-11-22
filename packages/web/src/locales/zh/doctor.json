@@ -124,5 +124,6 @@
 		"server_unverified": "未验证：{{server}} 未连接",
 		"server_sees": "{{server}} 在此有媒体库",
 		"server_unseen": "{{server}} 没有包含此文件夹的媒体库"
-	}
+	},
+	"downloader_other_folder": "{{name}} 保存到 {{folder}}，Reelix 这边也有 {{ours}}，但它下载完成的文件不在那里：这是两个不同的文件夹。请在路径映射中写明 {{name}} 的文件夹在这边的位置。"
 }

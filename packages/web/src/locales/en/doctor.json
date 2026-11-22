@@ -134,5 +134,6 @@
 		"server_unverified": "Not verified: {{server}} is not connected",
 		"server_sees": "{{server}} has a library here",
 		"server_unseen": "No library of {{server}} holds this folder"
-	}
+	},
+	"downloader_other_folder": "{{name}} saves to {{folder}} and Reelix has {{ours}}, but its finished downloads are not there: the two are different folders. Say in the path map where {{name}}'s folder is here."
 }

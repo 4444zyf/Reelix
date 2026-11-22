@@ -175,7 +175,7 @@ test("a failing chat model: the conversation says why, and the next answer from 
 
 		const second = await host.runToEnd(chat.id, "again");
 		assert.deepEqual([second.model, second.failure, second.text], ["fake/good", undefined, "Done."]);
-		const start = host.subscribe(chat.id, 0, () => {}).backlog.find((e) => e.type === "assistant_start") as any;
+		const start = host.subscribe(chat.id, 0, () => {}).backlog.filter((e) => e.type === "assistant_start").at(-1) as any;
 		assert.deepEqual([start.model, start.fallback?.model, start.fallback?.class], ["fake/good", "fake/bad", "signed_out"], "the note names the failed model, live");
 		h = host.history(chat.id);
 		const answered = h.filter((m) => m.role === "assistant").at(-1) as any;
@@ -194,6 +194,43 @@ test("a failing chat model: the conversation says why, and the next answer from 
 		assert.deepEqual(record.failures.map((f: any) => [f.model, f.class, f.action]), [["fake/bad", "signed_out", "reconnect"]]);
 	} finally {
 		jobs.stop();
+		host.dispose();
+		model.close();
+		app.close();
+	}
+});
+
+test("a model refused before any answer (no key): the turn is saved, the page's stream follows the next model's answer, and the note names the refusal", async () => {
+	const { app, root } = tempApp();
+	const model = await twoModels();
+	const piDir = join(root, "pi");
+	mkdirSync(piDir, { recursive: true });
+	writeFileSync(join(piDir, "models.json"), JSON.stringify({ providers: { nokey: { baseUrl: model.url, api: "openai-completions", models: [{ id: "m" }] }, fake: { baseUrl: model.url, api: "openai-completions", apiKey: "local", models: [{ id: "good" }] } } }));
+	app.setConfig("models.roles", roles({ chat: ["nokey/m", "fake/good"] }));
+	const host = new AgentHost(app, { piDir, binDir: join(REPO_ROOT, "bin"), skillsDir: join(REPO_ROOT, "skills"), notify: async () => "in_1" });
+	await host.init();
+	try {
+		const chat = host.createThread("chat");
+		const seen: any[] = [];
+		await host.load(chat.id); // as the page's event route does
+		host.subscribe(chat.id, 0, (e) => seen.push(e));
+		const first = await host.runToEnd(chat.id, "hello");
+		assert.deepEqual([first.state, first.failure?.class], ["failed", "signed_out"]);
+		const second = await host.runToEnd(chat.id, "again");
+		assert.deepEqual([second.state, second.model, second.text], ["done", "fake/good", "Done."]);
+		const start = seen.filter((e) => e.type === "assistant_start").at(-1);
+		assert.deepEqual([start?.model, start?.fallback?.model], ["fake/good", "nokey/m"], "the stream opened before the refusal sees the next model's answer");
+		const seqs = seen.map((e) => e.seq);
+		assert.deepEqual(seqs, [...seqs].sort((a, b) => a - b), "event numbers go on, not from 1 again");
+		host.unload(chat.id);
+		const h = host.history(chat.id) as any[];
+		assert.deepEqual(
+			h.map((m) => [m.role, m.text, m.failure?.class, m.fallback?.model]),
+			[["user", "hello", undefined, undefined], ["assistant", "", "signed_out", undefined], ["user", "again", undefined, undefined], ["assistant", "Done.", undefined, "nokey/m"]],
+			"after a reload: the refused turn, its failure, and the note on the answer",
+		);
+		assert.deepEqual(model.asked, ["good"], "the refused model was never sent anything");
+	} finally {
 		host.dispose();
 		model.close();
 		app.close();

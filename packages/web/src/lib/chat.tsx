@@ -27,6 +27,8 @@ export type ThreadState = {
 	pending?: Ask;
 	epoch: number;
 	loadError?: string;
+	/** The last run whose end the stream delivered: a send that answers after it does not mark the thread running again. */
+	ended?: string;
 };
 
 const empty = (id: string): ThreadState => ({ id, loaded: false, items: [], seq: 0, running: false, thinking: false, epoch: 0 });
@@ -40,7 +42,8 @@ type Action =
 	| { type: "loadError"; id: string; error: string }
 	| { type: "event"; id: string; ev: UiEvent }
 	| { type: "local"; id: string; item: ChatItem }
-	| { type: "patch"; id: string; patch: Partial<ThreadState> };
+	| { type: "patch"; id: string; patch: Partial<ThreadState> }
+	| { type: "started"; id: string; runId: string };
 
 type Store = Record<string, ThreadState>;
 
@@ -72,7 +75,7 @@ function applyEvent(s: ThreadState, ev: UiEvent): ThreadState {
 			const items = s.items.map((it) => (it.role === "assistant" && it.streaming ? { ...it, streaming: false } : it));
 			const state = ev.state as string;
 			const extra: ChatItem[] = state === "interrupted" ? [{ role: "notice", text: i18n.t("chat:notices.stopped"), level: "info" }] : [];
-			return { ...s, running: false, thinking: false, pending: undefined, items: [...items, ...extra] };
+			return { ...s, running: false, thinking: false, pending: undefined, items: [...items, ...extra], ended: ev.runId as string | undefined };
 		}
 		case "user_message": {
 			const text = String(ev.text ?? "");
@@ -184,6 +187,9 @@ function reducer(store: Store, a: Action): Store {
 			return { ...store, [a.id]: { ...cur, items: [...cur.items, a.item] } };
 		case "patch":
 			return { ...store, [a.id]: { ...cur, ...a.patch } };
+		// The send answered; a run that failed at once may already have ended on the stream.
+		case "started":
+			return cur.ended === a.runId ? store : { ...store, [a.id]: { ...cur, running: true } };
 	}
 }
 
@@ -324,7 +330,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 				dispatch({ type: "local", id, item: { role: "user", text: body, images: images.length || undefined, local: true } });
 				setDrafts((d) => ({ ...d, [keyBefore]: "", [id]: "" }));
 				const r = await endpoints.sendMessage(id, body, images.map(({ data, mimeType }) => ({ data, mimeType })));
-				if (r.runId) dispatch({ type: "patch", id, patch: { running: true } });
+				if (r.runId) dispatch({ type: "started", id, runId: r.runId });
 				qc.invalidateQueries({ queryKey: ["threads"] });
 			} catch (e) {
 				toast({ title: i18n.t("chat:notices.messageNotSent"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });

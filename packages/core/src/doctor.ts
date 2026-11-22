@@ -282,6 +282,17 @@ async function downloaderCheck(app: Reelix): Promise<CheckResult> {
 			cli: `reelix config set path_maps.downloaders.${d.id} '[{"theirs":"${folder}","ours":"/media/torrents"}]'`,
 			raw: `${d.label} saves to ${folder}, which is ${ours} here, and Reelix cannot see it`,
 		};
+	// The folder exists here, but is it the same folder? Both sides can say /media and mean two disks: then the
+	// downloads the downloader has finished are not where Reelix looks (docs/settings.md, "Path maps").
+	const finished = (await d.call("list", [{}]).catch(() => [])).filter((t) => t.done && t.name).slice(0, 5);
+	if (finished.length && !finished.some((t) => existsSync(join(ourPath(app, d.id, t.folder), t.name))))
+		return {
+			state: "failed",
+			cause: msg("downloader_other_folder", { ...values, folder, ours }),
+			impact: msg("impact.downloads_not_found"),
+			action: open(`field-path_maps.downloaders.${d.id}`, "set_path_map"),
+			raw: `${d.label} has finished ${finished.map((t) => `${t.folder}/${t.name}`).join(", ")}; none of them is at the same place here (${finished.map((t) => join(ourPath(app, d.id, t.folder), t.name)).join(", ")})`,
+		};
 	return { state: "passed", cause: msg("downloader_ok", { ...values, folder: ours }), raw: `${d.label} saves to ${folder}${ours === folder ? "" : ` (${ours} here)`}` };
 }
 

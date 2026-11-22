@@ -3,7 +3,27 @@
 		"photo": "(photo)",
 		"secretInWeb": "Passwords and keys are entered in the web app's secret field: please answer this in the web app.",
 		"error": "Error: {{message}}",
-		"hiddenBy": "hidden by {{plugins}}"
+		"hiddenBy": "hidden by {{plugins}}",
+		"model": {
+			"fallback": "({{from}} could not answer: {{reason}}. {{to}}, the next model in your list, answered.)",
+			"failed": "{{model}} could not answer: {{reason}}. {{action}}",
+			"reason": {
+				"signed_out": "signed out, or its key expired",
+				"timeout": "no answer in time",
+				"rate_limited": "too many requests for now",
+				"budget": "its spending limit is reached",
+				"capability_images": "it cannot read images",
+				"capability_context": "the conversation is too long for it",
+				"other": "it answered with an error"
+			},
+			"action": {
+				"reconnect": "Sign in to its provider again in Settings → Models.",
+				"retry": "Send your message again.",
+				"wait": "Wait a little, then try again.",
+				"waitUntil": "It can be used again from {{time}}.",
+				"choose_model": "Choose a model that can, in Settings → Models."
+			}
+		}
 	},
 	"watcher": {
 		"downloaderUnreachableTitle": "{{name}} is unreachable",

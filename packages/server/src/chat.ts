@@ -1,8 +1,9 @@
 import { randomInt } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { type ChatIncoming, type ChatOut, type ChatReceipt, isOutcome } from "@reelix/plugin";
-import { CHAT_SEAM, type Reelix, ReelixError, answerApproves, answerInbox, channelActor, channelMayApprove, channelOfThread, channelRow, errorMessage, getInbox, inboxOfDelivery, outcomeText, playTargetText, recordChannelResult, setChannelOwner, setChannelThread, tr } from "@reelix/core";
+import { CHAT_SEAM, type Reelix, ReelixError, answerApproves, answerInbox, channelActor, channelMayApprove, channelOfThread, channelRow, errorMessage, getInbox, inboxOfDelivery, outcomeText, ownerLanguage, playTargetText, recordChannelResult, setChannelOwner, setChannelThread, tr } from "@reelix/core";
 import type { AgentHost, UiEvent } from "./agent/host.ts";
+import type { ModelFailure } from "./models.ts";
 
 const PAIRING_MS = 10 * 60_000;
 /** A chat app is told the agent is working at most this often. */
@@ -31,6 +32,8 @@ export class ChatBridge {
 	private host: ChatHost;
 	private codes = new Map<string, { code: string; until: number }>();
 	private replies = new Map<string, string>();
+	/** The model that failed before this answer, when the next one in the role's list gave it. */
+	private fallbacks = new Map<string, { failed: ModelFailure; by: string }>();
 	private queues = new Map<string, Promise<void>>();
 	private lastWorking = new Map<string, number>();
 	/** Reelix is stopping: a send still on its way records nothing (the database may be closed). */
@@ -149,14 +152,20 @@ export class ChatBridge {
 		switch (e.type) {
 			case "assistant_start":
 				this.replies.set(channel, "");
+				if (e.fallback) this.fallbacks.set(channel, { failed: e.fallback as ModelFailure, by: String(e.model ?? "") });
+				else this.fallbacks.delete(channel);
 				break;
 			case "text_delta":
 				this.replies.set(channel, (this.replies.get(channel) ?? "") + String(e.delta));
 				break;
 			case "assistant_end": {
 				const text = this.replies.get(channel)?.trim();
+				const fallback = this.fallbacks.get(channel);
 				this.replies.delete(channel);
-				if (text) this.say(channel, { type: "text", text });
+				this.fallbacks.delete(channel);
+				// Said as in the web chat: which model failed and why, and what to do (docs/models.md, "Why a call failed").
+				if (text) this.say(channel, { type: "text", text: fallback ? `${text}\n\n${tr(this.app, "chat.model.fallback", { from: fallback.failed.model ?? "?", reason: this.reason(fallback.failed), to: fallback.by })}` : text });
+				else if (e.failure) this.say(channel, { type: "text", text: this.failed(e.failure as ModelFailure) });
 				break;
 			}
 			case "tool_start":
@@ -176,6 +185,15 @@ export class ChatBridge {
 				break;
 		}
 	};
+
+	private reason(f: ModelFailure): string {
+		return tr(this.app, `chat.model.reason.${f.class === "capability" ? `capability_${f.capability ?? "context"}` : f.class}`);
+	}
+
+	private failed(f: ModelFailure): string {
+		const action = f.action === "wait" && f.until ? tr(this.app, "chat.model.action.waitUntil", { time: new Date(f.until).toLocaleString(ownerLanguage(this.app)) }) : tr(this.app, `chat.model.action.${f.action}`);
+		return tr(this.app, "chat.model.failed", { model: f.model ?? "?", reason: this.reason(f), action });
+	}
 
 	/** What leaves for the chat app: no known secret, and only what this channel can show. */
 	private prepared(m: ChatOut, can: { buttons: boolean; images: boolean }): ChatOut {

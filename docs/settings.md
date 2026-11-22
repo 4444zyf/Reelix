@@ -197,7 +197,7 @@ They come from Doctor's existing checks: the hard-link test and Jellyfin's libra
 The editor checks each row:
 - **Case:** a path that matches an existing folder only in letter case is flagged ("did you mean /media/Torrents?").
 - **Missing folder:** a Reelix-side path that does not exist is flagged.
-- **Same path, different folders:** when both sides use the same path (both `/media`) but Doctor's downloader check finds the files elsewhere, it says the two `/media` are different folders.
+- **Same path, different folders:** when both sides use the same path (both `/media`) but Doctor's downloader check finds the files elsewhere, it says the two `/media` are different folders. (Built: Doctor looks for up to five of the downloader's finished downloads where the path map puts them; when none is there, the check fails with that cause, and the downloader's card shows it under its path map.)
 
 ## Subtitles, proxy, playback
 
@@ -388,6 +388,7 @@ Built:
 - **Services:** cards for the downloader (with its path map and, when another is running, the switch, which asks first), indexers, media server (likewise), TMDB, subtitle sites (grouped by site, with what an account adds), Telegram (four steps, each waiting for the one before) and magpie (address and key, admin key under Advanced). A card's state comes from the plugin, its setup needs and its last check (`lastCheck`); "Test connection" runs `plugin.check`.
 - **Doctor:** structured results, states, a shared cause shown once, actions that jump to the field, raw output and the command line under Details (`components/settings/Doctor.tsx`, `core/doctor.ts`; `media.folder_checks`, `plugin.check`).
 - **Models:** with no model, the three steps (connect a provider in the page, with its own sign-in or its API key, or magpie; choose a chat model; test it), and a Providers list (sign in, sign out) once one is connected, refreshing while open (`components/settings/ModelSetup.tsx`); roles as ordered pickers showing the model each uses and those resting; "Reasoning effort", the translator. Failed model calls are classed (signed out, timed out, rate limited, budget, missing capability, other) with an action; the chat shows a failure and the next model's answer names it; an agent job hands its task to the role's next model and records both (`job_runs.models_json`); `model.test` (docs/models.md).
+- **Telegram** says a model's failure and the next model's answer in words, as the web chat does.
 - **Other operations:** `library.players`, `proxy.services`, `preferences.show`, `preferences.set`.
 
 Different from the text above, and why:

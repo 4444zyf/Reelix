@@ -41,6 +41,8 @@ const WEB_OWNER = "owner:web";
 
 class ThreadRuntime {
 	session!: AgentSession;
+	/** Where the conversation is saved: a turn refused before any answer is written here by Reelix. */
+	sessionManager?: SessionManager;
 	/** The model this conversation runs on, and why its last answer failed, if it did (docs/models.md). */
 	modelSpec?: string;
 	failure?: ModelFailure;
@@ -250,8 +252,11 @@ export class AgentHost {
 	/** Open (or create) the pi session behind a thread. */
 	async load(threadId: string): Promise<ThreadRuntime> {
 		let rt = this.threads.get(threadId);
-		// Its model failed last time: start the next run on the role's next model.
+		// Its model failed last time (or a plugin's extension changed): open the session again, on the role's next
+		// model. The page's open streams and the event numbers carry over, so it sees the next run as before.
+		let carried: Pick<ThreadRuntime, "listeners" | "events" | "seq"> | undefined;
 		if (rt?.stale && !rt.running) {
+			carried = { listeners: rt.listeners, events: rt.events, seq: rt.seq };
 			this.unload(threadId);
 			rt = undefined;
 		}
@@ -262,6 +267,7 @@ export class AgentHost {
 		const channel = kind === "channel" ? channelOfThread(this.app, threadId) : undefined;
 		const sections = await pluginSections(this.app, kind, channel); // the prompt itself is built synchronously
 		rt = new ThreadRuntime(threadId, kind, this.actorFor(row));
+		if (carried) Object.assign(rt, carried);
 		const cwd = this.app.paths.workspace;
 		const sessionManager = row.session_file && existsSync(row.session_file) ? SessionManager.open(row.session_file, this.app.paths.sessions, cwd) : SessionManager.create(cwd, this.app.paths.sessions);
 		const file = sessionManager.getSessionFile();
@@ -354,6 +360,7 @@ export class AgentHost {
 			customTools: tools as any,
 		});
 		rt.session = created;
+		rt.sessionManager = sessionManager;
 		rt.shellToken = this.tokens.issue(rt.actor);
 		created.subscribe((ev: any) => this.onSessionEvent(rt!, ev));
 		this.threads.set(threadId, rt);
@@ -420,11 +427,31 @@ export class AgentHost {
 			.catch((e) => {
 				// Refused before any answer (no key for the provider): a failure of the model too, unless it is something else.
 				const failure = rt.modelSpec ? this.router.classify(rt.modelSpec, errorMessage(e)) : undefined;
-				if (failure && failure.class !== "other") this.modelFailed(rt, failure);
+				if (failure && failure.class !== "other") {
+					this.modelFailed(rt, failure);
+					this.saveRefusedTurn(rt, text, errorMessage(e));
+				}
 				this.push(rt, { type: "error", message: this.app.redact(errorMessage(e)), failure: rt.failure });
 				this.finishRun(rt, "failed");
 			});
 		return runId;
+	}
+
+	/**
+	 * A model refused before answering (no key for its provider): pi saved nothing, so the owner's message and the
+	 * failure are written to the conversation as pi writes a failed answer, and survive a reload. The session is
+	 * opened again for the next run (the model failed), and reads them back.
+	 */
+	private saveRefusedTurn(rt: ThreadRuntime, text: string, error: string): void {
+		const [provider, ...rest] = rt.modelSpec!.split("/");
+		const model = this.router.resolve(rt.modelSpec!);
+		const zero = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } };
+		try {
+			rt.sessionManager?.appendMessage({ role: "user", content: text, timestamp: Date.now() } as any);
+			rt.sessionManager?.appendMessage({ role: "assistant", content: [], api: model?.api ?? "unknown", provider, model: rest.join("/"), usage: zero, stopReason: "error", errorMessage: this.app.redact(error), timestamp: Date.now() } as any);
+		} catch {
+			// The live page has the turn; only a reload would miss it.
+		}
 	}
 
 	/** The thread's model failed: the next answer from another model is marked with this reason (docs/models.md). */
