@@ -12,7 +12,7 @@ export function tempApp(opts: { base?: string } = {}) {
 	for (const d of [downloads, join(library, "Movies"), join(library, "Shows"), join(library, "Anime")]) mkdirSync(d, { recursive: true });
 	const app = new Reelix(join(root, "data"));
 	app.setConfig("downloads", downloads);
-	app.setConfig("library", { movies: join(library, "Movies"), shows: join(library, "Shows"), anime: join(library, "Anime") });
+	app.setConfig("library", { movies: [{ path: join(library, "Movies") }], shows: [{ path: join(library, "Shows") }], anime: [{ path: join(library, "Anime") }] });
 	return { app, root, media, downloads, library };
 }
 

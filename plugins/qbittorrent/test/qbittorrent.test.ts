@@ -234,7 +234,7 @@ test("an old data folder moves once: address, user, password, path map, the open
 	writeFileSync(join(data, "secrets.yaml"), "qbittorrent:\n  password: old-secret-password\n");
 	// The database as phase 5 left it: no downloader column, and an open "unreachable" notice under the old key.
 	const db = new DatabaseSync(join(data, "reelix.db"));
-	db.exec("ALTER TABLE downloads DROP COLUMN downloader; ALTER TABLE titles DROP COLUMN ratings_json; ALTER TABLE titles ADD COLUMN douban_rating REAL; UPDATE schema_version SET v = 9;");
+	db.exec("ALTER TABLE downloads DROP COLUMN downloader; ALTER TABLE titles DROP COLUMN ratings_json; ALTER TABLE titles ADD COLUMN douban_rating REAL; ALTER TABLE titles DROP COLUMN original_language; ALTER TABLE titles DROP COLUMN origin_country_json; ALTER TABLE titles DROP COLUMN genres_json; ALTER TABLE titles DROP COLUMN library_choice; UPDATE schema_version SET v = 9;");
 	db.prepare("INSERT INTO inbox (id, kind, title, status, payload_json, created_at) VALUES ('in_old', 'notice', 'qBittorrent is unreachable', 'open', ?, datetime('now'))").run(JSON.stringify({ dedupeKey: "qb-unreachable" }));
 	db.close();
 

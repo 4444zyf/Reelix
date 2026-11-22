@@ -8,6 +8,7 @@ import { type ReasonInput, replaceReasons } from "./reasons.ts";
 import { parsedFacts } from "./releases.ts";
 import type { Title } from "./titles.ts";
 import { AUDIO_EXT, SUB_EXT, VIDEO_EXT, isDiscStructure } from "./torrent.ts";
+import { type FolderTitle, allLibraryFolders, decidedText, folderLabel, libraryFolderFor, libraryRootFor, undecidedProblem, within } from "./library-folders.ts";
 import { ReelixError, nowIso } from "./util.ts";
 
 export type PlanItem = {
@@ -30,20 +31,6 @@ export type ApplyItemResult = { source: string; dest: string; status: "linked" |
 
 // ------------------------------------------------------------------ roots
 
-export function libraryRoots(app: Reelix): Record<MediaClass, string | undefined> {
-	return { movie: app.config.library.movies, show: app.config.library.shows, anime: app.config.library.anime };
-}
-
-export function libraryRootFor(app: Reelix, cls: MediaClass): string {
-	const root = libraryRoots(app)[cls] ?? (cls === "anime" ? app.config.library.shows : undefined);
-	if (!root) throw new ReelixError("not_configured", `No library folder for ${cls === "movie" ? "movies" : cls === "anime" ? "anime" : "shows"} is set (config library.${cls === "movie" ? "movies" : cls === "anime" ? "anime" : "shows"}).`);
-	return root;
-}
-
-function within(child: string, parent: string): boolean {
-	const rel = relative(parent, child);
-	return rel === "" || (!rel.startsWith("..") && !rel.startsWith(sep) && rel !== "..");
-}
 
 function realOrResolved(p: string): string {
 	try {
@@ -94,8 +81,8 @@ export function applyPlan(app: Reelix, plan: Plan): ApplyItemResult[] {
 	const downloads = app.config.downloads;
 	if (!downloads) throw new ReelixError("not_configured", "The download folder is not set (config downloads).");
 	const downloadsReal = realOrResolved(downloads);
-	const roots = Object.values(libraryRoots(app)).filter(Boolean).map((r) => realOrResolved(r!));
-	if (!roots.length) throw new ReelixError("not_configured", "No library folders are set (config library.*).");
+	const roots = allLibraryFolders(app).map(realOrResolved);
+	if (!roots.length) throw new ReelixError("not_configured", "No library folders are set (Settings → Paths, setting library).");
 
 	const results: ApplyItemResult[] = [];
 	for (const item of plan.items) {
@@ -236,14 +223,16 @@ export type AutoPlanResult = { plan: Plan; problems: string[] };
  */
 export function autoPlan(
 	app: Reelix,
-	title: TitleLike & { id: string; runtime_min?: number | null },
+	title: FolderTitle & { id: string; runtime_min?: number | null },
 	contentPath: string,
 	opts: { wanted?: { season: number; episode: number }[]; hash?: string; version?: string; seasonHint?: number; resolveAbsolute?: (n: number, hintSeason?: number) => { season: number; episode: number; how: string } | undefined } = {},
 ): AutoPlanResult {
 	const problems: string[] = [];
-	const cls = mediaClassOf(title);
-	const root = libraryRootFor(app, cls);
 	const plan: Plan = { title_id: title.id, download_hash: opts.hash, items: [] };
+	const decided = libraryFolderFor(app, title);
+	if (!("folder" in decided)) return { plan, problems: [undecidedProblem(title, decided.undecided)] };
+	const root = decided.folder.path;
+	plan.notes = [`Library folder: ${folderLabel(decided.folder)} (${decidedText(decided)})`];
 	if (!existsSync(contentPath)) return { plan, problems: [`Content path does not exist: ${contentPath}`] };
 
 	const files = listFilesRecursive(contentPath);
@@ -367,7 +356,7 @@ export async function plannedByReelix(app: Reelix, title: Title, contentPath: st
 	const result = autoPlan(app, title, contentPath, opts);
 	const { plan } = result;
 	if (!plan.items.length || !app.hooks.has("organise.name@1")) return result;
-	const root = libraryRootFor(app, mediaClassOf(title));
+	const root = libraryRootFor(app, title);
 	const reasons: ReasonInput[] = [];
 	const named = await app.hooks.pipeline(
 		"organise.name@1",
@@ -393,7 +382,7 @@ export async function plannedByReelix(app: Reelix, title: Title, contentPath: st
 
 /** Items the agent wrote are held to the limits of `organise.name`, without passing through it. */
 export function checkWrittenItems(app: Reelix, title: (TitleLike & { library_folder?: string | null }) | undefined, items: PlanItem[]): void {
-	const roots = title ? [libraryRootFor(app, mediaClassOf(title))] : Object.values(libraryRoots(app)).filter((r): r is string => !!r);
+	const roots = title ? [libraryRootFor(app, title)] : allLibraryFolders(app);
 	const fileDepth = title?.kind === "movie" ? 2 : 3;
 	const depths: Record<PlanItem["kind"], number[]> = { video: title ? [fileDepth] : [2, 3], subtitle: title ? [fileDepth] : [2, 3], audio: title ? [fileDepth] : [2, 3], extra: [fileDepth, fileDepth + 1], disc: [1] };
 	const titleFolders = title ? [folderName(title), ...(title.library_folder ? [basename(title.library_folder)] : [])] : undefined;

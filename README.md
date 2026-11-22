@@ -45,7 +45,7 @@ Most tools in this space are rule systems with a chat box added. Reelix is the o
 | | |
 | --- | --- |
 | **Chat that does the work** | Web, terminal (`reelix chat`) and Telegram. Each step the agent takes is shown and recorded. |
-| **Hard-link library** | Movies, shows and anime in Jellyfin's layout. Removal is safe: a last copy goes to a 14-day trash. |
+| **Hard-link library** | Movies, shows and anime in Jellyfin's layout, in one folder per type or several (for example Chinese-language and international films), sorted by rules the assistant learns from your library. Removal is safe: a last copy goes to a 14-day trash. |
 | **Subtitles** | Sources are searched and the content of each file is checked, not just its name. Missing languages can be translated by your own models into a separate styled file. |
 | **Trends and suggestions** | TMDB trending, anime airing now from Bangumi, and suggestions from your Jellyfin watch history. |
 | **Inbox and approvals** | Questions, plans and notices wait in one place. Destructive actions need your yes, and an approval is used once. |

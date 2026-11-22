@@ -70,7 +70,19 @@
 		"notChanged": "Not changed",
 		"history": "History",
 		"activity": "Activity",
-		"noHistory": "Nothing recorded yet"
+		"noHistory": "Nothing recorded yet",
+		"libraryFolder": "Library folder",
+		"libraryFolderAuto": "Automatic",
+		"libraryFolderAutoIs": "Automatic: {{name}}",
+		"libraryFolderUndecided": "No rule decides this title. When it is downloaded, the assistant compares it with what each folder holds and asks you if it is not sure. You can choose here.",
+		"libraryFolderRule": "Decided by the folder's rule ({{rule}}).",
+		"libraryFolderHow": {
+			"chosen": "Chosen for this title.",
+			"only": "The only folder for this type.",
+			"default": "No rule decides; this is the default folder.",
+			"there": "The title is already in this folder."
+		},
+		"libraryFolderFailed": "Could not set the folder"
 	},
 	"remove": {
 		"title": "Remove {{title}}?",

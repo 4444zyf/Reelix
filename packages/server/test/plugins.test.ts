@@ -391,7 +391,7 @@ test("metadata-refresh: the stored language moves once from the core store to th
 	const data = app.paths.root;
 	app.close();
 	const db = new DatabaseSync(join(data, "reelix.db"));
-	db.exec("ALTER TABLE inbox ADD COLUMN telegram_message_id INTEGER; DROP TABLE notice_deliveries; DROP TABLE chat_channels; DROP TABLE reasons; DROP TABLE proposals; DROP TABLE trial_results; ALTER TABLE downloads DROP COLUMN downloader; ALTER TABLE titles DROP COLUMN ratings_json; ALTER TABLE titles ADD COLUMN douban_rating REAL; UPDATE schema_version SET v = 2; DELETE FROM kv WHERE k LIKE 'plugin:%'; DROP TABLE approvals; DROP TABLE provider_outcomes; CREATE TABLE site_state (site TEXT PRIMARY KEY, state_json TEXT NOT NULL DEFAULT '{}', updated_at TEXT NOT NULL)");
+	db.exec("ALTER TABLE inbox ADD COLUMN telegram_message_id INTEGER; DROP TABLE notice_deliveries; DROP TABLE chat_channels; DROP TABLE reasons; DROP TABLE proposals; DROP TABLE trial_results; ALTER TABLE downloads DROP COLUMN downloader; ALTER TABLE titles DROP COLUMN ratings_json; ALTER TABLE titles ADD COLUMN douban_rating REAL; ALTER TABLE titles DROP COLUMN original_language; ALTER TABLE titles DROP COLUMN origin_country_json; ALTER TABLE titles DROP COLUMN genres_json; ALTER TABLE titles DROP COLUMN library_choice; UPDATE schema_version SET v = 2; DELETE FROM kv WHERE k LIKE 'plugin:%'; DROP TABLE approvals; DROP TABLE provider_outcomes; CREATE TABLE site_state (site TEXT PRIMARY KEY, state_json TEXT NOT NULL DEFAULT '{}', updated_at TEXT NOT NULL)");
 	db.prepare("INSERT INTO kv (k, v) VALUES ('metadata.locale', 'zh-CN')").run();
 	db.prepare("INSERT INTO job_runs (id, kind, payload_json, state, created_at) VALUES ('old', 'metadata_refresh', '{}', 'queued', 'now')").run();
 	db.close();

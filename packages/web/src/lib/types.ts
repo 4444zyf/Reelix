@@ -68,6 +68,12 @@ export type TitleShow = {
 	files: TitleFile[];
 	downloads: TitleDownload[];
 	follows: Follow[];
+	/** The library folders of the title's media type, and which one it goes to (docs/library-folders.md). */
+	library: {
+		folders: { path: string; name: string; default: boolean }[];
+		choice?: string | null;
+		decided: { path: string; how: "there" | "chosen" | "rule" | "only" | "default"; rule?: Record<string, string[]>; text: string } | null;
+	};
 };
 
 export type LibraryList = { titles: (Title & { file_count: number })[]; untracked_folders: string[] };

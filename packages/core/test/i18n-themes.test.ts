@@ -104,6 +104,8 @@ test("one language everywhere: tmdb.language migrates, TMDB follows the owner, s
 		app.setConfig("language", "en");
 		let t = await fetchTitle(app, "movie", 45745);
 		assert.equal(t.name, "Sintel");
+		const sintelFacts = { original_language: t.original_language, origin_country: t.origin_country };
+		assert.ok(t.original_language && t.genres.includes("Animation"));
 		assert.equal(chineseName(t), "辛特尔", "Chinese subtitle sites still get the Chinese name");
 		const folder = t.folder_name;
 		app.setConfig("language", "zh");
@@ -111,6 +113,7 @@ test("one language everywhere: tmdb.language migrates, TMDB follows the owner, s
 		t = (await import("../src/titles.ts")).getTitle(app, "movie:45745")!;
 		assert.equal(t.name, "辛特尔", "metadata re-read in the owner's new language");
 		assert.equal(t.folder_name, folder, "the library folder name never changes");
+		assert.deepEqual([t.original_language, t.origin_country, t.genres.includes("Animation")], [sintelFacts.original_language, sintelFacts.origin_country, true], "library rules see the same facts, genres in English, in any language");
 		assert.ok(tmdb.requests.some((r) => r.includes("language=zh-CN")));
 	} finally {
 		app.close();

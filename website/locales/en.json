@@ -69,7 +69,7 @@
 			},
 			{
 				"name": "Organise",
-				"text": "Hard links into a Jellyfin-standard library. Nothing is copied; seeding goes on."
+				"text": "Hard links into a Jellyfin-standard library, one folder per type or several, sorted by rules learned from your own library. Nothing is copied; seeding goes on."
 			},
 			{
 				"name": "Subtitle",

@@ -27,10 +27,18 @@ export type TitleRow = {
 	overview: string | null;
 	notes: string;
 	library_folder: string | null;
+	original_language: string | null;
+	origin_country_json: string;
+	genres_json: string;
+	/** The library folder chosen for the title before it is filed (docs/library-folders.md). */
+	library_choice: string | null;
 	updated_at: string;
 };
 
-export type Title = Omit<TitleRow, "names_json" | "bangumi_ids_json" | "seasons_json" | "ratings_json"> & {
+export type Title = Omit<TitleRow, "names_json" | "bangumi_ids_json" | "seasons_json" | "ratings_json" | "origin_country_json" | "genres_json"> & {
+	/** TMDB's countries of origin (ISO 3166-1) and genres (in English), which library rules match. */
+	origin_country: string[];
+	genres: string[];
 	names: string[];
 	bangumi_ids: number[];
 	/** Ratings at the metadata sources, by provider id (docs/plugins.md §7.6). */
@@ -39,8 +47,8 @@ export type Title = Omit<TitleRow, "names_json" | "bangumi_ids_json" | "seasons_
 };
 
 export function rowToTitle(r: TitleRow): Title {
-	const { names_json, bangumi_ids_json, seasons_json, ratings_json, ...rest } = r;
-	return { ...rest, names: json(names_json, []), bangumi_ids: json(bangumi_ids_json, []), seasons: json(seasons_json, []), ratings: json(ratings_json, {}) };
+	const { names_json, bangumi_ids_json, seasons_json, ratings_json, origin_country_json, genres_json, ...rest } = r;
+	return { ...rest, names: json(names_json, []), bangumi_ids: json(bangumi_ids_json, []), seasons: json(seasons_json, []), ratings: json(ratings_json, {}), origin_country: json(origin_country_json, []), genres: json(genres_json, []) };
 }
 
 export function getTitle(app: Reelix, id: string): Title | undefined {
@@ -66,7 +74,7 @@ function isLatin(s: string | undefined | null): boolean {
 
 export function classify(d: TmdbDetails): "movie" | "show" | "anime" {
 	if (d.kind === "movie") return "movie";
-	const animation = d.genres.some((g) => /animation|动画|動畫/i.test(g));
+	const animation = d.genres.includes("Animation");
 	const jp = d.original_language === "ja" || d.origin_country?.includes("JP");
 	return animation && jp ? "anime" : "show";
 }
@@ -78,11 +86,12 @@ export function upsertFromTmdb(app: Reelix, d: TmdbDetails): Title {
 	const seasons = d.seasons?.map((s) => ({ season_number: s.season_number, episode_count: s.episode_count, air_date: s.air_date }));
 	app.db
 		.prepare(
-			`INSERT INTO titles (id, kind, tmdb_id, media_class, name, original_name, folder_name, year, names_json, imdb_id, runtime_min, seasons_json, poster_path, rating, overview, updated_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			`INSERT INTO titles (id, kind, tmdb_id, media_class, name, original_name, folder_name, year, names_json, imdb_id, runtime_min, seasons_json, poster_path, rating, overview, original_language, origin_country_json, genres_json, updated_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			 ON CONFLICT(id) DO UPDATE SET name=excluded.name, original_name=excluded.original_name, folder_name=COALESCE(titles.folder_name, excluded.folder_name),
 			   year=excluded.year, names_json=excluded.names_json, imdb_id=COALESCE(excluded.imdb_id, titles.imdb_id), runtime_min=excluded.runtime_min,
-			   seasons_json=excluded.seasons_json, poster_path=excluded.poster_path, rating=excluded.rating, overview=excluded.overview, updated_at=excluded.updated_at`,
+			   seasons_json=excluded.seasons_json, poster_path=excluded.poster_path, rating=excluded.rating, overview=excluded.overview,
+			   original_language=excluded.original_language, origin_country_json=excluded.origin_country_json, genres_json=excluded.genres_json, updated_at=excluded.updated_at`,
 		)
 		.run(
 			id,
@@ -100,6 +109,9 @@ export function upsertFromTmdb(app: Reelix, d: TmdbDetails): Title {
 			d.poster_path ?? null,
 			d.vote_average ?? null,
 			d.overview ?? null,
+			d.original_language ?? null,
+			JSON.stringify(d.origin_country ?? []),
+			JSON.stringify(d.genres),
 			nowIso(),
 		);
 	return getTitle(app, id)!;

@@ -69,7 +69,7 @@
 			},
 			{
 				"name": "Ranger",
-				"text": "Des liens physiques vers une bibliothèque au format Jellyfin. Rien n'est copié ; le partage continue."
+				"text": "Des liens physiques vers une bibliothèque au format Jellyfin, un dossier par type ou plusieurs, triés selon des règles apprises de votre propre bibliothèque. Rien n'est copié ; le partage continue."
 			},
 			{
 				"name": "Sous-titrer",

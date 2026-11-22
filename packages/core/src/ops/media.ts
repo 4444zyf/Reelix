@@ -6,6 +6,8 @@ import { DOWNLOADER, MARK, downloaderOf } from "../downloader.ts";
 import { addDownload, downloadLine, fileDownload, getDownload, listDownloads, markFiled, reconcileAdd, setDownloadState } from "../downloads.ts";
 import { MEDIA_SERVER, tellMediaServer } from "../media-server.ts";
 import { type EnrichResult, enrichTitle } from "../metadata.ts";
+import { type Survey, decidedText, folderLabel, foldersOf, libraryFolderFor, setLibraryChoice, surveyLibraryFolders, whenText } from "../library-folders.ts";
+import { mediaClassOf } from "../naming.ts";
 import { haveInLibrary, libraryOverview, listRemoved, mediaFolders, removeFromLibrary, restoreRemoved, titleFiles } from "../library.ts";
 import { applyPlan, checkWrittenItems, plannedByReelix, planToText, type Plan } from "../organiser.ts";
 import { grabFrame, probe, probeToText } from "../probe.ts";
@@ -174,7 +176,10 @@ defineOperation({
 		const files = titleFiles(ctx.app, t.id);
 		const downloads = ctx.app.db.prepare("SELECT hash, name, state, progress, reason, added_at FROM downloads WHERE title_id = ? ORDER BY added_at DESC").all(t.id);
 		const follows = ctx.app.db.prepare("SELECT * FROM follows WHERE title_id = ?").all(t.id);
-		return { title: t, have: haveInLibrary(ctx.app, t), files, downloads, follows };
+		const folders = foldersOf(ctx.app, mediaClassOf(t));
+		const decided = folders.length ? libraryFolderFor(ctx.app, t) : undefined;
+		const library = { folders: folders.map((f) => ({ path: f.path, name: folderLabel(f), default: !!f.default })), choice: t.library_choice, decided: decided && "folder" in decided ? { path: decided.folder.path, how: decided.how, rule: decided.rule, text: decidedText(decided) } : null };
+		return { title: t, have: haveInLibrary(ctx.app, t), files, downloads, follows, library };
 	},
 	toText(o: any) {
 		const f = o.files.map((x: any) => `  ${x.kind}${x.exists ? "" : " (MISSING)"}: ${x.dest}`).join("\n");
@@ -218,6 +223,20 @@ defineOperation({
 		return requireTitle(ctx.app, t.id);
 	},
 	toText: (t: any) => titleSummary(t),
+	titleOf: (i) => i.id,
+});
+
+defineOperation({
+	name: "title.library_folder.set",
+	summary: "Choose the library folder a title goes to, before it is filed (when its media type has several folders)",
+	description: "folder: a folder's path or name from Settings → Paths; empty clears the choice. A title already in the library stays where it is.",
+	effect: "write",
+	input: Type.Object({ id: Type.String(), folder: Type.String() }),
+	positional: ["id", "folder"],
+	async run(ctx, i) {
+		return setLibraryChoice(ctx.app, requireTitle(ctx.app, i.id), i.folder);
+	},
+	toText: (o: any) => (o.folder ? `${o.title} goes to ${o.folder}` : `${o.title}: choice cleared`),
 	titleOf: (i) => i.id,
 });
 
@@ -498,6 +517,24 @@ defineOperation({
 		return mediaFolders(ctx.app, i.path);
 	},
 	toText: (o: any) => `${o.path}${o.parent ? ` (up: ${o.parent})` : ""}\n${o.folders.map((f: any) => `  ${f.name}/`).join("\n") || "  (no folders)"}${o.truncated ? "\n  …" : ""}`,
+});
+
+defineOperation({
+	name: "library.folders.survey",
+	summary: "What each library folder holds, with the language, countries and genres of its titles, and the titles the current rules would put elsewhere",
+	description: "For learning how the owner sorts titles into folders (skill library-folders). Reads TMDB for titles it does not know yet, up to 200 per call; call again for the rest.",
+	effect: "read",
+	input: Type.Object({ type: Type.Optional(Type.Union([Type.Literal("movies"), Type.Literal("shows"), Type.Literal("anime")])) }),
+	positional: ["type"],
+	async run(ctx, i) {
+		return surveyLibraryFolders(ctx.app, i.type);
+	},
+	toText: (o: Survey) => {
+		const top = (m: Record<string, number>) => Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, n]) => `${k} ${n}`).join(", ") || "-";
+		const folders = o.folders.map((f) => `${f.type}: ${f.name}${f.default ? " [default]" : ""} — ${f.path}\n  ${f.titles.length} titles, ${f.untagged.length} untagged\n  languages: ${top(f.counts.original_language)}\n  countries: ${top(f.counts.origin_country)}\n  genres: ${top(f.counts.genre)}${f.rules.length ? `\n  rules: ${f.rules.map((r) => whenText(r.when)).join("; ")}` : ""}`);
+		const misfits = o.misfits.length ? `\nThe rules would put elsewhere (${o.misfits.length}):\n${o.misfits.slice(0, 40).map((m) => `  ${m.name}: in ${m.in}, rules say ${m.rules_say ?? "nothing"}`).join("\n")}` : "\nThe rules put every identified title where it is.";
+		return `${folders.join("\n") || "No library folders."}${misfits}${o.unread ? `\n${o.unread} titles not read from TMDB yet; call again.` : ""}`;
+	},
 });
 
 defineOperation({

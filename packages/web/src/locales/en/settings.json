@@ -429,5 +429,31 @@
 			"library": "Choose the folder Jellyfin scans as this library: the one that holds a folder per title, not a title's own folder. For now each media type has one library folder."
 		},
 		"tooDeep": "This is a single title's folder (or one of its season folders). Go up to the folder that holds all the titles."
+	},
+	"libraryFolders": {
+		"none": "No folder yet.",
+		"animeUsesShows": "No folder of its own: anime goes to the shows' folders.",
+		"add": "Add a folder",
+		"change": "Choose another folder",
+		"up": "Move up",
+		"down": "Move down",
+		"remove": "Remove the folder from the list (nothing on disk changes)",
+		"name": "Name",
+		"default": "Default",
+		"addRule": "Add a rule",
+		"removeRule": "Remove rule",
+		"help": "Rules are checked from the top. A title matches a rule when it has one of the values listed for each field you fill in. A title no rule decides goes to the default folder; with none, the assistant chooses by what each folder already holds and asks you if it is not sure. A title already in the library stays where it is.",
+		"fact": {
+			"original_language": "Original language",
+			"origin_country": "Country of origin",
+			"genre": "Genre"
+		},
+		"example": {
+			"original_language": "zh, ja",
+			"origin_country": "CN, TW, HK",
+			"genre": "Documentary"
+		},
+		"learn": "Ask the assistant to learn the rules",
+		"learnPrompt": "Look at what each of my library folders for {{type}} already holds and propose rules for which titles go where (skill library-folders)."
 	}
 }

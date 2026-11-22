@@ -7,7 +7,7 @@ import type { Reelix } from "../app.ts";
 import type { ModelRole } from "../config.ts";
 import { json } from "../db.ts";
 import { subtitlePathFor } from "../naming.ts";
-import { libraryRoots } from "../organiser.ts";
+import { allLibraryFolders } from "../library-folders.ts";
 import { parseReleaseName } from "../parser.ts";
 import { findBinary, probe } from "../probe.ts";
 import { requireTitle } from "../titles.ts";
@@ -617,7 +617,7 @@ function humanSubtitleExists(video: string, lang: SubLang, tracks: Track[]): boo
 type Track = { language?: string; title?: string };
 
 function placeTranslation(app: Reelix, t: TranslationRow, o: TranslationOptions, video: string, parsed: ParsedSubtitle, work: Work, tracks: Track[], titleName?: string): { path: string; isDefault: boolean } {
-	const roots = Object.values(libraryRoots(app)).filter(Boolean) as string[];
+	const roots = allLibraryFolders(app);
 	if (!roots.some((r) => video.startsWith(r.replace(/\/+$/, "") + "/"))) throw new ReelixError("outside_library", "The video is not inside the library, so nothing was written next to it.");
 	const preset = getPreset(o.style);
 	let look = o.look ?? preset.look;

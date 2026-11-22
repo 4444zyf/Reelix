@@ -313,7 +313,7 @@ Douban is best-effort. When it is unavailable nothing else stops, and subhd can 
 
 ### 5.4 Organising into the library
 
-**Layout (agreed):** Jellyfin's conventions, English or original titles, the TMDB ID in the folder name, three top-level folders that become three Jellyfin libraries.
+**Layout (agreed):** Jellyfin's conventions, English or original titles, the TMDB ID in the folder name, three top-level folders that become three Jellyfin libraries. A media type may have several library folders, each a Jellyfin library; which one a title goes to is decided first ([library-folders.md](library-folders.md), 2026-11-22).
 
 ```
 Movies/Oppenheimer (2023) [tmdbid-872585]/Oppenheimer (2023) [tmdbid-872585] - 2160p.mkv

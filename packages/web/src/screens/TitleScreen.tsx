@@ -128,6 +128,42 @@ function OpButton({ op, input, icon, label }: { op: string; input: object; icon:
 	);
 }
 
+/** Where the title will be filed, when its media type has several library folders (docs/library-folders.md). */
+function LibraryFolderChoice({ id, library }: { id: string; library: TitleShow["library"] }) {
+	const { t: tr } = useTranslation("library");
+	const qc = useQueryClient();
+	const [busy, setBusy] = useState(false);
+	const d = library.decided;
+	const choose = async (folder: string) => {
+		setBusy(true);
+		try {
+			await runOp("title.library_folder.set", { id, folder });
+			await qc.invalidateQueries({ queryKey: ["title", id] });
+		} catch (e) {
+			toast({ title: tr("title.libraryFolderFailed"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+		} finally {
+			setBusy(false);
+		}
+	};
+	const why = !d ? tr("title.libraryFolderUndecided") : d.how === "rule" ? tr("title.libraryFolderRule", { rule: Object.entries(d.rule ?? {}).map(([k, v]) => `${k} ${v.join("/")}`).join(", ") }) : tr(`title.libraryFolderHow.${d.how}`);
+	return (
+		<div className="mb-3 grid gap-1">
+			<label htmlFor="library-folder" className="text-xs font-medium">
+				{tr("title.libraryFolder")}
+			</label>
+			<select id="library-folder" disabled={busy} value={library.choice ?? ""} onChange={(e) => void choose(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
+				<option value="">{d && d.how !== "chosen" ? tr("title.libraryFolderAutoIs", { name: library.folders.find((f) => f.path === d.path)?.name ?? d.path }) : tr("title.libraryFolderAuto")}</option>
+				{library.folders.map((f) => (
+					<option key={f.path} value={f.path}>
+						{f.name}
+					</option>
+				))}
+			</select>
+			<p className="text-xs text-muted-foreground">{why}</p>
+		</div>
+	);
+}
+
 function Section({ title, icon, children, actions }: { title: string; icon: React.ReactNode; children: React.ReactNode; actions?: React.ReactNode }) {
 	return (
 		<section className="surface-card rounded-xl p-4">
@@ -316,6 +352,7 @@ export function TitleScreen() {
 					)}
 
 					<Section title={tr("title.files", { n: data.files.length })} icon={<FileVideo />}>
+						{!data.have.folder && data.library.folders.length > 1 && <LibraryFolderChoice id={t.id} library={data.library} />}
 						{data.have.folder && <p className="mb-2 break-all text-xs text-muted-foreground">{tr("title.folder", { folder: short(data.have.folder) })}</p>}
 						{data.files.length === 0 ? (
 							<p className="text-sm text-muted-foreground">{tr("title.noFiles")}</p>

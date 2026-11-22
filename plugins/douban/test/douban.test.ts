@@ -68,7 +68,7 @@ test("douban.rating: the plugin's operation records the rating through title.enr
 test("an old database's Douban rating becomes the title's rating from the source douban", () => {
 	const w = tempApp();
 	const data = w.app.paths.root;
-	w.app.db.exec("ALTER TABLE titles DROP COLUMN ratings_json; ALTER TABLE titles ADD COLUMN douban_rating REAL; UPDATE schema_version SET v = 10;");
+	w.app.db.exec("ALTER TABLE titles DROP COLUMN ratings_json; ALTER TABLE titles ADD COLUMN douban_rating REAL; ALTER TABLE titles DROP COLUMN original_language; ALTER TABLE titles DROP COLUMN origin_country_json; ALTER TABLE titles DROP COLUMN genres_json; ALTER TABLE titles DROP COLUMN library_choice; UPDATE schema_version SET v = 10;");
 	w.app.db.prepare("INSERT INTO titles (id, kind, tmdb_id, media_class, name, douban_id, douban_rating, updated_at) VALUES ('movie:872585', 'movie', 872585, 'movie', 'Oppenheimer', '35593344', 8.8, '2026-11-01T00:00:00Z'), ('movie:45745', 'movie', 45745, 'movie', 'Sintel', NULL, NULL, '2026-11-01T00:00:00Z')").run();
 	w.app.close();
 	const app = new Reelix(data);

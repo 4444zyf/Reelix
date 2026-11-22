@@ -373,6 +373,14 @@ const MIGRATIONS: string[] = [
 	UPDATE titles SET ratings_json = json_object('douban', json_object('value', douban_rating, 'scale', 10, 'label', 'Douban', 'at', updated_at)) WHERE douban_rating IS NOT NULL;
 	ALTER TABLE titles DROP COLUMN douban_rating;
 	`,
+	// 12: several library folders per media type (docs/library-folders.md): the TMDB facts the rules match,
+	// and the folder the owner (or the agent) chose for a title before it is filed
+	`
+	ALTER TABLE titles ADD COLUMN original_language TEXT;
+	ALTER TABLE titles ADD COLUMN origin_country_json TEXT NOT NULL DEFAULT '[]';
+	ALTER TABLE titles ADD COLUMN genres_json TEXT NOT NULL DEFAULT '[]';
+	ALTER TABLE titles ADD COLUMN library_choice TEXT;
+	`,
 ];
 
 export function openDb(path: string): Db {

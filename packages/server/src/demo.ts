@@ -102,7 +102,7 @@ export async function startDemo(root: string, o: { password?: string; model?: st
 	const firstRun = !existsSync(join(root, "config.yaml"));
 	const app = new Reelix(root);
 	app.setConfig("downloads", downloads);
-	app.setConfig("library", { movies: join(library, "Movies"), shows: join(library, "Shows"), anime: join(library, "Anime") });
+	app.setConfig("library", { movies: [{ path: join(library, "Movies") }], shows: [{ path: join(library, "Shows") }], anime: [{ path: join(library, "Anime") }] });
 	app.setConfig("plugins.qbittorrent", { ...(app.config.plugins.qbittorrent as object | undefined), url: qb.url });
 	app.setConfig("plugins.jackett.servers", [{ url: jackett.url }]);
 	app.setConfig("tmdb.base_url", tmdb.url);

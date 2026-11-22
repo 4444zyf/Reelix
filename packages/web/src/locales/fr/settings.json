@@ -436,5 +436,31 @@
 			"library": "Choisissez le dossier que Jellyfin analyse comme cette bibliothèque : celui qui contient un dossier par titre, pas le dossier d'un titre. Pour l'instant, chaque type de média a un seul dossier de bibliothèque."
 		},
 		"tooDeep": "Ceci est le dossier d'un seul titre (ou d'une de ses saisons). Remontez jusqu'au dossier qui contient tous les titres."
+	},
+	"libraryFolders": {
+		"none": "Aucun dossier pour l'instant.",
+		"animeUsesShows": "Pas de dossier propre : les animes vont dans les dossiers des séries.",
+		"add": "Ajouter un dossier",
+		"change": "Choisir un autre dossier",
+		"up": "Monter",
+		"down": "Descendre",
+		"remove": "Retirer le dossier de la liste (rien ne change sur le disque)",
+		"name": "Nom",
+		"default": "Par défaut",
+		"addRule": "Ajouter une règle",
+		"removeRule": "Supprimer la règle",
+		"help": "Les règles sont vérifiées de haut en bas. Un titre correspond à une règle s'il a l'une des valeurs indiquées pour chaque champ rempli. Un titre qu'aucune règle ne décide va dans le dossier par défaut ; sans dossier par défaut, l'assistant choisit d'après ce que contient déjà chaque dossier et vous demande s'il n'est pas sûr. Un titre déjà dans la bibliothèque reste où il est.",
+		"fact": {
+			"original_language": "Langue originale",
+			"origin_country": "Pays d'origine",
+			"genre": "Genre"
+		},
+		"example": {
+			"original_language": "zh, ja",
+			"origin_country": "CN, TW, HK",
+			"genre": "Documentary"
+		},
+		"learn": "Demander à l'assistant d'apprendre les règles",
+		"learnPrompt": "Regarde ce que contient déjà chacun de mes dossiers de bibliothèque pour « {{type}} » et propose des règles sur quel titre va où (compétence library-folders)."
 	}
 }

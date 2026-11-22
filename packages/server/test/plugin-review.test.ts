@@ -364,7 +364,7 @@ test("M8: an agent's plan may file a disc folder and change the case of an exten
 	withApp((app) => {
 		assert.equal(core.libraryPathProblem("Film (2020)/Film.mkv", { depths: [2], extension: ".MKV" }), undefined);
 		assert.match(core.libraryPathProblem("Film (2020)/Film.mp4", { depths: [2], extension: ".MKV" })!, /extension/);
-		const dest = join(app.config.library.movies!, "Film (2020) [tmdbid-1]");
+		const dest = join(app.config.library.movies[0]!.path, "Film (2020) [tmdbid-1]");
 		core.checkWrittenItems(app, undefined, [{ kind: "disc", source: "/downloads/Film.2020.COMPLETE.BLURAY", dest } as core.PlanItem]);
 	}));
 

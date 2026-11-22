@@ -8,6 +8,7 @@ import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { Screen } from "../components/common/Screen";
 import { AppearanceSection } from "../components/common/ThemePicker";
 import { FolderPicker } from "../components/settings/FolderPicker";
+import { LibraryFolders } from "../components/settings/LibraryFolders";
 import { Plugins, SecretRow } from "../components/settings/Plugins";
 import { ErrorState, Loading, Spinner } from "../components/common/States";
 import { toast } from "../components/hooks/use-toast";
@@ -576,9 +577,9 @@ export function SettingsScreen() {
 					<Section id="paths" icon={<FolderTree />} title={t("paths.title")} description={t("paths.description")}>
 						<Field config={c} path="media_root" label={t("paths.mediaRoot")} />
 						<Field config={c} path="downloads" label={t("paths.downloads")} type="folder" />
-						<Field config={c} path="library.movies" label={t("paths.films")} type="folder" />
-						<Field config={c} path="library.shows" label={t("paths.shows")} type="folder" />
-						<Field config={c} path="library.anime" label={t("paths.anime")} type="folder" />
+						{(["movies", "shows", "anime"] as const).map((k) => (
+							<LibraryFolders key={k} kind={k} label={t(`paths.${k === "movies" ? "films" : k}`)} folders={(get(c, `library.${k}`) as never[]) ?? []} showsFolders={((get(c, "library.shows") as unknown[]) ?? []).length} />
+						))}
 					</Section>
 
 					<Section id="downloaders" icon={<Download />} title={t("downloader.title")} description={t("downloader.description")}>

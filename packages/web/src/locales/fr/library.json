@@ -75,7 +75,19 @@
 		"notChanged": "Non modifié",
 		"history": "Historique",
 		"activity": "Activité",
-		"noHistory": "Rien d’enregistré pour l’instant"
+		"noHistory": "Rien d’enregistré pour l’instant",
+		"libraryFolder": "Dossier de bibliothèque",
+		"libraryFolderAuto": "Automatique",
+		"libraryFolderAutoIs": "Automatique : {{name}}",
+		"libraryFolderUndecided": "Aucune règle ne décide pour ce titre. Une fois téléchargé, l'assistant le compare au contenu de chaque dossier et vous demande s'il n'est pas sûr. Vous pouvez choisir ici.",
+		"libraryFolderRule": "Décidé par la règle du dossier ({{rule}}).",
+		"libraryFolderHow": {
+			"chosen": "Choisi pour ce titre.",
+			"only": "Le seul dossier pour ce type.",
+			"default": "Aucune règle ne décide ; c'est le dossier par défaut.",
+			"there": "Le titre est déjà dans ce dossier."
+		},
+		"libraryFolderFailed": "Impossible de choisir le dossier"
 	},
 	"remove": {
 		"title": "Supprimer {{title}} ?",

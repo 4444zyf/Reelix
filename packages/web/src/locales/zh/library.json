@@ -65,7 +65,19 @@
 		"notChanged": "未更改",
 		"history": "历史",
 		"activity": "活动",
-		"noHistory": "暂无记录"
+		"noHistory": "暂无记录",
+		"libraryFolder": "媒体库文件夹",
+		"libraryFolderAuto": "自动",
+		"libraryFolderAutoIs": "自动：{{name}}",
+		"libraryFolderUndecided": "没有规则能决定这部影片。下载完成后，助手会把它和各个文件夹里已有的内容比较，拿不准时会问你。你也可以在这里选择。",
+		"libraryFolderRule": "由文件夹的规则决定（{{rule}}）。",
+		"libraryFolderHow": {
+			"chosen": "已为这部影片选定。",
+			"only": "这个类型只有这一个文件夹。",
+			"default": "没有规则能决定，使用默认文件夹。",
+			"there": "这部影片已经在这个文件夹里。"
+		},
+		"libraryFolderFailed": "无法设置文件夹"
 	},
 	"remove": {
 		"title": "移除 {{title}}？",

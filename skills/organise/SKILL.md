@@ -4,7 +4,7 @@ description: Filing downloads into the library by hard link, in Jellyfin's namin
 ---
 # Organising into the library
 
-**Layout** (one root each for Movies, Shows, Anime; see config `library`):
+**Layout** (inside the library folder chosen for the title: a media type may have several, see skill library-folders; `reelix title show <id>` says which):
 ```
 Movies/Name (Year) [tmdbid-N]/Name (Year) [tmdbid-N] - 2160p.mkv
 Shows/Name (Year) [tmdbid-N]/Season 01/Name (Year) S01E01.mkv

@@ -4,8 +4,9 @@ import type { Reelix } from "./app.ts";
 import { downloaderOf } from "./downloader.ts";
 import { getDownload } from "./downloads.ts";
 import { tellMediaServer } from "./media-server.ts";
-import { ignoredName, libraryRoots } from "./organiser.ts";
-import { type Title, requireTitle } from "./titles.ts";
+import { allLibraryFolders } from "./library-folders.ts";
+import { ignoredName } from "./organiser.ts";
+import { type Title, requireTitle, rowToTitle } from "./titles.ts";
 import { ReelixError, nowIso } from "./util.ts";
 
 export type FileRow = { id: number; title_id: string | null; download_hash: string | null; source: string | null; dest: string; kind: string; version_label: string | null; linked: number; created_at: string };
@@ -18,7 +19,7 @@ export function titleFiles(app: Reelix, titleId: string): (FileRow & { episodes:
 
 /** Which library root holds a path. */
 function rootOf(app: Reelix, p: string): string | undefined {
-	return Object.values(libraryRoots(app)).find((r) => r && (p === r || p.startsWith(r.replace(/\/+$/, "") + "/")));
+	return allLibraryFolders(app).find((r) => p === r || p.startsWith(r.replace(/\/+$/, "") + "/"));
 }
 
 function trashDir(root: string): string {
@@ -177,13 +178,13 @@ export function libraryOverview(app: Reelix): { titles: (Title & { file_count: n
 	const titles = app.db.prepare("SELECT t.*, (SELECT COUNT(*) FROM files f WHERE f.title_id = t.id AND f.kind IN ('video','disc')) AS file_count FROM titles t WHERE t.library_folder IS NOT NULL OR EXISTS (SELECT 1 FROM files f WHERE f.title_id = t.id) ORDER BY t.updated_at DESC").all() as any[];
 	const known = new Set(titles.map((t) => t.library_folder).filter(Boolean));
 	const untracked: string[] = [];
-	for (const root of Object.values(libraryRoots(app))) {
-		if (!root || !existsSync(root)) continue;
+	for (const root of allLibraryFolders(app)) {
+		if (!existsSync(root)) continue;
 		for (const e of readdirSync(root, { withFileTypes: true })) {
 			if (e.isDirectory() && !e.name.startsWith(".") && !known.has(join(root, e.name))) untracked.push(join(root, e.name));
 		}
 	}
-	return { titles: titles.map((t) => ({ ...t, names: JSON.parse(t.names_json), bangumi_ids: JSON.parse(t.bangumi_ids_json), seasons: JSON.parse(t.seasons_json ?? "[]"), ratings: JSON.parse(t.ratings_json) })), untracked_folders: untracked.slice(0, 500) };
+	return { titles: titles.map((t) => ({ ...rowToTitle(t), file_count: t.file_count })), untracked_folders: untracked.slice(0, 500) };
 }
 
 /** Does the library already have this title (and these episodes)? The folder with [tmdbid-N] is the truth (§5.2). */
@@ -192,8 +193,8 @@ export function haveInLibrary(app: Reelix, title: Title): { folder?: string; epi
 	const episodes = files.flatMap((f) => f.episodes);
 	let folder = title.library_folder ?? undefined;
 	if (!files.length && title.tmdb_id) {
-		for (const root of Object.values(libraryRoots(app))) {
-			if (!root || !existsSync(root)) continue;
+		for (const root of allLibraryFolders(app)) {
+			if (!existsSync(root)) continue;
 			const hit = readdirSync(root).find((n) => n.includes(`[tmdbid-${title.tmdb_id}]`));
 			if (hit) {
 				folder = join(root, hit);

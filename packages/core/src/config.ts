@@ -56,6 +56,29 @@ export function ensureDataDirs(p: DataPaths): void {
 
 const PathMap = Type.Object({ theirs: Type.String(), ours: Type.String() });
 
+/** TMDB facts a library rule matches: a title matches when, for every fact named, it has one of the values (docs/library-folders.md). */
+const LibraryWhen = Type.Object(
+	{
+		original_language: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { description: "ISO 639-1, e.g. zh" })),
+		origin_country: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { description: "ISO 3166-1, e.g. CN" })),
+		genre: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { description: "TMDB's genre names in English, e.g. Documentary" })),
+	},
+	{ additionalProperties: false },
+);
+const LibraryFolder = Type.Object(
+	{
+		path: Type.String({ minLength: 1 }),
+		/** Shown in the UI and to the agent; the folder's own name when unset. */
+		name: Type.Optional(Type.String()),
+		rules: Type.Optional(Type.Array(Type.Object({ when: LibraryWhen, note: Type.Optional(Type.String()) }, { additionalProperties: false }))),
+		/** The folder for titles no rule decides. At most one per media type. */
+		default: Type.Optional(Type.Boolean()),
+	},
+	{ additionalProperties: false },
+);
+export type LibraryFolder = Static<typeof LibraryFolder>;
+export type LibraryWhen = Static<typeof LibraryWhen>;
+
 export const LANGUAGES = ["en", "zh", "fr", "ru"] as const;
 export const DEFAULT_SUBTITLE_SOURCES = ["subhd", "assrt", "opensubtitles", "subdl", "gestdown", "jimaku"] as const;
 export type Language = (typeof LANGUAGES)[number];
@@ -67,11 +90,12 @@ export const ConfigSchema = Type.Object({
 	language: Type.Optional(Type.Union(LANGUAGES.map((l) => Type.Literal(l)), { description: "en, zh, fr or ru" })),
 	media_root: Type.String({ default: "/media" }),
 	downloads: Type.Optional(Type.String()),
+	/** Library folders per media type, in order (docs/library-folders.md). Anime with none uses the shows' folders. */
 	library: Type.Object(
 		{
-			movies: Type.Optional(Type.String()),
-			shows: Type.Optional(Type.String()),
-			anime: Type.Optional(Type.String()),
+			movies: Type.Array(LibraryFolder, { default: [] }),
+			shows: Type.Array(LibraryFolder, { default: [] }),
+			anime: Type.Array(LibraryFolder, { default: [] }),
 		},
 		{ default: {} },
 	),
@@ -213,6 +237,14 @@ function migrateConfig(raw: any): any {
 		delete m.main;
 		delete m.background;
 	}
+	// A media type had one library folder, a path; it is now a list of folders (docs/library-folders.md).
+	if (raw?.library && typeof raw.library === "object") {
+		for (const k of ["movies", "shows", "anime"]) {
+			const v = raw.library[k];
+			if (typeof v === "string") raw.library[k] = v ? [{ path: v }] : [];
+			else if (v === null) delete raw.library[k];
+		}
+	}
 	// The old default list (saved out by earlier versions) gains the sources added since.
 	const src = raw?.subtitles?.sources;
 	if (Array.isArray(src) && src.length === 2 && src[0] === "subhd" && src[1] === "assrt") raw.subtitles.sources = [...DEFAULT_SUBTITLE_SOURCES];
@@ -289,7 +321,13 @@ function moveSettingsToPlugins(raw: any, owners: MovedOwner[]): boolean {
 /** Fill defaults and validate. Throws a ReelixError listing every problem. */
 export function parseConfig(raw: unknown): Config {
 	const v = Value.Default(ConfigSchema, migrateConfig(Value.Clone(raw ?? {})));
-	const errors = [...Value.Errors(ConfigSchema, v)];
+	const errors: { instancePath?: string; message: string }[] = [...Value.Errors(ConfigSchema, v)];
+	if (!errors.length) {
+		for (const [k, folders] of Object.entries((v as Config).library)) {
+			if (folders.filter((f) => f.default).length > 1) errors.push({ instancePath: `/library/${k}`, message: "has more than one default folder" });
+			if (new Set(folders.map((f) => f.path)).size < folders.length) errors.push({ instancePath: `/library/${k}`, message: "lists the same folder twice" });
+		}
+	}
 	if (errors.length) {
 		throw new ReelixError(
 			"config_invalid",
@@ -404,7 +442,7 @@ type ConfigAndSecrets = { config: Config; secrets: Secrets };
  * Settings that are the owner's even within `config.set`: where Reelix and its plugins connect (changing
  * one can send a secret elsewhere), and the agent's own spending and time limits.
  */
-const OWNER_SETTINGS = new Set(["plugins", "proxy", "web", "limits", "downloader", "media_server", "translator"]);
+const OWNER_SETTINGS = new Set(["plugins", "proxy", "web", "limits", "downloader", "media_server", "translator", "library"]);
 /** A service's address, and the secrets Reelix sends to it. */
 const SERVICE_SECRETS: [url: string, secrets: string[]][] = [
 	["magpie.url", ["magpie.api_key", "magpie.admin_key", "magpie.new_provider_key"]],
@@ -532,7 +570,7 @@ export function describeConfig(app: Reelix): string {
 	const has = (k: string) => (app.secrets[k] ? "set" : "missing");
 	return [
 		`downloads: ${c.downloads ?? "(not set)"}`,
-		`library: movies=${c.library.movies ?? "-"} shows=${c.library.shows ?? "-"} anime=${c.library.anime ?? "-"}`,
+		...((["movies", "shows", "anime"] as const).map((k) => `library ${k}: ${c.library[k].map((f) => `${f.path}${f.name ? ` (${f.name})` : ""}${f.default ? " [default]" : ""}${f.rules?.length ? ` rules ${JSON.stringify(f.rules.map((r) => r.when))}` : ""}`).join("; ") || (k === "anime" && c.library.shows.length ? "(the shows' folders)" : "-")}`)),
 		`downloader: ${c.downloader}; path map ${JSON.stringify(c.path_maps.downloaders[c.downloader] ?? [])}`,
 		`media server: ${c.media_server}; path map ${JSON.stringify(c.path_maps.media_servers[c.media_server] ?? [])}`,
 		`players: ${c.players.join(" > ")}`,

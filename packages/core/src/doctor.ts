@@ -6,7 +6,8 @@ import { downloader, ourPath } from "./downloader.ts";
 import { freeSpace } from "./downloads.ts";
 import { proxyFor } from "./http.ts";
 import { activeMediaServer, missingMediaServer, serverPath } from "./media-server.ts";
-import { explainLinkError, libraryRoots } from "./organiser.ts";
+import { everyLibraryFolder } from "./library-folders.ts";
+import { explainLinkError } from "./organiser.ts";
 import { findBinary } from "./probe.ts";
 import { VIDEO_EXT } from "./torrent.ts";
 import { errorMessage, humanBytes, newId } from "./util.ts";
@@ -67,22 +68,22 @@ export async function doctor(app: Reelix, opts: { quick?: boolean } = {}): Promi
 		await check("folders", () => {
 			const missing: string[] = [];
 			if (!c.downloads) missing.push("downloads");
-			const roots = libraryRoots(app);
-			if (!roots.movie) missing.push("library.movies");
-			if (!roots.show) missing.push("library.shows");
-			if (missing.length) return { ok: false, detail: `not set: ${missing.join(", ")}`, fix: "reelix config set downloads /media/…" };
-			const absent = [c.downloads!, ...Object.values(roots).filter(Boolean)].filter((p) => !existsSync(p!));
+			const folders = everyLibraryFolder(app);
+			if (!c.library.movies.length) missing.push("library.movies");
+			if (!c.library.shows.length) missing.push("library.shows");
+			if (missing.length) return { ok: false, detail: `not set: ${missing.join(", ")}`, fix: "Settings → Paths" };
+			const absent = [c.downloads!, ...folders.map((f) => f.path)].filter((p) => !existsSync(p));
 			if (absent.length) return { ok: false, detail: `do not exist: ${absent.join(", ")}` };
-			const unwritable = Object.values(roots).filter((p) => {
+			const unwritable = folders.filter((f) => {
 				try {
-					if (p) accessSync(p, constants.W_OK);
+					accessSync(f.path, constants.W_OK);
 					return false;
 				} catch {
 					return true;
 				}
 			});
-			if (unwritable.length) return { ok: false, detail: `library folders not writable by uid ${process.getuid?.()}: ${unwritable.join(", ")}` };
-			return { ok: true, detail: `downloads ${c.downloads}; library ${Object.entries(roots).map(([k, v]) => `${k}=${v ?? "-"}`).join(" ")}` };
+			if (unwritable.length) return { ok: false, detail: `library folders not writable by uid ${process.getuid?.()}: ${unwritable.map((f) => f.path).join(", ")}` };
+			return { ok: true, detail: `downloads ${c.downloads}; library ${folders.map((f) => `${f.label}=${f.path}`).join(" ")}` };
 		}),
 	);
 
@@ -103,9 +104,9 @@ export async function doctor(app: Reelix, opts: { quick?: boolean } = {}): Promi
 			if (!c.downloads || !existsSync(c.downloads)) return { ok: null, detail: "skipped: download folder not set" };
 			const sample = findSampleFile(c.downloads);
 			if (!sample) return { ok: null, detail: "skipped: no file in the download folder to test with" };
-			const results = Object.entries(libraryRoots(app))
-				.filter(([, r]) => r && existsSync(r))
-				.map(([k, r]) => ({ k, ...linkTest(sample, r!) }));
+			const results = everyLibraryFolder(app)
+				.filter((f) => existsSync(f.path))
+				.map((f) => ({ k: f.label, ...linkTest(sample, f.path) }));
 			if (!results.length) return { ok: null, detail: "skipped: no library folder exists yet" };
 			const bad = results.filter((r) => !r.ok);
 			const st = statSync(sample);
@@ -142,7 +143,7 @@ export async function doctor(app: Reelix, opts: { quick?: boolean } = {}): Promi
 				const [info, libs] = await Promise.all([p.call("info", []), p.call("libraries", [])]);
 				const detail = `${p.label} ${info.name} ${info.version}; libraries: ${libs.map((l) => `${l.name}=${l.paths.join("|")}`).join("; ") || "none"}`;
 				const near = (a: string, b: string) => a === b || a.startsWith(`${b.replace(/\/+$/, "")}/`) || b.startsWith(`${a.replace(/\/+$/, "")}/`);
-				const unseen = Object.entries(libraryRoots(app)).flatMap(([k, r]) => (r && !libs.some((l) => l.paths.some((lp) => near(serverPath(app, p.id, r), lp))) ? [`${k} (${serverPath(app, p.id, r)} there)`] : []));
+				const unseen = everyLibraryFolder(app).flatMap((f) => (!libs.some((l) => l.paths.some((lp) => near(serverPath(app, p.id, f.path), lp))) ? [`${f.label} (${serverPath(app, p.id, f.path)} there)`] : []));
 				if (unseen.length) return { ok: false, detail: `${detail}. No library of ${p.label} holds ${unseen.join(", ")}`, fix: `Add the folder as a library in ${p.label}, or say how its paths look: reelix config set path_maps.media_servers.${p.id} '[{"theirs":"/data/media","ours":"/media"}]'` };
 				return { ok: true, detail };
 			}),

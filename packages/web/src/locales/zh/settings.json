@@ -422,5 +422,31 @@
 			"library": "选择 Jellyfin 作为这个媒体库扫描的文件夹：里面每部影片各有一个文件夹，而不是某一部影片自己的文件夹。目前每种媒体类型只有一个媒体库文件夹。"
 		},
 		"tooDeep": "这是某一部影片自己的文件夹（或它的某一季）。请返回上一级，选择存放所有影片的那个文件夹。"
+	},
+	"libraryFolders": {
+		"none": "还没有文件夹。",
+		"animeUsesShows": "没有单独的文件夹：动画放进剧集的文件夹。",
+		"add": "添加文件夹",
+		"change": "换一个文件夹",
+		"up": "上移",
+		"down": "下移",
+		"remove": "从列表中移除这个文件夹（磁盘上的内容不变）",
+		"name": "名称",
+		"default": "默认",
+		"addRule": "添加规则",
+		"removeRule": "删除规则",
+		"help": "规则从上往下检查。影片在你填写的每一项里都具备列出的某个值时，就符合这条规则。没有规则能决定的影片放进默认文件夹；没有默认文件夹时，助手会参考各文件夹已有的内容来选择，拿不准时会问你。已经在媒体库里的影片保持原位。",
+		"fact": {
+			"original_language": "原始语言",
+			"origin_country": "出品国家/地区",
+			"genre": "类型"
+		},
+		"example": {
+			"original_language": "zh, ja",
+			"origin_country": "CN, TW, HK",
+			"genre": "Documentary"
+		},
+		"learn": "让助手学习分类规则",
+		"learnPrompt": "看看我的「{{type}}」各个媒体库文件夹里已经放了什么，然后提出哪些影片该放哪里的规则（技能 library-folders）。"
 	}
 }

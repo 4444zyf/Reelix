@@ -1,7 +1,7 @@
 # Several library folders per media type
 
 Date: 2026-11-20
-Status: **proposed**, shaped with the owner on 2026-11-20 (the agent learns the owner's folders and keeps them as rules); not yet agreed in full. Answers [issue #1](https://github.com/4444zyf/Reelix/issues/1).
+Status: **agreed** with the owner on 2026-11-22 (shaped 2026-11-20: the agent learns the owner's folders and keeps them as rules). Built 2026-11-22 (Implementation status, below). Answers [issue #1](https://github.com/4444zyf/Reelix/issues/1).
 Changes design §5.4 (layout) and the `library` settings.
 
 ## The problem
@@ -74,8 +74,8 @@ The plan's reason always names the folder and why ("Chinese-language: rule origi
 
 A skill (`skills/library-folders/SKILL.md`) tells it how. It works from facts code gives it; it does not walk the disk itself.
 
-**Learning, when a type gets a second folder** (in setup, or when the owner adds one):
-1. `library.folders.survey` (new operation, read-only) lists, per folder, the titles in it, found by their `[tmdbid-N]` tags (untagged folders are looked up by name), with each title's language, countries and genres, and the counts of each value.
+**Learning, when a type gets a second folder** (in setup, or when the owner asks: Settings → Paths offers "Ask the assistant to learn the rules" under a type with several folders):
+1. `library.folders.survey` (new operation, read-only) lists, per folder, the titles in it, found by their `[tmdbid-N]` tags (untagged folders are listed by name; the agent identifies them with `title.find` when it needs to), with each title's language, countries and genres, and the counts of each value.
 2. The agent looks for what separates the folders ("47 of 48 here are in Chinese; none in the other folder is") and writes the fewest rules that sort the existing titles the way the owner already did. It reports how well they fit, naming the titles they would put elsewhere.
 3. It proposes them with `config.set` (owner-confirmed, above): the owner sees the rules and the fit and approves in one tap, or edits them in Settings instead. Nothing changes before approval.
 
@@ -108,7 +108,7 @@ Titles store `original_language` and `origin_country` (a list) from TMDB, next t
 | `organiser.ts` `libraryRoots` | three paths | every folder of every type (apply, subtitles, doctor, library scan) |
 | `downloads.ts`, `adopt.ts` | root by type | the title's folder; undecided goes to `needs_agent` (downloads) or is marked unsure on the review screen (adoption) |
 | `checkWrittenItems` (the agent's plans) | the type's root | the folder chosen for the title |
-| `organise.name@1` | paths relative to the type's root | relative to the chosen folder; the input names it. Limits unchanged |
+| `organise.name@1` | paths relative to the type's root | relative to the chosen folder. Input and limits unchanged |
 | `library.ts` | looks in three roots | looks in every folder |
 | `doctor.ts` | link test and Jellyfin check per type | per folder |
 | operations | | `library.folders.survey`, `title.library_folder.set`; `library` becomes owner-confirmed, so the agent's rule changes are approved by the owner |
@@ -122,3 +122,16 @@ Titles store `original_language` and `origin_country` (a list) from TMDB, next t
 - Moving titles between folders, and re-sorting an existing library by new rules.
 - Rules in plain words judged by the model at filing time: routine filing stays code (§5.4). The model's judgement is used where rules run out, and its result is turned back into a rule.
 - A plugin hook to choose the folder. The name `organise.route@1` is reserved for it.
+
+## Implementation status (2026-11-22)
+
+Built:
+- **Settings and data.** `library.movies`, `.shows` and `.anime` are lists of `{ path, name?, rules?, default? }`. Old single paths are migrated in `migrateConfig`. `parseConfig` refuses two defaults or the same folder twice in one type. `library` is in `OWNER_SETTINGS`. Migration 12 adds `original_language`, `origin_country_json`, `genres_json` and `library_choice` to titles. TMDB genres are stored in English by their ids (`TMDB_GENRES` in `clients/tmdb.ts`), whatever the metadata language, and the anime check now uses them.
+- **Choosing.** `core/library-folders.ts`: `libraryFolderFor` (the six steps), `libraryRootFor`, `setLibraryChoice`, `surveyLibraryFolders`, `everyLibraryFolder`. The organiser, apply, the agent's plans, the library scan, subtitles and Doctor use it. A plan's notes name the folder and why. An undecided title is not planned: its download goes to `needs_agent` with the reason, and the filing job hands it to the agent; an adoption row is marked unsure with the same reason.
+- **Operations:** `library.folders.survey`, `title.library_folder.set`; `title.show` returns the folders and the decision.
+- **Web:** Settings → Paths lists the folders of each type (folder picker, name, default, rules, order) and offers the learning in chat; the title page has the "Library folder" select before the title is filed.
+- **Skills:** `library-folders` (new); `organise` and `setup-and-doctor` updated.
+
+Tested (`packages/core/test/library-folders.test.ts`): the migration and the checks on the list; rule, undecided, default, the owner's choice, and a filed title staying where it is; code filing into the decided folder and handing an undecided title over with its reason; `library` refused to the agent and accepted from the owner; the survey's counts, untagged folders and misfits.
+
+Not yet seen in practice: the agent learning rules from a real library, and deciding a title no rule decides. Both follow the skill and are not tested with a model.

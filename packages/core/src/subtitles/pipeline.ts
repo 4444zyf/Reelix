@@ -3,7 +3,7 @@ import { basename, dirname, extname, join, relative } from "node:path";
 import { type Kind, type Outcome, type SubtitleHit, type SubtitleQuery, outsideLine, isOutcome } from "@reelix/plugin";
 import { Type } from "typebox";
 import type { Reelix } from "../app.ts";
-import { libraryRoots } from "../organiser.ts";
+import { allLibraryFolders } from "../library-folders.ts";
 import { subtitlePathFor } from "../naming.ts";
 import { parseReleaseName } from "../parser.ts";
 import { probe } from "../probe.ts";
@@ -308,7 +308,7 @@ export type PlaceResult = { video: string; placed?: string; from?: string; langu
 
 /** Write cleaned subtitles next to their videos (ordinary files, not links). */
 export async function placeSubtitles(app: Reelix, titleId: string | undefined, subs: AnalysedSub[], videos: VideoTarget[], opts: { prefer?: string; file?: string; source?: string; ref?: string } = {}): Promise<PlaceResult[]> {
-	const roots = Object.values(libraryRoots(app)).filter(Boolean) as string[];
+	const roots = allLibraryFolders(app);
 	const results: PlaceResult[] = [];
 	const usable = subs.filter((s) => s.format !== "sub" && s.format !== "idx" && s.format !== "sup");
 	const { score, changes } = await scores(app, usable, opts.prefer);
