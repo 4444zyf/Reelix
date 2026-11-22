@@ -104,7 +104,12 @@
 			"step3": "Lier votre compte Telegram",
 			"step4": "Envoyer un message de test",
 			"after": "Après : {{step}}.",
-			"refresh": "Rafraîchir l'état"
+			"refresh": "Rafraîchir l'état",
+			"botOk": "Le bot @{{bot}} répond.",
+			"botUnknown": "Le bot n'a pas dit qui il est ; vérifiez le jeton.",
+			"code": "Dans Telegram, envoyez à {{bot}} ce code dans les 10 minutes : {{code}}",
+			"theBot": "le bot",
+			"sent": "Message de test envoyé : il devrait être dans Telegram."
 		},
 		"magpie": {
 			"title": "magpie (passerelle de modèles)",

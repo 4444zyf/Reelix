@@ -122,7 +122,12 @@
 			"step3": "Link your Telegram account",
 			"step4": "Send a test message",
 			"after": "After: {{step}}.",
-			"refresh": "Refresh the state"
+			"refresh": "Refresh the state",
+			"botOk": "The bot @{{bot}} answers.",
+			"botUnknown": "The bot did not say who it is; check the token.",
+			"code": "In Telegram, send {{bot}} this code within 10 minutes: {{code}}",
+			"theBot": "the bot",
+			"sent": "Test message sent: it should be in Telegram now."
 		},
 		"magpie": {
 			"title": "magpie (model gateway)",

@@ -14,7 +14,7 @@ import { toast } from "../hooks/use-toast";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Disclosure, PathMapEditor, Row, SaveBar, Searchable, SecretBadge, SecretInput, type PathMap, getPath, useConfigDraft } from "./form";
-import { type AlsoInForm, PluginAdvanced, PluginButtons, PluginForm, PluginProblem, PluginTechnical, type SecretGroup, usePluginSettings, usePluginSwitch } from "./Plugins";
+import { type AlsoInForm, PluginAdvanced, PluginForm, PluginProblem, PluginTechnical, type SecretGroup, usePluginSettings, usePluginSwitch } from "./Plugins";
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -397,16 +397,17 @@ function TelegramCard() {
 	const plugins = useQuery({ queryKey: ["plugins"], queryFn: endpoints.plugins });
 	const p = plugins.data?.find((x) => x.id === "telegram");
 	const settings = usePluginSettings("telegram");
-	const status = useQuery({ queryKey: ["telegram-status"], queryFn: () => op<{ configured: boolean; linked: boolean; bot?: string; error?: string }>("telegram.status"), enabled: p?.state === "active", retry: false });
+	const status = useQuery({ queryKey: ["telegram-status"], queryFn: () => op<{ configured: boolean; linked: boolean; bot?: string; error?: string }>("telegram.status"), enabled: p?.state === "active", retry: false, refetchInterval: (q) => (q.state.data?.bot && !q.state.data.linked ? 3000 : false) });
 	const turn = usePluginSwitch();
 	if (!p) return null;
 	const s = status.data;
 	const state: ServiceState = p.state === "disabled" || p.unused ? "unused" : p.needsSetup.length ? "needs_setup" : s?.error ? "unreachable" : s?.bot && s.linked ? "connected" : pluginServiceState(p);
 	const steps: { done: boolean; title: string; body: ReactNode }[] = [
-		{ done: !p.needsSetup.length, title: t("services.telegram.step1"), body: settings.data && <PluginForm data={settings.data} /> },
-		{ done: !!s?.bot, title: t("services.telegram.step2"), body: settings.data && <PluginButtons data={settings.data} only={["status"]} /> },
-		{ done: !!s?.linked, title: t("services.telegram.step3"), body: settings.data && <PluginButtons data={settings.data} only={["link"]} /> },
-		{ done: false, title: t("services.telegram.step4"), body: settings.data && <PluginButtons data={settings.data} only={["test"]} /> },
+		// Each step's result moves the card on at once.
+		{ done: !p.needsSetup.length, title: t("services.telegram.step1"), body: settings.data && <PluginForm data={settings.data} onSaved={() => void status.refetch()} /> },
+		{ done: !!s?.bot, title: t("services.telegram.step2"), body: settings.data && <TelegramStep data={settings.data} name="status" onDone={() => void status.refetch()} /> },
+		{ done: !!s?.linked, title: t("services.telegram.step3"), body: settings.data && <TelegramStep data={settings.data} name="link" onDone={() => void status.refetch()} /> },
+		{ done: false, title: t("services.telegram.step4"), body: settings.data && <TelegramStep data={settings.data} name="test" /> },
 	];
 	const firstOpen = steps.findIndex((x) => !x.done);
 	return (
@@ -439,6 +440,36 @@ function TelegramCard() {
 				</>
 			)}
 		</ServiceCard>
+	);
+}
+
+/** One of Telegram's steps: its button (labelled by the plugin), and what it answered, worded here in the owner's language. */
+function TelegramStep({ data, name, onDone }: { data: PluginSettings; name: "status" | "link" | "test"; onDone?: () => void }) {
+	const { t } = useTranslation("settings");
+	const [busy, setBusy] = useState(false);
+	const [said, setSaid] = useState<{ text: string; warn?: boolean }>();
+	const run = async () => {
+		setBusy(true);
+		try {
+			const o = await op<{ bot?: string; error?: string; code?: string; linked?: boolean }>(`telegram.${name}`);
+			if (name === "status") setSaid(o.error ? { text: o.error, warn: true } : o.bot ? { text: t("services.telegram.botOk", { bot: o.bot }) } : { text: t("services.telegram.botUnknown"), warn: true });
+			else if (name === "link") setSaid({ text: t("services.telegram.code", { code: o.code, bot: o.bot ? `@${o.bot}` : t("services.telegram.theBot") }) });
+			else setSaid({ text: t("services.telegram.sent") });
+			onDone?.();
+		} catch (e) {
+			setSaid({ text: message(e), warn: true });
+		} finally {
+			setBusy(false);
+		}
+	};
+	return (
+		<div className="space-y-2">
+			<Button type="button" variant="outline" disabled={busy} onClick={() => void run()}>
+				{busy && <Spinner />}
+				{data.strings[`buttons.${name}`] ?? name}
+			</Button>
+			{said && <p className={cn("rounded-md bg-surface px-3 py-2 text-sm", said.warn && "text-warning")}>{said.text}</p>}
+		</div>
 	);
 }
 

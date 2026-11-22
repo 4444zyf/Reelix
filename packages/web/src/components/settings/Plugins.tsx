@@ -323,11 +323,11 @@ export function PluginForm({ data, footer, also, groups, onSaved }: { data: Plug
 }
 
 /** Buttons that run one of the plugin's operations, such as "test" or "pair". What it answers is shown as it is. */
-export function PluginButtons({ data, only }: { data: PluginSettings; only?: string[] }) {
+function PluginButtons({ data }: { data: PluginSettings }) {
 	const { t } = useTranslation("settings");
 	const [busy, setBusy] = useState<string>();
 	const [answer, setAnswer] = useState<string>();
-	const buttons = data.buttons.filter((b) => !only || only.includes(b.slice(data.id.length + 1)));
+	const buttons = data.buttons;
 	if (!buttons.length) return null;
 	return (
 		<div className="space-y-2">

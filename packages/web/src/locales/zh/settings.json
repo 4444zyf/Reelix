@@ -104,7 +104,12 @@
 			"step3": "关联你的 Telegram 账号",
 			"step4": "发送测试消息",
 			"after": "先完成：{{step}}。",
-			"refresh": "刷新状态"
+			"refresh": "刷新状态",
+			"botOk": "机器人 @{{bot}} 有响应。",
+			"botUnknown": "机器人没有报出身份；请检查令牌。",
+			"code": "请在 10 分钟内在 Telegram 里把这个代码发给 {{bot}}：{{code}}",
+			"theBot": "机器人",
+			"sent": "测试消息已发送：现在应该在 Telegram 里了。"
 		},
 		"magpie": {
 			"title": "magpie（模型网关）",
