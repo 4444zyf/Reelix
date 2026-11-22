@@ -92,7 +92,7 @@
 		"machine": "machine-translated",
 		"hearingImpaired": "hearing impaired",
 		"wanted": "Wanted: {{languages}}",
-		"needsKey": "{{source}} not asked: it needs {{keys}} (Settings → Secrets).",
+		"needsKey": "{{source}} not asked: it needs {{keys}} (Settings → Services → Subtitle sites).",
 		"lang": {
 			"zh": "Chinese",
 			"en": "English",

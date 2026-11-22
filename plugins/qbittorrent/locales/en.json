@@ -2,10 +2,22 @@
 	"description": "Downloads through qBittorrent's Web API (4.x and 5.x).",
 	"settings": {
 		"url": "Address of qBittorrent's Web UI",
-		"url_help": "For example http://qbittorrent:8080. How its folders look to Reelix is the path map under Settings → Downloads.",
+		"url_help": "For example http://qbittorrent:8080. How its folders look to Reelix is set in \"How it names the folders\" in this card.",
 		"username": "User name"
 	},
 	"secrets": {
 		"password": "Web UI password"
+	},
+	"checks": {
+		"not_set_up": "qBittorrent's address is not set",
+		"off": "Nothing can be downloaded until qBittorrent is connected.",
+		"set_address": "Set the address",
+		"login_refused": "qBittorrent refused the user name or password",
+		"paused": "Downloads are paused: Reelix sends no more logins until the password changes or you test the connection.",
+		"change_password": "Change the password",
+		"banned": "qBittorrent has banned Reelix's address after failed logins",
+		"banned_impact": "Downloads are paused. Wait, or restart qBittorrent, then test the connection.",
+		"unreachable": "qBittorrent does not answer at {{url}}",
+		"ok": "qBittorrent {{version}}, saves to {{folder}}"
 	}
 }

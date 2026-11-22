@@ -17,7 +17,7 @@ description: Finding, choosing, cleaning up and placing subtitles in the owner's
 | Gestdown | TV only (Addic7ed): English, French, Russian, Chinese… | No key. One result per episode and language, with the release version. |
 | Jimaku | Japanese, anime | Needs `plugins.subtitle-sites.jimaku_api_key`. Only when Japanese is wanted. |
 
-**Missing keys.** A source without its key is listed under "Not asked". If that leaves nothing good, tell the owner which key would help and where to add it (Settings → Secrets, free account at the source).
+**Missing keys.** A source without its key is listed under "Not asked". If that leaves nothing good, tell the owner which key would help and where to add it (Settings → Services → Subtitle sites, under that site; free account at the source).
 
 ## Steps
 

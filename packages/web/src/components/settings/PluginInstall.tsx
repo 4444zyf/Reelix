@@ -81,9 +81,13 @@ export function InstallBox({ onReview }: { onReview: (r: PluginReview) => void }
 			<label htmlFor="plugin-source" className="text-sm font-medium">
 				{t("plugins.installTitle")}
 			</label>
-			<p className="text-xs text-muted-foreground">{t("plugins.installHelp")}</p>
+			<p className="text-xs text-muted-foreground">{t("plugins.installIntro")}</p>
+			<details className="text-xs text-muted-foreground">
+				<summary className="cursor-pointer">{t("plugins.installHow")}</summary>
+				<p className="mt-1">{t("plugins.installHelp")}</p>
+			</details>
 			<div className="flex gap-2">
-				<Input id="plugin-source" value={source} onChange={(e) => setSource(e.target.value)} placeholder="git+https://…/repo.git#<commit>  ·  npm:name@1.2.3  ·  /path/to/folder" />
+				<Input id="plugin-source" value={source} onChange={(e) => setSource(e.target.value)} placeholder={t("plugins.installPlaceholder")} />
 				<Button type="submit" disabled={busy || !source.trim()} className="shrink-0">
 					{busy ? <Spinner /> : <Download />}
 					{t("plugins.install")}

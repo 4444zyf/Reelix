@@ -1,9 +1,9 @@
-import { type Outcome, type PluginContext, Type, definePlugin } from "@reelix/plugin";
+import { type Outcome, type PluginCheck, SETTINGS, type PluginContext, Type, definePlugin } from "@reelix/plugin";
 import { type FetchRef, JackettError, jackettClient } from "./client.ts";
 
 const SEAM = "reelix:indexer@1";
-/** Each server has its own key: `api_key`, then `api_key_2`, `api_key_3`. */
-const keyName = (i: number) => (i === 0 ? "api_key" : `api_key_${i + 1}`);
+/** Each server has its own key, declared per entry of `servers` (docs/plugins.md §12.2). */
+const keyName = (i: number) => `servers.${i}.api_key`;
 
 const isExpected = (e: unknown) => e instanceof JackettError || /^network/.test(String((e as { code?: unknown } | null)?.code ?? ""));
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -25,7 +25,7 @@ function clientFor(ctx: PluginContext, s: Server) {
 
 export default definePlugin({
 	config: Type.Object({
-		servers: Type.Array(Type.Object({ url: Type.Optional(Type.String()) }), { default: [], maxItems: 3 }),
+		servers: Type.Array(Type.Object({ url: Type.Optional(Type.String({ [SETTINGS.required]: true })) }), { default: [], maxItems: 3, [SETTINGS.required]: true }),
 	}),
 	async activate(ctx, settings) {
 		const servers: Server[] = settings.servers.flatMap((s, i) =>
@@ -66,6 +66,9 @@ export default definePlugin({
 			});
 		}
 
+		/** Each server's last test of its indexers, until the plugin restarts: the quick check shows it (docs/settings.md, Indexers). */
+		const lastHealth = new Map<string, { indexer: string; ok: boolean; ms: number; error?: string }[]>();
+
 		/** Every server's indexers, with a test search when asked; a server's trouble stays on its line. */
 		async function survey(test: boolean, limitMs: number) {
 			const signal = AbortSignal.timeout(limitMs);
@@ -74,9 +77,10 @@ export default definePlugin({
 				servers.map(async (s) => {
 					try {
 						const client = await clientFor(ctx, s);
-						if (!client) return { server: s.id, error: `API key missing (secret plugins.jackett.${s.keyName})`, indexers: [] };
+						if (!client) return { server: s.id, error: `API key missing (secret plugins.jackett.${s.keyName})`, missingKey: s.keyName, indexers: [] };
 						const indexers = await client.sites(signal);
 						const health = test ? (await client.searchEach(indexers.map((i) => i.id), ["test"], undefined, { signal, deadline })).sites.map((r) => ({ indexer: r.site, ok: r.ok, ms: r.ms, error: r.outcome?.outcome === "unavailable" ? r.outcome.message : undefined })) : undefined;
+						if (health) lastHealth.set(s.id, health);
 						return { server: s.id, indexers, health };
 					} catch (e) {
 						if (!isExpected(e)) throw e;
@@ -103,16 +107,28 @@ export default definePlugin({
 		});
 
 		await ctx.check("jackett", async ({ quick }) => {
-			if (!servers.length) return { ok: false, detail: "not configured", fix: "reelix config set plugins.jackett.servers '[{\"url\":\"http://host:9117\"}]'" };
+			if (!servers.length)
+				return { state: "failed", cause: { key: "checks.not_set_up" }, impact: { key: "checks.no_search" }, action: { label: { key: "checks.add_server" }, setting: "servers" }, cli: "reelix config set plugins.jackett.servers '[{\"url\":\"http://host:9117\"}]'", raw: "not configured", cause_id: "setup" };
 			const found = await survey(!quick, 25_000);
-			const lines = found.map((s) => {
-				if (s.error) return { ok: false, text: `${s.server}: ${s.error}` };
-				if (!s.indexers.length) return { ok: false, text: `${s.server}: no indexers configured in Jackett` };
-				if (!s.health) return { ok: true, text: `${s.indexers.length} indexers: ${s.indexers.map((i) => i.name).join(", ")}` };
+			const test = { label: { key: "checks.test_each" }, operation: "indexers", input: { test: true } };
+			const results = found.map((s): PluginCheck => {
+				const server = servers.find((x) => x.id === s.server)?.label ?? s.server;
+				if (s.missingKey) return { state: "failed", cause: { key: "checks.no_key", values: { server } }, impact: { key: "checks.no_search" }, action: { label: { key: "checks.add_key" }, secret: s.missingKey }, raw: `${s.server}: ${s.error}` };
+				if (s.error) return { state: "failed", cause: { key: "checks.unreachable", values: { server } }, impact: { key: "checks.no_search" }, action: { label: { key: "checks.add_server" }, setting: "servers" }, raw: `${s.server}: ${s.error}` };
+				if (!s.indexers.length) return { state: "failed", cause: { key: "checks.no_indexers", values: { server } }, impact: { key: "checks.no_search" }, raw: `${s.server}: no indexers configured in Jackett` };
+				const health = s.health ?? lastHealth.get(s.server);
+				if (!health) return { state: "not_tested", cause: { key: "checks.not_tested", values: { count: s.indexers.length } }, action: test, raw: `${s.indexers.length} indexers: ${s.indexers.map((i) => i.name).join(", ")}` };
 				const name = (id: string) => s.indexers.find((i) => i.id === id)?.name ?? id;
-				return { ok: s.health.some((h) => h.ok), text: s.health.map((h) => `${name(h.indexer)}: ${h.ok ? `ok ${(h.ms / 1000).toFixed(1)}s` : `ERROR ${h.error}`}`).join("; ") };
+				const raw = health.map((h) => `${name(h.indexer)}: ${h.ok ? `ok ${(h.ms / 1000).toFixed(1)}s` : `ERROR ${h.error}`}`).join("; ");
+				const failed = health.filter((h) => !h.ok).length;
+				if (!failed) return { state: "passed", cause: { key: "checks.all_answer", values: { count: health.length } }, raw };
+				if (failed < health.length) return { state: "degraded", cause: { key: "checks.some_fail", values: { failed, count: health.length } }, impact: { key: "checks.some_fail_impact" }, action: test, raw };
+				return { state: "failed", cause: { key: "checks.none_answer" }, impact: { key: "checks.no_search" }, action: test, raw };
 			});
-			return { ok: lines.every((l) => l.ok), detail: lines.map((l) => l.text).join("; ") };
+			// One result for every server: the worst of them, with every server's details.
+			const rank = ["passed", "not_tested", "degraded", "failed"];
+			const worst = results.reduce((a, b) => (rank.indexOf(b.state) > rank.indexOf(a.state) ? b : a));
+			return { ...worst, raw: results.map((r) => r.raw).join("; ") };
 		});
 	},
 });

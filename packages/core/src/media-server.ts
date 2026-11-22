@@ -27,7 +27,7 @@ export function missingMediaServer(app: Reelix): string {
 			? `its plugin is ${plugin.state}${plugin.error ? ` (${plugin.error})` : ""}`
 			: `its plugin is running but offers no media server, so its settings are probably incomplete (Settings → Plugins → ${id})`;
 	const others = app.seams.providers(MEDIA_SERVER).map((x) => x.id);
-	return `The media server "${id}" is not available: ${why}.${others.length ? ` Other media servers: ${others.join(", ")}; only the owner can choose one (Settings → Media server).` : ""}`;
+	return `The media server "${id}" is not available: ${why}.${others.length ? ` Other media servers: ${others.join(", ")}; only the owner can choose one (Settings → Services → Media server).` : ""}`;
 }
 
 const maps = (app: Reelix, providerId: string) => app.config.path_maps.media_servers[providerId] ?? [];

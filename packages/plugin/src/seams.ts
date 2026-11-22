@@ -353,6 +353,8 @@ export type PlayerLink = { url: string; autoplay: boolean };
 export type Player = {
 	id: string;
 	label: string;
+	/** It needs the media server's item ids (`PlayRequest.server`); Settings says so while no media server is connected. */
+	needsMediaServer?: boolean;
 	/** One answer per request, in the same order; null where this player cannot open it. */
 	links(requests: PlayRequest[], call: Call): Promise<(PlayerLink | null)[]>;
 };

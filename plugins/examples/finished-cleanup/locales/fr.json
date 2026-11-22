@@ -29,7 +29,10 @@
 		"schedule_manual": "Quand je le demande",
 		"schedule_daily": "Chaque jour",
 		"at_most": "Au plus par jour",
-		"at_most_help": "Étapes d'une proposition quotidienne."
+		"at_most_help": "Étapes d'une proposition quotidienne.",
+		"kind_all": "Films et séries",
+		"kind_movie": "Films seulement",
+		"kind_tv": "Séries seulement"
 	},
 	"buttons": {
 		"scan": "Analyser maintenant"

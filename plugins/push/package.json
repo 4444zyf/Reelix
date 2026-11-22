@@ -16,7 +16,7 @@
       "provides": ["reelix:notifier@1"],
       "operations": { "devices": "read", "subscribe": "write", "unsubscribe": "write", "test": "write" },
       "network": ["web.push.apple.com", "fcm.googleapis.com", "push.services.mozilla.com", "*.push.services.mozilla.com", "*.notify.windows.com"],
-      "secrets": ["vapid_private"]
+      "secrets": [{ "name": "vapid_private", "managed": true }]
     }
   }
 }

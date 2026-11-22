@@ -21,5 +21,15 @@
 		"status": "检查机器人",
 		"link": "获取绑定码",
 		"test": "发送测试消息"
+	},
+	"checks": {
+		"not_used": "尚未设置 Telegram",
+		"set_up": "设置 Telegram",
+		"not_linked": "机器人 @{{bot}} 可用，但你的账号尚未绑定",
+		"not_linked_impact": "绑定账号之前，通知不会发到 Telegram。收件箱不需要它也能使用。",
+		"link": "绑定你的账号",
+		"unreachable": "Telegram 没有响应",
+		"unreachable_impact": "通知无法发到 Telegram；收件箱里仍然有。",
+		"ok": "机器人 @{{bot}}，账号已绑定"
 	}
 }

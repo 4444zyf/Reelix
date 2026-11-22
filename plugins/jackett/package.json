@@ -33,9 +33,11 @@
         "*"
       ],
       "secrets": [
-        "api_key",
-        "api_key_2",
-        "api_key_3"
+        {
+          "name": "api_key",
+          "per": "servers",
+          "required": true
+        }
       ],
       "skills": true
     }

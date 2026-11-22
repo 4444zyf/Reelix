@@ -108,7 +108,7 @@ export async function startDemo(root: string, o: { password?: string; model?: st
 	app.setConfig("tmdb.base_url", tmdb.url);
 	app.setConfig("path_maps.downloaders.qbittorrent", [{ theirs: qb.theirsRoot, ours: downloads }]);
 	app.setSecret("plugins.qbittorrent.password", "demo-qb");
-	app.setSecret("plugins.jackett.api_key", "demo-jackett-key");
+	app.setSecret("plugins.jackett.servers.0.api_key", "demo-jackett-key");
 	app.setSecret("tmdb.api_key", tmdb.apiKey);
 	app.setConfig("plugins.jellyfin", { ...(app.config.plugins.jellyfin as object | undefined), url: jellyfin.url });
 	app.setConfig("path_maps.media_servers.jellyfin", [{ theirs: "/data/media", ours: media }]);

@@ -106,7 +106,7 @@ export type MediaServer = { id: string; label: string; watchUsers?: string[]; in
 Kind: many. Contract: `Player`
 
 ```ts
-export type Player = { id: string; label: string; links(requests: PlayRequest[], call: Call): Promise<(PlayerLink | null)[]>; };
+export type Player = { id: string; label: string; needsMediaServer?: boolean; links(requests: PlayRequest[], call: Call): Promise<(PlayerLink | null)[]>; };
 ```
 
 | Method | Limit | Outcome | Optional |
@@ -344,6 +344,8 @@ The form is generated from the plugin's `config` schema. These annotations, writ
 | `optionsFrom` | `x-reelix-options-from` | On a string field: a choice whose options are the output of this operation of the plugin (short name), `{ value, label }[]`. |
 | `showWhen` | `x-reelix-show-when` | On a field: show it only while the field `field` of the same object equals `equals`. |
 | `buttons` | `x-reelix-buttons` | On the `config` object: buttons that run these operations of the plugin (short names), such as "test" or "link". |
+| `required` | `x-reelix-required` | On a field: the plugin cannot work while it is empty (a list: while it has no entry). Settings shows "needs setup" until it is filled in. |
+| `advanced` | `x-reelix-advanced` | On a field: rarely needed (another address for a site, a program's path); Settings shows it under Advanced. |
 
 ## Context calls
 

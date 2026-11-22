@@ -133,11 +133,8 @@ Services that this installation started are empty and need their own first-time 
 Some steps are the owner's own, because they involve their accounts and passwords. Tell them what to do; do not ask them to paste a password or API key into this conversation.
 
 1. **Open `http://<nas>:7878`.** The first visit sets Reelix's password.
-2. **Sign in to a model provider.** `pi` is interactive, so the owner runs it. Use the numbers from `.env` for the user, so no root-owned files are left in the data folder:
-   ```sh
-   docker compose exec -u <PUID>:<PGID> reelix pi
-   ```
-3. **Ask Reelix to set itself up**, in its chat: "Set yourself up." Reelix has a setup skill of its own. It looks at `/media`, asks for the service addresses, takes each login and API key through a secret field that never reaches the model, and tests each connection.
+2. **Connect a model**, in Reelix's Settings → Models: the owner signs in with the provider's own account, or enters its API key there, or connects a magpie gateway. The key goes straight to the NAS; nothing is run in a terminal.
+3. **Ask Reelix to set itself up**, in its chat: "Set yourself up." Reelix has a setup skill of its own. It looks at `/media`, asks for the service addresses, takes each login and API key through a secret field that never reaches the model, and tests each connection. The owner can do the same by hand in Settings: Status at the top lists what still needs them, and each service has a card with its address, its password and "Test connection". Point them there by those names, not by config keys.
 
 What you can do from the shell, with the same `-u <PUID>:<PGID>`:
 

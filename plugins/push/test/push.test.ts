@@ -270,7 +270,7 @@ test("an old data folder: the devices and the signing key carry over", async () 
 		const first = new Reelix(root);
 		first.close();
 		const db = new DatabaseSync(join(root, "reelix.db"));
-		db.exec("ALTER TABLE inbox ADD COLUMN telegram_message_id INTEGER; DROP TABLE notice_deliveries; DROP TABLE chat_channels; DROP TABLE reasons; DROP TABLE proposals; DROP TABLE trial_results; ALTER TABLE downloads DROP COLUMN downloader; ALTER TABLE titles DROP COLUMN ratings_json; ALTER TABLE titles ADD COLUMN douban_rating REAL; ALTER TABLE titles DROP COLUMN original_language; ALTER TABLE titles DROP COLUMN origin_country_json; ALTER TABLE titles DROP COLUMN genres_json; ALTER TABLE titles DROP COLUMN library_choice; UPDATE schema_version SET v = 6;");
+		db.exec("ALTER TABLE inbox ADD COLUMN telegram_message_id INTEGER; DROP TABLE notice_deliveries; DROP TABLE chat_channels; DROP TABLE reasons; DROP TABLE proposals; DROP TABLE trial_results; ALTER TABLE downloads DROP COLUMN downloader; ALTER TABLE titles DROP COLUMN ratings_json; ALTER TABLE titles ADD COLUMN douban_rating REAL; ALTER TABLE titles DROP COLUMN original_language; ALTER TABLE titles DROP COLUMN origin_country_json; ALTER TABLE titles DROP COLUMN genres_json; ALTER TABLE titles DROP COLUMN library_choice; ALTER TABLE job_runs DROP COLUMN models_json; UPDATE schema_version SET v = 6;");
 		const b = browser();
 		const device = { id: "dev_old", endpoint: APPLE, p256dh: b.p256dh, auth: b.auth, origin: ORIGIN, label: "Old phone", created_at: "2026-11-01T00:00:00Z" };
 		db.prepare("INSERT INTO kv (k, v) VALUES ('push.devices', ?)").run(JSON.stringify([device]));

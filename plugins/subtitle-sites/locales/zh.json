@@ -18,5 +18,10 @@
 		"opensubtitles_token": "OpenSubtitles.com 登录令牌（Reelix 会用用户名和密码自动获取）",
 		"subdl_api_key": "SubDL API 密钥（subdl.com，账户 → API）",
 		"jimaku_api_key": "Jimaku API 密钥（jimaku.cc，账户 → API；日本动画字幕）"
+	},
+	"checks": {
+		"subhd_ok": "SubHD 有响应",
+		"subhd_unreachable": "SubHD 没有响应",
+		"subhd_unreachable_impact": "缺少来自 SubHD 的字幕；其他站点仍会搜索。"
 	}
 }

@@ -21,5 +21,15 @@
 		"status": "Check the bot",
 		"link": "Get a linking code",
 		"test": "Send a test message"
+	},
+	"checks": {
+		"not_used": "Telegram is not set up",
+		"set_up": "Set up Telegram",
+		"not_linked": "The bot @{{bot}} works, but your account is not linked yet",
+		"not_linked_impact": "Notices do not reach Telegram until you link your account. The Inbox works without it.",
+		"link": "Link your account",
+		"unreachable": "Telegram does not answer",
+		"unreachable_impact": "Notices do not reach Telegram; the Inbox still has them.",
+		"ok": "Bot @{{bot}}, your account is linked"
 	}
 }

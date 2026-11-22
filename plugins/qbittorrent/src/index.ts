@@ -1,4 +1,4 @@
-import { type Call, type Outcome, OperationError, OutcomeError, type Transfer, type TransferFile, Type, definePlugin } from "@reelix/plugin";
+import { type Call, type Outcome, OperationError, OutcomeError, type PluginCheck, SETTINGS, type Transfer, type TransferFile, Type, definePlugin } from "@reelix/plugin";
 import { QbClient, QbError, type QbTorrent, magnetHash, torrentHash } from "./client.ts";
 
 const SEAM = "reelix:downloader@1";
@@ -70,7 +70,7 @@ const notSetUp = () => new OperationError("not_configured", "qBittorrent is not 
 
 export default definePlugin({
 	config: Type.Object({
-		url: Type.Optional(Type.String()),
+		url: Type.Optional(Type.String({ [SETTINGS.required]: true })),
 		username: Type.String({ default: "admin" }),
 	}),
 	async activate(ctx, settings) {
@@ -226,8 +226,9 @@ export default definePlugin({
 				`${o.total} torrents\n${o.torrents.map((x) => `${x.hash.slice(0, 10)} | ${x.state} | ${Math.round(x.progress * 100)}% | ${(x.size / 1e9).toFixed(1)} GB | ${x.tags || "-"} | ${x.name}`).join("\n")}`,
 		});
 
-		await ctx.check("qbittorrent", async () => {
-			if (!url) return { ok: false, detail: "not configured", fix: "reelix config set plugins.qbittorrent.url http://host:8080" };
+		await ctx.check("qbittorrent", async (): Promise<PluginCheck> => {
+			if (!url)
+				return { state: "failed", cause: { key: "checks.not_set_up" }, impact: { key: "checks.off" }, action: { label: { key: "checks.set_address" }, setting: "url" }, cli: "reelix config set plugins.qbittorrent.url http://host:8080", raw: "not configured", cause_id: "setup" };
 			try {
 				const c = await qb();
 				c.retryLogin(); // the owner asked: one login, even after a refused one
@@ -235,10 +236,13 @@ export default definePlugin({
 				const save = await c.defaultSavePath(ctx.signal);
 				const prefs = await c.preferences(ctx.signal);
 				const temp = prefs.temp_path_enabled ? `; incomplete folder ${String(prefs.temp_path)} (files move on completion)` : "";
-				return { ok: true, detail: `qBittorrent ${v.app} (API ${v.api}); saves to ${save}${temp}` };
+				return { state: "passed", cause: { key: "checks.ok", values: { version: v.app, folder: save } }, raw: `qBittorrent ${v.app} (API ${v.api}); saves to ${save}${temp}` };
 			} catch (e) {
 				if (!expected(e)) throw e;
-				return { ok: false, detail: message(e) };
+				const raw = message(e);
+				if (e instanceof QbError && e.kind === "auth") return { state: "failed", cause: { key: "checks.login_refused" }, impact: { key: "checks.paused" }, action: { label: { key: "checks.change_password" }, secret: "password" }, raw, cause_id: "unreachable" };
+				if (e instanceof QbError && e.kind === "banned") return { state: "failed", cause: { key: "checks.banned" }, impact: { key: "checks.banned_impact" }, raw, cause_id: "unreachable" };
+				return { state: "failed", cause: { key: "checks.unreachable", values: { url } }, impact: { key: "checks.off" }, action: { label: { key: "checks.set_address" }, setting: "url" }, raw, cause_id: "unreachable" };
 			}
 		});
 	},

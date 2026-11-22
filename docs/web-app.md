@@ -38,7 +38,7 @@ An installed iOS app keeps its own sign-in, separate from Safari, so the owner s
 
 ## Playing: one tap into Infuse, Swiftfin or Jellyfin
 
-Asked for by the owner on 2026-11-18: jump to the specific video, in one click from the library or from chat ("I want to watch…"). The links come from the players (`reelix:player@1`, [plugins.md](plugins.md) §7.9); the built-in plugin `players` has the three below. They are offered in the order of the setting `players` (Settings → Media server), and a player not in that list comes after.
+Asked for by the owner on 2026-11-18: jump to the specific video, in one click from the library or from chat ("I want to watch…"). The links come from the players (`reelix:player@1`, [plugins.md](plugins.md) §7.9); the built-in plugin `players` has the three below. They are offered in the order of the setting `players` (Settings → Services → Media server), and a player not in that list comes after.
 
 | App | Link | What it does |
 | --- | --- | --- |

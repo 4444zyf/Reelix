@@ -6,7 +6,8 @@
 	"properties": {
 		"api_url": {
 			"type": "string",
-			"default": "https://api.telegram.org"
+			"default": "https://api.telegram.org",
+			"x-reelix-advanced": true
 		}
 	},
 	"x-reelix-buttons": [

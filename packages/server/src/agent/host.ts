@@ -21,7 +21,7 @@ import {
 import { type AgentToolCall, outsideLine } from "@reelix/plugin";
 import { type Reelix, channelMayApprove, channelOfThread, errorMessage, markOutside, newId, nowIso, recordSpend, spentToday, toolResultForModel, unmarkOutside, watchApprovals } from "@reelix/core";
 import { ISOLATION, agentCommand, agentHome } from "../isolation.ts";
-import { ModelRouter } from "../models.ts";
+import { type ModelFailure, ModelRouter } from "../models.ts";
 import { type PiExtensions, sessionExtensions } from "../plugins/pi.ts";
 import { SocketTokens } from "../socket-tokens.ts";
 import { fileToolRefusal } from "./file-paths.ts";
@@ -29,6 +29,9 @@ import { type SessionKind, pluginSections, systemPrompt } from "./prompt.ts";
 import { type AskAnswer, type AskRequest, type NotifyRequest, buildTools, describeToolCall } from "./tools.ts";
 
 export type UiEvent = { seq: number; threadId: string; type: string; [k: string]: unknown };
+
+/** How a run ended. `model`: the model it ran on (none: pi's default); `failure`: why that model failed, if it did. */
+type RunOutcome = { state: string; text: string; parkedOn?: string; model?: string; failure?: ModelFailure };
 
 export type ThreadRow = { id: string; name: string; kind: string; session_file: string | null; title_id: string | null; job_run_id: string | null; created_at: string; updated_at: string; archived: number };
 
@@ -38,9 +41,9 @@ const WEB_OWNER = "owner:web";
 
 class ThreadRuntime {
 	session!: AgentSession;
-	/** The model this conversation runs on, and whether its last answer was an error. */
+	/** The model this conversation runs on, and why its last answer failed, if it did (docs/models.md). */
 	modelSpec?: string;
-	modelFailed = false;
+	failure?: ModelFailure;
 	stale = false;
 	events: UiEvent[] = [];
 	seq = 0;
@@ -415,28 +418,42 @@ export class AgentHost {
 			.prompt(text, { images: opts.images as any })
 			.then(() => this.finishRun(rt, "done"))
 			.catch((e) => {
-				this.push(rt, { type: "error", message: this.app.redact(errorMessage(e)) });
+				// Refused before any answer (no key for the provider): a failure of the model too, unless it is something else.
+				const failure = rt.modelSpec ? this.router.classify(rt.modelSpec, errorMessage(e)) : undefined;
+				if (failure && failure.class !== "other") this.modelFailed(rt, failure);
+				this.push(rt, { type: "error", message: this.app.redact(errorMessage(e)), failure: rt.failure });
 				this.finishRun(rt, "failed");
 			});
 		return runId;
 	}
 
+	/** The thread's model failed: the next answer from another model is marked with this reason (docs/models.md). */
+	private modelFailed(rt: ThreadRuntime, failure: ModelFailure): void {
+		rt.failure = failure;
+		this.lastFailure.set(rt.id, failure);
+	}
+
+	/** Each thread's last model failure, until a model answers again (it outlives the session, which is opened again on the next model). */
+	private lastFailure = new Map<string, ModelFailure>();
+
 	private finishRun(rt: ThreadRuntime, state: "done" | "failed" | "interrupted"): void {
 		if (!rt.running) return;
 		rt.running = false;
+		const failure = rt.failure;
 		if (rt.modelSpec) {
-			if (rt.modelFailed) {
-				this.router.rest(rt.modelSpec, "the conversation ended on a model error");
+			if (failure) {
+				// The next run opens the session again, on the role's next model that is not resting.
+				this.router.rest(rt.modelSpec, failure);
 				rt.stale = true;
 			} else if (state === "done") this.router.ok(rt.modelSpec);
 		}
-		rt.modelFailed = false;
+		rt.failure = undefined;
 		this.app.db.prepare("UPDATE runs SET state = ?, finished_at = ? WHERE id = ?").run(state, nowIso(), rt.runId ?? "");
 		this.push(rt, { type: "run_end", runId: rt.runId, state, parkedOn: rt.parkedOn });
 		const waiters = this.runWaiters.get(rt.id);
 		if (waiters) {
 			this.runWaiters.delete(rt.id);
-			for (const w of waiters) w({ state, text: rt.lastText, parkedOn: rt.parkedOn });
+			for (const w of waiters) w({ state, text: rt.lastText, parkedOn: rt.parkedOn, model: rt.modelSpec, failure });
 		}
 		// Bound the buffer: after the run, the page is rebuilt from the saved conversation.
 		rt.idleTimer = setTimeout(() => {
@@ -446,10 +463,10 @@ export class AgentHost {
 		rt.idleTimer.unref();
 	}
 
-	private runWaiters = new Map<string, ((r: { state: string; text: string; parkedOn?: string }) => void)[]>();
+	private runWaiters = new Map<string, ((r: RunOutcome) => void)[]>();
 
 	/** For job runners: start a run and wait for it to end. */
-	async runToEnd(threadId: string, text: string): Promise<{ state: string; text: string; parkedOn?: string }> {
+	async runToEnd(threadId: string, text: string): Promise<RunOutcome> {
 		const rt = await this.load(threadId);
 		if (rt.running) throw new Error("thread is busy");
 		return new Promise((resolve) => {
@@ -540,14 +557,23 @@ export class AgentHost {
 			case "message_start":
 				if (ev.message?.role === "assistant") {
 					rt.lastText = "";
-					this.push(rt, { type: "assistant_start" });
+					// The first answer after another model failed says which one failed, and why.
+					const model = modelOf(ev.message) ?? rt.modelSpec;
+					const before = this.lastFailure.get(rt.id);
+					this.push(rt, { type: "assistant_start", model, fallback: before && model && before.model !== model ? before : undefined });
 				}
 				break;
 			case "message_end": {
 				const m = ev.message;
 				if (m?.role === "assistant") {
-					this.push(rt, { type: "assistant_end", stopReason: m.stopReason, error: m.errorMessage });
-					rt.modelFailed = m.stopReason === "error";
+					const model = modelOf(m) ?? rt.modelSpec;
+					const failure = m.stopReason === "error" && model ? this.router.classify(model, m.errorMessage ?? "") : undefined;
+					if (failure) this.modelFailed(rt, failure);
+					else {
+						rt.failure = undefined;
+						if (m.stopReason !== "aborted") this.lastFailure.delete(rt.id);
+					}
+					this.push(rt, { type: "assistant_end", stopReason: m.stopReason, error: m.errorMessage, failure });
 					this.recordUsage(rt, m.usage);
 				}
 				break;
@@ -596,7 +622,7 @@ export class AgentHost {
 			if (!row?.session_file || !existsSync(row.session_file)) return [];
 			messages = SessionManager.open(row.session_file, this.app.paths.sessions, this.app.paths.workspace).buildSessionContext().messages as any[];
 		}
-		return toUiMessages(this.app, messages);
+		return toUiMessages(this.app, messages, (spec, message) => this.router.classify(spec, message));
 	}
 
 	threadSeq(threadId: string): number {
@@ -636,7 +662,18 @@ function pluginOfJob(app: Reelix, threadId: string): string | undefined {
 
 export type UiMessage =
 	| { role: "user"; text: string; images?: number }
-	| { role: "assistant"; text: string; tools: { id: string; name: string; label: string; isError?: boolean; summary?: string; card?: unknown }[]; error?: string };
+	| {
+			role: "assistant";
+			text: string;
+			tools: { id: string; name: string; label: string; isError?: boolean; summary?: string; card?: unknown }[];
+			error?: string;
+			/** The model that answered, as `provider/model`. */
+			model?: string;
+			/** Why this answer failed, when it did. */
+			failure?: ModelFailure;
+			/** This answer came from another model because the one before failed: that failure. */
+			fallback?: ModelFailure;
+	  };
 
 function cardFromDetails(toolName: string, details: any): unknown {
 	if (!details) return undefined;
@@ -659,8 +696,15 @@ function cardFromDetails(toolName: string, details: any): unknown {
 	}
 }
 
-function toUiMessages(app: Reelix, messages: any[]): UiMessage[] {
+/** The model a pi assistant message came from, as `provider/model`. */
+function modelOf(m: any): string | undefined {
+	return m?.provider && m?.model ? `${m.provider}/${m.model}` : undefined;
+}
+
+function toUiMessages(app: Reelix, messages: any[], classify: (spec: string, message: string) => ModelFailure): UiMessage[] {
 	const out: UiMessage[] = [];
+	// The last model failure not yet followed by an answer: the next answer from another model names it.
+	let failed: ModelFailure | undefined;
 	const toolResults = new Map<string, any>();
 	for (const m of messages) if (m.role === "toolResult") toolResults.set(m.toolCallId, m);
 	for (const m of messages) {
@@ -677,13 +721,20 @@ function toUiMessages(app: Reelix, messages: any[]): UiMessage[] {
 					const rtext = (r?.content ?? []).filter((x: any) => x.type === "text").map((x: any) => unmarkOutside(x.text)).join("\n");
 					return { id: c.id, name: c.name, label: describeToolCall(app, c.name, c.arguments), isError: r?.isError, summary: rtext.split("\n").slice(0, 3).join(" ").slice(0, 300), card: cardFromDetails(c.name, r?.details) };
 				});
+			const model = modelOf(m);
+			const failure = m.stopReason === "error" && model ? classify(model, m.errorMessage ?? "") : undefined;
+			const fallback = !failure && failed && model && failed.model !== model ? failed : undefined;
+			if (failure) failed = failure;
+			else if (m.stopReason !== "aborted") failed = undefined;
 			const prev = out[out.length - 1];
 			// Merge consecutive assistant turns (tool loop) into one bubble.
 			if (prev && prev.role === "assistant") {
 				prev.text = [prev.text, text].filter(Boolean).join("\n\n");
 				prev.tools.push(...tools);
 				if (m.errorMessage) prev.error = m.errorMessage;
-			} else out.push({ role: "assistant", text, tools, error: m.errorMessage });
+				if (failure) prev.failure = failure;
+				if (fallback) prev.fallback ??= fallback;
+			} else out.push({ role: "assistant", text, tools, error: m.errorMessage, model, failure, fallback });
 		} else if (m.role === "custom" && m.display) {
 			out.push({ role: "user", text: typeof m.content === "string" ? m.content : "" });
 		}

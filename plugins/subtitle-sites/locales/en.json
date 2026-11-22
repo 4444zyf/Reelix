@@ -18,5 +18,10 @@
 		"opensubtitles_token": "OpenSubtitles.com login token (Reelix gets it itself with the username and password)",
 		"subdl_api_key": "SubDL API key (subdl.com, account → API)",
 		"jimaku_api_key": "Jimaku API key (jimaku.cc, account → API; Japanese anime subtitles)"
+	},
+	"checks": {
+		"subhd_ok": "SubHD answers",
+		"subhd_unreachable": "SubHD does not answer",
+		"subhd_unreachable_impact": "Subtitles from SubHD are missing; the other sites are still searched."
 	}
 }

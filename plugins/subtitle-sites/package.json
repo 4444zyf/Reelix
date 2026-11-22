@@ -16,7 +16,7 @@
     "uses": {
       "provides": ["reelix:subtitle.source@1"],
       "network": ["config:subhd_url", "config:assrt_url", "config:opensubtitles_url", "config:subdl_url", "config:subdl_download_url", "config:gestdown_url", "config:jimaku_url", "*"],
-      "secrets": ["assrt_token", "opensubtitles_api_key", "opensubtitles_username", "opensubtitles_password", "opensubtitles_token", "subdl_api_key", "jimaku_api_key"]
+      "secrets": ["assrt_token", "opensubtitles_api_key", "opensubtitles_username", "opensubtitles_password", { "name": "opensubtitles_token", "managed": true }, "subdl_api_key", "jimaku_api_key"]
     }
   }
 }

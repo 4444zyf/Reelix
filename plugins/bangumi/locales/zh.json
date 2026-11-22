@@ -4,5 +4,11 @@
 	"settings": {
 		"base_url": "Bangumi API 地址",
 		"base_url_help": "除非使用镜像，否则为 https://api.bgm.tv。"
+	},
+	"checks": {
+		"ok": "Bangumi 有响应",
+		"unreachable": "Bangumi 没有响应",
+		"unreachable_impact": "无法用 Bangumi 的条目对齐动画季度，也无法显示正在播出的内容。",
+		"change_address": "检查地址"
 	}
 }

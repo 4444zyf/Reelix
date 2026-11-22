@@ -40,7 +40,8 @@ test("model router: the next model answers when the first fails; all failing is 
 	const router = new ModelRouter(app, () => rt);
 	try {
 		app.setConfig("models.roles", { chat: ["c/chat"], background: [], glossary: [], translate: ["a/broken", "b/good", "z/unknown"], review: [] });
-		assert.deepEqual(await router.complete("translate", "s", "u", { scope: "translation" }), { text: "hello", model: "b/good" });
+		const answer = await router.complete("translate", "s", "u", { scope: "translation" });
+		assert.deepEqual([answer.text, answer.model, answer.skipped.map((f) => [f.model, f.class])], ["hello", "b/good", [["a/broken", "rate_limited"]]]);
 		assert.deepEqual(rt.calls, ["a/broken", "b/good"]);
 		assert.ok(router.isResting("a/broken"));
 		// While it rests, the working model is asked first; review inherits translate's list.
@@ -62,7 +63,7 @@ test("model router: the next model answers when the first fails; all failing is 
 		await new Promise<void>((r) => gw.listen(0, "127.0.0.1", r));
 		const url = `http://127.0.0.1:${(gw.address() as any).port}`;
 		app.setConfig("magpie.url", url);
-		assert.match((await router.registerMagpie()).error!, /401.*magpie\.api_key/);
+		assert.match((await router.registerMagpie()).error!, /401.*Services → magpie/);
 		app.setSecret("magpie.api_key", "sk-magpie-test");
 		const m = await router.registerMagpie();
 		assert.deepEqual([m.url, m.ok, m.models, m.admin], [url, true, ["group/translate", "openai/gpt-x"], false]);
@@ -155,7 +156,8 @@ test("model router: a model that never answers is cut off at the time limit and 
 		// AbortSignal.timeout does not keep Node running; the server always has other timers.
 		const keep = setInterval(() => {}, 1000);
 		try {
-			assert.deepEqual(await router.complete("translate", "s", "u", { scope: "translation" }), { text: "ok", model: "b/fast" });
+			const answer = await router.complete("translate", "s", "u", { scope: "translation" });
+			assert.deepEqual([answer.text, answer.model, answer.skipped.map((f) => [f.model, f.class])], ["ok", "b/fast", [["a/slow", "timeout"]]]);
 		} finally {
 			(AbortSignal as any).timeout = realTimeout;
 			clearInterval(keep);

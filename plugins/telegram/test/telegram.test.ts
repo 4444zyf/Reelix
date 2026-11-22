@@ -302,7 +302,7 @@ test("Doctor's check and the operations work through the plugin", async () => {
 	const { t, tg, stop } = await start();
 	try {
 		const check = (await doctor(t.app, { quick: true })).find((c) => c.name === "telegram")!;
-		assert.deepEqual([check.ok, check.detail], [true, "bot @reelix_test_bot, owner linked"]);
+		assert.deepEqual([check.state, check.cause.text, check.raw], ["passed", "Bot @reelix_test_bot, your account is linked", "bot @reelix_test_bot, owner linked"]);
 		await until("the bot's name", () => tg.sent("getMe").length >= 1);
 		await runOperation(t.app, "telegram.test", {}, { actor: "owner:web" });
 		assert.match(tg.sent("sendMessage").at(-1)!.body.text, /Reelix test message/);
@@ -330,8 +330,8 @@ test("an old data folder: bot, owner, offset, conversation and sent messages all
 		const first = new Reelix(root);
 		first.close();
 		const db = new DatabaseSync(join(root, "reelix.db"));
-		assert.equal((db.prepare("SELECT v FROM schema_version").get() as { v: number }).v, 12);
-		db.exec("ALTER TABLE inbox ADD COLUMN telegram_message_id INTEGER; DROP TABLE notice_deliveries; DROP TABLE chat_channels; DROP TABLE reasons; DROP TABLE proposals; DROP TABLE trial_results; ALTER TABLE downloads DROP COLUMN downloader; ALTER TABLE titles DROP COLUMN ratings_json; ALTER TABLE titles ADD COLUMN douban_rating REAL; ALTER TABLE titles DROP COLUMN original_language; ALTER TABLE titles DROP COLUMN origin_country_json; ALTER TABLE titles DROP COLUMN genres_json; ALTER TABLE titles DROP COLUMN library_choice; UPDATE schema_version SET v = 6;");
+		assert.equal((db.prepare("SELECT v FROM schema_version").get() as { v: number }).v, 13);
+		db.exec("ALTER TABLE inbox ADD COLUMN telegram_message_id INTEGER; DROP TABLE notice_deliveries; DROP TABLE chat_channels; DROP TABLE reasons; DROP TABLE proposals; DROP TABLE trial_results; ALTER TABLE downloads DROP COLUMN downloader; ALTER TABLE titles DROP COLUMN ratings_json; ALTER TABLE titles ADD COLUMN douban_rating REAL; ALTER TABLE titles DROP COLUMN original_language; ALTER TABLE titles DROP COLUMN origin_country_json; ALTER TABLE titles DROP COLUMN genres_json; ALTER TABLE titles DROP COLUMN library_choice; ALTER TABLE job_runs DROP COLUMN models_json; UPDATE schema_version SET v = 6;");
 		db.prepare("INSERT INTO inbox (id, kind, title, status, telegram_message_id, created_at) VALUES ('in_old', 'question', 'Old question', 'open', 55, '2026-11-01T00:00:00Z')").run();
 		db.prepare("INSERT INTO threads (id, name, kind, created_at, updated_at) VALUES ('t_tg', 'Telegram', 'telegram', 'x', 'x')").run();
 		for (const [k, v] of [["telegram.offset", "41"], ["telegram.thread", "t_tg"]]) db.prepare("INSERT INTO kv (k, v) VALUES (?, ?)").run(k, v);

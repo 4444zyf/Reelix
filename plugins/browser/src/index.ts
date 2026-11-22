@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { OperationError, Type, definePlugin } from "@reelix/plugin";
+import { OperationError, SETTINGS, Type, definePlugin } from "@reelix/plugin";
 import { Browser } from "./browser.ts";
 import { registerTools } from "./tools.ts";
 
@@ -10,8 +10,8 @@ import { registerTools } from "./tools.ts";
  */
 export default definePlugin({
 	config: Type.Object({
-		chromium: Type.String({ default: "" }),
-		headed: Type.Boolean({ default: false }),
+		chromium: Type.String({ default: "", [SETTINGS.advanced]: true }),
+		headed: Type.Boolean({ default: false, [SETTINGS.advanced]: true }),
 	}),
 	async activate(ctx, settings) {
 		const folder = await ctx.folder();

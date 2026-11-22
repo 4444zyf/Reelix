@@ -381,6 +381,8 @@ const MIGRATIONS: string[] = [
 	ALTER TABLE titles ADD COLUMN genres_json TEXT NOT NULL DEFAULT '[]';
 	ALTER TABLE titles ADD COLUMN library_choice TEXT;
 	`,
+	// 13: an agent job's models (docs/models.md): the one that did the work, and those that failed before it, with why
+	`ALTER TABLE job_runs ADD COLUMN models_json TEXT;`,
 ];
 
 export function openDb(path: string): Db {

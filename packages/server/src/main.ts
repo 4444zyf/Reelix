@@ -15,6 +15,8 @@ import { startFollows } from "./follows.ts";
 import { agentSocketApp, socketApp, webApp } from "./http.ts";
 import { ISOLATION, isolateData } from "./isolation.ts";
 import { JobRunner } from "./jobs.ts";
+import { type LoginRuntime, ProviderLogins, providerOperations } from "./model-login.ts";
+import { modelTestOperation } from "./models.ts";
 import { registerNightly } from "./nightly.ts";
 import { Watcher } from "./watcher.ts";
 import { PluginManager } from "./plugins/manager.ts";
@@ -69,6 +71,8 @@ export async function startServer(o: { devPlugin?: string } = {}): Promise<void>
 	registerNightly(app, jobs);
 
 	// Operations that need the running server.
+	app.operations.add(modelTestOperation(host.router));
+	for (const o of providerOperations(new ProviderLogins(() => host.runtime as unknown as LoginRuntime | undefined))) app.operations.add(o);
 	app.operations.add({
 		name: "job.run",
 		summary: "Start a background agent job now with a task in plain words",

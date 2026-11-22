@@ -1,4 +1,4 @@
-import { type MetaHit, type Outcome, Type, definePlugin } from "@reelix/plugin";
+import { type MetaHit, type Outcome, SETTINGS, Type, definePlugin } from "@reelix/plugin";
 import { BangumiClient, BangumiError, type BgmSubject } from "./client.ts";
 
 const LINK = /(?:bgm\.tv|bangumi\.tv|chii\.in)\/subject\/(\d+)|^bangumi:(\d+)$/;
@@ -35,7 +35,7 @@ const toHit = (s: BgmSubject): MetaHit => ({
 const today = () => new Date().getDay() || 7;
 
 export default definePlugin({
-	config: Type.Object({ base_url: Type.String({ default: "https://api.bgm.tv" }) }),
+	config: Type.Object({ base_url: Type.String({ default: "https://api.bgm.tv", [SETTINGS.advanced]: true }) }),
 	async activate(ctx, settings) {
 		const bgm = new BangumiClient(ctx.http.fetch, { baseUrl: settings.base_url });
 
@@ -77,14 +77,15 @@ export default definePlugin({
 
 		await ctx.check("bangumi", async ({ quick }) => {
 			if (quick) return undefined;
+			const reachable = { state: "passed", cause: { key: "checks.ok" }, raw: `reachable at ${bgm.base}` } as const;
 			try {
 				await bgm.subject(1, ctx.signal);
-				return { ok: true, detail: `reachable at ${bgm.base}` };
+				return reachable;
 			} catch (e) {
 				if (!expected(e)) throw e;
 				// An entry it does not have is still an answer: Bangumi is reachable.
-				if (e instanceof BangumiError && e.kind === "not_found") return { ok: true, detail: `reachable at ${bgm.base}` };
-				return { ok: false, detail: e instanceof Error ? e.message : String(e) };
+				if (e instanceof BangumiError && e.kind === "not_found") return reachable;
+				return { state: "failed", cause: { key: "checks.unreachable" }, impact: { key: "checks.unreachable_impact" }, action: { label: { key: "checks.change_address" }, setting: "base_url" }, raw: e instanceof Error ? e.message : String(e) };
 			}
 		});
 	},

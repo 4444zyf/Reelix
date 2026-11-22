@@ -5,7 +5,8 @@
 	],
 	"properties": {
 		"url": {
-			"type": "string"
+			"type": "string",
+			"x-reelix-required": true
 		},
 		"username": {
 			"type": "string",

@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { toast } from "../components/hooks/use-toast";
 import { ApiError, endpoints, useEventStream } from "./api";
 import i18n from "./i18n";
-import type { Ask, Card, ThreadDetail, ToolCall, UiEvent, UiMessage } from "./types";
+import type { Ask, Card, ModelFailure, ThreadDetail, ToolCall, UiEvent, UiMessage } from "./types";
 
 /**
  * Chat state lives above the routes (design §7): navigating between screens never cuts off a
@@ -13,8 +13,8 @@ import type { Ask, Card, ThreadDetail, ToolCall, UiEvent, UiMessage } from "./ty
 
 export type ChatItem =
 	| { role: "user"; text: string; images?: number; queued?: boolean; local?: boolean; from?: string }
-	| { role: "assistant"; text: string; tools: ToolCall[]; cards: Card[]; error?: string; streaming?: boolean }
-	| { role: "notice"; text: string; level: "info" | "error" }
+	| { role: "assistant"; text: string; tools: ToolCall[]; cards: Card[]; error?: string; streaming?: boolean; model?: string; failure?: ModelFailure; fallback?: ModelFailure }
+	| { role: "notice"; text: string; level: "info" | "error"; failure?: ModelFailure }
 	| { role: "answer"; text: string };
 
 export type ThreadState = {
@@ -32,7 +32,7 @@ export type ThreadState = {
 const empty = (id: string): ThreadState => ({ id, loaded: false, items: [], seq: 0, running: false, thinking: false, epoch: 0 });
 
 function fromMessages(messages: UiMessage[]): ChatItem[] {
-	return messages.map((m) => (m.role === "user" ? { role: "user", text: m.text, images: m.images } : { role: "assistant", text: m.text, tools: m.tools.map((t) => ({ ...t, done: true })), cards: [], error: m.error }));
+	return messages.map((m) => (m.role === "user" ? { role: "user", text: m.text, images: m.images } : { role: "assistant", text: m.text, tools: m.tools.map((t) => ({ ...t, done: true })), cards: [], error: m.error, model: m.model, failure: m.failure, fallback: m.fallback }));
 }
 
 type Action =
@@ -88,7 +88,13 @@ function applyEvent(s: ThreadState, ev: UiEvent): ThreadState {
 			return {
 				...s,
 				thinking: false,
-				items: withAssistant(s.items, (a) => ({ ...a, streaming: true, text: a.text && !a.text.endsWith("\n\n") ? `${a.text}\n\n` : a.text })),
+				items: withAssistant(s.items, (a) => ({
+					...a,
+					streaming: true,
+					text: a.text && !a.text.endsWith("\n\n") ? `${a.text}\n\n` : a.text,
+					model: a.model ?? (ev.model as string | undefined),
+					fallback: a.fallback ?? (ev.fallback as ModelFailure | undefined),
+				})),
 			};
 		case "text_delta":
 			return { ...s, thinking: false, items: withAssistant(s.items, (a) => ({ ...a, text: a.text + String(ev.delta ?? "") })) };
@@ -98,7 +104,7 @@ function applyEvent(s: ThreadState, ev: UiEvent): ThreadState {
 			return {
 				...s,
 				thinking: false,
-				items: withAssistant(s.items, (a) => ({ ...a, text: a.text.replace(/\n\n$/, ""), error: (ev.error as string | undefined) ?? a.error })),
+				items: withAssistant(s.items, (a) => ({ ...a, text: a.text.replace(/\n\n$/, ""), error: (ev.error as string | undefined) ?? a.error, failure: (ev.failure as ModelFailure | undefined) ?? a.failure })),
 			};
 		case "tool_start": {
 			const tool: ToolCall = { id: String(ev.id), name: String(ev.name), label: String(ev.label ?? ev.name), done: false };
@@ -142,7 +148,7 @@ function applyEvent(s: ThreadState, ev: UiEvent): ThreadState {
 		case "notice":
 			return { ...s, items: [...s.items, { role: "notice", text: String(ev.text ?? ""), level: "info" }] };
 		case "error":
-			return { ...s, items: [...s.items, { role: "notice", text: String(ev.message ?? i18n.t("chat:notices.failed")), level: "error" }] };
+			return { ...s, items: [...s.items, { role: "notice", text: String(ev.message ?? i18n.t("chat:notices.failed")), level: "error", failure: ev.failure as ModelFailure | undefined }] };
 		default:
 			return s;
 	}

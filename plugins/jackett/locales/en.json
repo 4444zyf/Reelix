@@ -2,13 +2,29 @@
 	"description": "Finds releases through one or more Jackett servers.",
 	"settings": {
 		"servers": "Jackett servers",
-		"servers_help": "Up to three. Each server's API key is its own secret below.",
+		"servers_help": "Up to three, each with its own API key (Jackett → the key at the top right of its page).",
 		"servers.url": "Address",
 		"servers.url_help": "For example http://jackett:9117"
 	},
 	"secrets": {
-		"api_key": "API key of the first server",
-		"api_key_2": "API key of the second server",
-		"api_key_3": "API key of the third server"
+		"api_key": "API key"
+	},
+	"checks": {
+		"not_set_up": "No Jackett server is set up",
+		"no_search": "Releases cannot be searched.",
+		"add_server": "Check the servers",
+		"no_key": "{{server}}: API key missing",
+		"add_key": "Add the key",
+		"unreachable": "{{server}} does not answer",
+		"no_indexers": "{{server}} has no indexers set up in Jackett",
+		"not_tested_one": "{{count}} indexer, not tested yet",
+		"not_tested_other": "{{count}} indexers, not tested one by one",
+		"test_each": "Test each indexer",
+		"all_answer_one": "The indexer answers",
+		"all_answer_other": "All {{count}} indexers answer",
+		"some_fail_one": "{{failed}} of {{count}} indexer does not answer",
+		"some_fail_other": "{{failed}} of {{count}} indexers do not answer",
+		"some_fail_impact": "Searches miss the releases of the indexers that do not answer.",
+		"none_answer": "No indexer answers"
 	}
 }

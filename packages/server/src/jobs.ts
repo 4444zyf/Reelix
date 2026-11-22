@@ -1,7 +1,11 @@
 import { type Reelix, addInbox, answeredByOwner, errorMessage, json, newId, nextMidnight, nowIso, spendDay, tr } from "@reelix/core";
 import type { AgentHost, ThreadRow } from "./agent/host.ts";
+import type { ModelFailure } from "./models.ts";
 
-export type JobRun = { id: string; job_id: string | null; kind: string; payload_json: string; state: string; lease_until: string | null; session_file: string | null; attempts: number; summary: string | null; created_at: string; started_at: string | null; finished_at: string | null };
+export type JobRun = { id: string; job_id: string | null; kind: string; payload_json: string; state: string; lease_until: string | null; session_file: string | null; attempts: number; summary: string | null; models_json: string | null; created_at: string; started_at: string | null; finished_at: string | null };
+
+/** `job_runs.models_json`: the model that did an agent job's work, and the models that failed before it, with why (docs/models.md). */
+type JobModels = { model?: string; failures: ModelFailure[] };
 
 export type AgentOutcome = { state: string; text: string; parkedOn?: string };
 
@@ -31,6 +35,7 @@ export class Postpone extends Error {
 const LEASE_MS = 30 * 60_000;
 const MAX_AGENT_RUNS = 2;
 const STARTED_AT_ONCE = 10;
+const MAX_MODELS_PER_TURN = 5;
 
 /**
  * Background work (§4.5): scheduled and one-off jobs, each run on a lease so a crashed run is
@@ -176,6 +181,7 @@ export class JobRunner {
 				// Waiting jobs queue for the next day, which starts at local midnight; one Inbox notice says so (§4.5).
 				const tomorrow = new Date(nextMidnight().getTime() + 5 * 60_000);
 				this.app.db.prepare("UPDATE job_runs SET state = 'queued', lease_until = ?, attempts = attempts - 1 WHERE id = ?").run(tomorrow.toISOString(), r.id);
+				this.recordModels(r.id, { failures: [{ class: "budget", action: "wait", until: tomorrow.toISOString(), message: "Reelix's daily limit for background work is reached" }] });
 				addInbox(this.app, { kind: "notice", title: tr(this.app, "jobs.capTitle"), body: tr(this.app, "jobs.capBody", { usd: this.app.config.limits.background_daily_usd, tokens: this.app.config.limits.background_daily_tokens }), dedupeKey: `cap:${spendDay()}` });
 				clearInterval(renew);
 				this.active.delete(r.id);
@@ -209,10 +215,30 @@ export class JobRunner {
 		if (this.host.spendToday().reached) throw new CapReached();
 		if (!this.host.runtime) throw new Error("the agent is not available");
 		const t = this.jobThread(r, title);
-		const out = await this.host.runToEnd(t.id, prompt);
+		let out = await this.host.runToEnd(t.id, prompt);
+		// The model failed before finishing: the role's next model takes the task over, each model once (docs/models.md).
+		const failures: ModelFailure[] = [];
+		while (out.failure && failures.length < MAX_MODELS_PER_TURN) {
+			failures.push(out.failure);
+			let next: string | undefined;
+			try {
+				next = this.host.modelFor("job")?.spec;
+			} catch {
+				next = undefined;
+			}
+			if (!next || failures.some((f) => f.model === next)) break;
+			out = await this.host.runToEnd(t.id, "The model you were running on failed before finishing. Continue the task from where it stopped.");
+		}
 		const row = this.host.getThread(t.id);
 		if (row?.session_file) this.app.db.prepare("UPDATE job_runs SET session_file = ? WHERE id = ?").run(row.session_file, r.id);
-		return out;
+		if (out.model || failures.length) this.recordModels(r.id, { model: out.failure ? undefined : out.model, failures: out.failure && !failures.includes(out.failure) ? [...failures, out.failure] : failures });
+		if (out.failure) return { state: "failed", text: out.text || `The model failed (${out.failure.class}): ${out.failure.message}` };
+		return { state: out.state, text: out.text, parkedOn: out.parkedOn };
+	}
+
+	/** The job record's model line: the model that did the work, and the ones that failed before it, with why. */
+	private recordModels(runId: string, record: JobModels): void {
+		this.app.db.prepare("UPDATE job_runs SET models_json = ? WHERE id = ?").run(JSON.stringify(record), runId);
 	}
 
 	/** The owner answered a parked job's question: resume it in its saved session. */

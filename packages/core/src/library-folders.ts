@@ -108,7 +108,7 @@ export function libraryFolderFor(app: Reelix, t: FolderTitle): FolderDecision {
 	const folders = foldersOf(app, cls);
 	if (!folders.length) {
 		const key = SETTING[cls];
-		throw new ReelixError("not_configured", `No library folder for ${key} is set (Settings → Paths, setting library.${key}).`);
+		throw new ReelixError("not_configured", `No library folder for ${key} is set (Settings → Folders, setting library.${key}).`);
 	}
 	const there = alreadyIn(app, folders, t);
 	if (there) return { folder: there, how: "there" };

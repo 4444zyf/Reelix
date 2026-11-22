@@ -206,6 +206,51 @@ test("settings: checked before activate, defaults filled in; a change of setting
 	}
 });
 
+test("a structured check is worded from the plugin's strings; plugin.check runs one plugin's checks in full and keeps the result until it restarts", async () => {
+	const f = folder();
+	const dir = pluginDir(f.root, "svc", { uses: { operations: { probe: "read" } } }, `export default definePlugin({ async activate(ctx) {
+		await ctx.operation({ name: "probe", summary: "p", effect: "read", input: Type.Object({}), async run() { return {}; } });
+		let runs = 0;
+		await ctx.check("svc", async ({ quick }) => { runs++; return { state: "failed", cause: { key: "checks.no_key", values: { n: runs } }, impact: { key: "checks.off" }, action: { secret: "api_key" }, raw: quick ? "quick" : "full", cause_id: "setup" }; });
+		await ctx.check("svc-test", async () => ({ state: "not_tested", cause: { key: "checks.untested" }, action: { operation: "probe", input: { x: 1 } } }));
+		await ctx.check("svc-bad", async () => ({ state: "fine", cause: { key: "x" } }));
+	} });`);
+	mkdirSync(join(dir, "locales"));
+	writeFileSync(join(dir, "locales/en.json"), JSON.stringify({ checks: { no_key: "Key missing ({{n}})", off: "Nothing works", untested: "Not tested" } }));
+	writeFileSync(join(dir, "locales/zh.json"), JSON.stringify({ checks: { no_key: "缺少密钥（{{n}}）" } }));
+	const t = await startPlugins([dir], {});
+	try {
+		t.app.setConfig("language", "zh");
+		const checks = await doctor(t.app, { quick: true });
+		assert.deepEqual(checks.find((c) => c.name === "svc"), {
+			name: "svc",
+			state: "failed",
+			cause: { key: "svc:checks.no_key", values: { n: 1 }, text: "缺少密钥（1）" },
+			impact: { key: "svc:checks.off", text: "Nothing works" },
+			action: { label: { key: "actions.open_plugin" }, anchor: "secret-plugins.svc.api_key" },
+			raw: "quick",
+			cause_id: "svc:setup",
+		});
+		assert.deepEqual(checks.find((c) => c.name === "svc-test")!.action, { label: { key: "actions.run" }, operation: "svc.probe", input: { x: 1 } });
+		const bad = checks.find((c) => c.name === "svc-bad")!;
+		assert.deepEqual([bad.state, bad.cause.key], ["failed", "check_failed"]);
+		assert.match(bad.raw!, /state must be one of/);
+		assert.equal(t.info("svc").lastCheck?.results.length, 3, "a Doctor run is the plugin's last check too");
+
+		const tested = (await runOperation(t.app, "plugin.check", { plugin: "svc" }, { actor: "owner:web" })).output as { name: string; state: string; raw?: string; cause: { values?: { n?: number } } }[];
+		assert.deepEqual(tested.map((c) => [c.name, c.state]), [["svc", "failed"], ["svc-test", "not_tested"], ["svc-bad", "failed"]]);
+		assert.deepEqual([tested[0]!.raw, tested[0]!.cause.values?.n], ["full", 2], "in full, not quick");
+		assert.deepEqual(t.info("svc").lastCheck?.results, tested);
+		await assert.rejects(runOperation(t.app, "plugin.check", { plugin: "nope" }, { actor: "owner:web" }), /no plugin "nope"/);
+		await t.manager.disable("svc");
+		assert.equal(t.info("svc").lastCheck, undefined, "stopping the plugin forgets it");
+		await assert.rejects(runOperation(t.app, "plugin.check", { plugin: "svc" }, { actor: "owner:web", requestId: "again" }), /is disabled/);
+	} finally {
+		await t.close();
+		f.cleanup();
+	}
+});
+
 test("checks reach Doctor and leave with the plugin; ctx.agent.run works only inside a job", async () => {
 	const f = folder();
 	const dir = pluginDir(f.root, "watcher-x", { uses: { jobs: ["turn"], agent: true } }, `export default definePlugin({ async activate(ctx) {
@@ -217,7 +262,7 @@ test("checks reach Doctor and leave with the plugin; ctx.agent.run works only in
 	const t = await startPlugins([dir, noAgent], { agent: (p) => ({ state: "done", text: `agent got ${p}` }) });
 	try {
 		const quick = await doctor(t.app, { quick: true });
-		assert.deepEqual(quick.find((c) => c.name === "watcher-x"), { name: "watcher-x", ok: false, detail: "looked" });
+		assert.deepEqual(quick.find((c) => c.name === "watcher-x"), { name: "watcher-x", state: "failed", cause: { key: "check_failed" }, raw: "looked" }, "the earlier shape still works");
 		assert.match(t.kv("watcher-x", "outside"), /only inside one of this plugin's jobs/);
 		assert.equal((await t.runJob("watcher-x.turn")).summary, "agent got say hi");
 		assert.match((await t.runJob("no-agent.turn")).summary!, /not declared/);
@@ -285,7 +330,7 @@ test("one-time move of old settings, secrets and stored data; the old keys are g
 		writeFileSync(join(root, "secrets.yaml"), "jackett:\n  api_key: jk-secret\nassrt:\n  token: as-secret\nopensubtitles:\n  api_key: os-key\n  username: me\nsubdl:\n  api_key: sd-key\njimaku:\n  api_key: jm-key\ntmdb:\n  api_key: keep\n");
 		let app = new Reelix(root);
 		const db = app.db;
-		db.exec("ALTER TABLE inbox ADD COLUMN telegram_message_id INTEGER; DROP TABLE notice_deliveries; DROP TABLE chat_channels; DROP TABLE reasons; DROP TABLE proposals; DROP TABLE trial_results; ALTER TABLE downloads DROP COLUMN downloader; ALTER TABLE titles DROP COLUMN ratings_json; ALTER TABLE titles ADD COLUMN douban_rating REAL; ALTER TABLE titles DROP COLUMN original_language; ALTER TABLE titles DROP COLUMN origin_country_json; ALTER TABLE titles DROP COLUMN genres_json; ALTER TABLE titles DROP COLUMN library_choice; UPDATE schema_version SET v = 5; DROP TABLE provider_outcomes; CREATE TABLE site_state (site TEXT PRIMARY KEY, state_json TEXT NOT NULL DEFAULT '{}', updated_at TEXT NOT NULL)");
+		db.exec("ALTER TABLE inbox ADD COLUMN telegram_message_id INTEGER; DROP TABLE notice_deliveries; DROP TABLE chat_channels; DROP TABLE reasons; DROP TABLE proposals; DROP TABLE trial_results; ALTER TABLE downloads DROP COLUMN downloader; ALTER TABLE titles DROP COLUMN ratings_json; ALTER TABLE titles ADD COLUMN douban_rating REAL; ALTER TABLE titles DROP COLUMN original_language; ALTER TABLE titles DROP COLUMN origin_country_json; ALTER TABLE titles DROP COLUMN genres_json; ALTER TABLE titles DROP COLUMN library_choice; ALTER TABLE job_runs DROP COLUMN models_json; UPDATE schema_version SET v = 5; DROP TABLE provider_outcomes; CREATE TABLE site_state (site TEXT PRIMARY KEY, state_json TEXT NOT NULL DEFAULT '{}', updated_at TEXT NOT NULL)");
 		const today = new Date().toISOString();
 		db.prepare("INSERT INTO site_state VALUES ('subhd', ?, ?)").run(JSON.stringify({ lastRequestAt: 123, dailyLimitUntil: "2099-01-01T00:00:00.000Z", downloadsToday: 2, day: today.slice(0, 10) }), today);
 		db.prepare("INSERT INTO kv (k, v) VALUES ('opensubtitles.token', '2026-01-01 tok'), ('translate.offered:movie:1:', 'then')").run();
@@ -297,8 +342,8 @@ test("one-time move of old settings, secrets and stored data; the old keys are g
 			assert.equal("jackett" in app.config, false);
 			assert.deepEqual(app.config.subtitles, parseConfig({ subtitles: { sources: ["subhd"] } }).subtitles);
 			assert.doesNotMatch(readFileSync(join(root, "config.yaml"), "utf8"), /^jackett:|subhd_url: https:\/\/subhd\.example\n  assrt/m);
-			assert.deepEqual(Object.keys(loadSecrets(app.paths)).sort(), ["plugins.jackett.api_key", "plugins.subtitle-sites.assrt_token", "plugins.subtitle-sites.jimaku_api_key", "plugins.subtitle-sites.opensubtitles_api_key", "plugins.subtitle-sites.opensubtitles_username", "plugins.subtitle-sites.subdl_api_key", "tmdb.api_key"]);
-			assert.equal(app.secrets["plugins.jackett.api_key"], "jk-secret");
+			assert.deepEqual(Object.keys(loadSecrets(app.paths)).sort(), ["plugins.jackett.servers.0.api_key", "plugins.subtitle-sites.assrt_token", "plugins.subtitle-sites.jimaku_api_key", "plugins.subtitle-sites.opensubtitles_api_key", "plugins.subtitle-sites.opensubtitles_username", "plugins.subtitle-sites.subdl_api_key", "tmdb.api_key"]);
+			assert.equal(app.secrets["plugins.jackett.servers.0.api_key"], "jk-secret");
 			assert.equal(kvGet(app.db, "plugin:subtitle-sites:pace.subhd"), "123");
 			assert.equal(kvGet(app.db, "plugin:subtitle-sites:subhd.limit_until"), '"2099-01-01T00:00:00.000Z"');
 			assert.equal(kvGet(app.db, "plugin:subtitle-sites:opensubtitles.token"), '"2026-01-01 tok"');

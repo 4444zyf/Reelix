@@ -97,7 +97,7 @@ async function world(opts: { version?: FakeQbVersion; magnets?: Record<string, M
 	app.setConfig("plugins.qbittorrent.url", qb.url);
 	app.setSecret("plugins.qbittorrent.password", QB_PASSWORD);
 	app.setConfig("plugins.jackett.servers", [{ url: jackett.url }]);
-	app.setSecret("plugins.jackett.api_key", JACKETT_KEY);
+	app.setSecret("plugins.jackett.servers.0.api_key", JACKETT_KEY);
 	app.setConfig("tmdb.base_url", tmdb.url);
 	app.setSecret("tmdb.api_key", tmdb.apiKey);
 	app.setConfig("path_maps.downloaders.qbittorrent", [{ theirs: "/downloads", ours: t.downloads }]);
@@ -457,7 +457,7 @@ test("TMDB rejects a wrong key; Jackett too", async () => {
 	try {
 		w.app.setSecret("tmdb.api_key", "not-the-key");
 		await rejectsWith(w.run("title.find", { id: "movie:45745" }), "tmdb_auth");
-		w.app.setSecret("plugins.jackett.api_key", "wrong-jackett-key");
+		w.app.setSecret("plugins.jackett.servers.0.api_key", "wrong-jackett-key");
 		// The plugin starts again with the new key, in its own process, which takes a moment.
 		const state = () => w.app.plugins!.list().find((p) => p.id === "jackett")!.state;
 		for (let i = 0; i < 500 && state() === "active"; i++) await new Promise((r) => setTimeout(r, 2));

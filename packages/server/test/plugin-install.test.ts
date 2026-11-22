@@ -550,7 +550,7 @@ test("setup skill: jackett offers setup-jackett, which takes keys only through t
 		assert.deepEqual(jackett.skills, ["setup-jackett"]);
 		const [dir] = s.m().skillFolders().find((f) => f.plugin === "jackett")!.dirs;
 		const text = readFileSync(join(dir!, "SKILL.md"), "utf8");
-		assert.match(text, /kind=secret, key=`plugins\.jackett\.api_key`/);
+		assert.match(text, /kind=secret, key=`plugins\.jackett\.servers\.0\.api_key`/);
 		assert.match(text, /Never ask for it in chat/);
 		assert.equal(s.info("telegram")!.setup, undefined);
 		await owner(s.app, "plugin.disable", { id: "jackett" });

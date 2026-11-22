@@ -171,11 +171,26 @@ export type InboxItem = {
 	created_at: string;
 };
 
+/** Why a model call failed, and what the owner can do about it (docs/models.md). */
+export type ModelFailure = {
+	model?: string;
+	class: "signed_out" | "timeout" | "rate_limited" | "budget" | "capability" | "other";
+	action: "reconnect" | "retry" | "wait" | "choose_model";
+	capability?: "images" | "context";
+	until?: string;
+	message: string;
+};
+
+/** `model.test`. */
+export type ModelTestResult =
+	| { ok: true; role: string; model: string; answer: string; ms: number; skipped: ModelFailure[] }
+	| { ok: false; role: string; ms: number; failures: ModelFailure[]; message: string };
+
 export type Status = {
 	spend: { usd: number; tokens: number; capUsd: number; capTokens: number; reached: boolean };
 	inbox: number;
 	models: string[];
-	model: { roles: Record<string, { own: string[]; uses: string[]; resting: string[] }>; magpie: { url?: string; ok: boolean; models: string[]; error?: string; admin?: boolean; limits?: { period: string; cost?: number; costLimit?: number; reset?: string; spent?: boolean }[] } };
+	model: { roles: Record<string, { own: string[]; uses: string[]; resting: string[] }>; rests: (ModelFailure & { model: string; until: string })[]; magpie: { url?: string; ok: boolean; models: string[]; error?: string; admin?: boolean; limits?: { period: string; cost?: number; costLimit?: number; reset?: string; spent?: boolean }[] } };
 	configWarning?: string;
 	jobs: { queued: number; running: number; parked: number };
 	version?: string;
@@ -185,7 +200,14 @@ export type Status = {
 
 export type ChatChannelInfo = { id: string; label: string; active: boolean; linked: boolean; may_approve: boolean; last_error?: string; last_error_at?: string };
 
-export type DoctorCheck = { name: string; ok: boolean | null; detail: string; fix?: string };
+/** Doctor (docs/settings.md, "Status and Doctor"): data the UI words from the `doctor` strings; `text`: a plugin's message, already worded. */
+export type CheckState = "passed" | "failed" | "skipped" | "not_tested" | "not_used" | "degraded";
+export type CheckMessage = { key: string; values?: Record<string, string | number>; text?: string };
+/** `anchor`: a section id, `field-<config path>`, `secret-<secret key>` or `plugin-<id>`. */
+export type CheckAction = { label: CheckMessage; anchor: string } | { label: CheckMessage; operation: string; input?: Record<string, unknown> };
+export type DoctorCheck = { name: string; state: CheckState; cause: CheckMessage; impact?: CheckMessage; action?: CheckAction; cli?: string; raw?: string; cause_id?: string; also?: string[] };
+export type FolderResult = { state: CheckState; cause: CheckMessage; raw?: string };
+export type FolderCheck = { path: string; kind: "downloads" | "library" | "other"; label: string; exists: FolderResult; writable: FolderResult; hardlink: FolderResult; media_server: FolderResult };
 
 export type SecretInfo = { key: string; what: string; set: boolean };
 
@@ -209,7 +231,15 @@ export type PluginInfo = {
 	jobs: string[];
 	events: string[];
 	runs: string[];
+	/** Secrets the owner gives it (full keys); one per entry for a secret declared per list entry. */
 	secrets: string[];
+	/** Secrets it makes itself: shown as a state, never as a field. */
+	managedSecrets: string[];
+	network: boolean;
+	/** Optional and nothing of it set up yet: shown as "optional, not connected". */
+	unused: boolean;
+	/** Required settings and secrets that are empty, by name (`servers.0.api_key`); empty while it is off. */
+	needsSetup: string[];
 	tools: string[];
 	toolsOn: boolean;
 	trial: boolean;
@@ -229,6 +259,8 @@ export type PluginInfo = {
 	processAllowed: boolean;
 	/** The screen it ships, shown under Plugins while it runs. */
 	screen?: { title: string };
+	/** Its own checks' last results, until it restarts; absent: not tested since. */
+	lastCheck?: { at: string; results: DoctorCheck[] };
 };
 export type PluginRuntime = "in-process" | "process";
 export type PluginRequirement = { id: string; range: string; version?: string; state?: PluginInfo["state"] };
@@ -318,14 +350,18 @@ export type SettingSchema = {
 	"x-reelix-options-from"?: string;
 	"x-reelix-show-when"?: { field: string; equals: unknown };
 	"x-reelix-buttons"?: string[];
+	"x-reelix-required"?: boolean;
+	"x-reelix-advanced"?: boolean;
 };
+export type PluginSecretRow = { name: string; key: string; set: boolean; managed: boolean; required: boolean; per?: string; entry?: number };
 export type PluginSettings = {
 	id: string;
 	state: PluginInfo["state"];
 	schema?: SettingSchema;
 	values: Record<string, unknown>;
 	strings: Record<string, string>;
-	secrets: { name: string; key: string; set: boolean }[];
+	secrets: PluginSecretRow[];
+	perEntry: { per: string; name: string; required: boolean }[];
 	buttons: string[];
 	note?: string;
 };
@@ -351,7 +387,7 @@ export type PluginCardData = { kind: "plugin"; card: string; plugin: string; lay
 
 export type Job = { id: string; kind: string; schedule?: string | null; payload_json?: string; next_run_at?: string | null; enabled: number; created_at: string };
 
-export type JobRun = { payload_json?: string; id: string; job_id?: string | null; kind: string; state: string; summary?: string | null; created_at: string; started_at?: string | null; finished_at?: string | null; thread_id?: string | null };
+export type JobRun = { payload_json?: string; id: string; job_id?: string | null; kind: string; state: string; summary?: string | null; models_json?: string | null; created_at: string; started_at?: string | null; finished_at?: string | null; thread_id?: string | null };
 
 // ------------------------------------------------------------------ chat
 
@@ -387,7 +423,7 @@ export type ToolCall = { id: string; name: string; label: string; isError?: bool
 
 export type UiMessage =
 	| { role: "user"; text: string; images?: number }
-	| { role: "assistant"; text: string; tools: ToolCall[]; error?: string };
+	| { role: "assistant"; text: string; tools: ToolCall[]; error?: string; model?: string; failure?: ModelFailure; fallback?: ModelFailure };
 
 export type ThreadDetail = { thread: Thread; messages: UiMessage[]; seq: number; running: boolean; pending?: Ask };
 

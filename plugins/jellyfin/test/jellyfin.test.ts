@@ -59,15 +59,19 @@ test("jellyfin.refresh asks for a full scan; Doctor checks the server and whethe
 		assert.equal(r.text, "Full library scan requested.");
 		assert.deepEqual(w.jf.updates, ["refresh"]);
 		const checks = await doctor(w.app, { quick: true });
-		assert.equal(checks.find((c) => c.name === "jellyfin")?.detail, `fake 10.10.7 at ${w.jf.url}`);
+		assert.equal(checks.find((c) => c.name === "jellyfin")?.raw, `fake 10.10.7 at ${w.jf.url}`);
 		const line = checks.find((c) => c.name === "media server")!;
-		assert.equal(line.ok, true, line.detail);
-		assert.match(line.detail, /Films=\/data\/media\/library\/Movies/);
+		assert.equal(line.state, "passed", line.raw);
+		assert.match(line.raw!, /Films=\/data\/media\/library\/Movies/);
 		w.app.setConfig("path_maps.media_servers.jellyfin", []);
 		const unmapped = (await doctor(w.app, { quick: true })).find((c) => c.name === "media server")!;
-		assert.equal(unmapped.ok, false);
-		assert.match(unmapped.detail, /No library of Jellyfin \(jellyfin\) holds movie/);
-		assert.match(unmapped.fix!, /path_maps\.media_servers\.jellyfin/);
+		assert.equal(unmapped.state, "failed");
+		assert.equal(unmapped.cause.key, "media_server_unseen");
+		assert.deepEqual(unmapped.action, { label: { key: "actions.set_path_map" }, anchor: "field-path_maps.media_servers.jellyfin" });
+		assert.match(unmapped.raw!, /No library of Jellyfin \(jellyfin\) holds movie/);
+		assert.match(unmapped.cli!, /path_maps\.media_servers\.jellyfin/);
+		const folders = (await runOperation(w.app, "media.folder_checks", {}, { actor: "owner:web" })).output as { kind: string; media_server: { state: string } }[];
+		assert.ok(folders.some((f) => f.kind === "library" && f.media_server.state === "failed"), "the folder checks see the same");
 	} finally {
 		await w.close();
 	}
@@ -82,10 +86,20 @@ test("not set up: no provider, filing goes on, Doctor says so, the operation ref
 		assert.equal(await tellMediaServer(w.app, ["/x/y.mkv"]), "No media server is set up.");
 		assert.equal(await watchHistory(w.app), undefined);
 		const checks = await doctor(w.app, { quick: true });
-		assert.equal(checks.find((c) => c.name === "jellyfin")?.detail, "not configured (optional)");
-		const line = checks.find((c) => c.name === "media server")!;
-		assert.equal(line.ok, null);
-		assert.match(line.detail, /running but offers no media server/);
+		assert.equal(checks.some((c) => c.name === "media server"), false, "one cause, shown once");
+		const line = checks.find((c) => c.name === "jellyfin")!;
+		assert.deepEqual([line.state, line.cause.key, line.cause_id, line.also], ["not_used", "jellyfin:checks.not_set_up", "jellyfin:setup", ["media server"]]);
+		w.app.setConfig("plugins.jellyfin", { url: "http://127.0.0.1:9" });
+		let noKey = (await doctor(w.app, { quick: true })).find((c) => c.name === "jellyfin")!;
+		for (let i = 0; i < 200 && noKey?.state !== "failed"; i++) {
+			await new Promise((r) => setTimeout(r, 10));
+			noKey = (await doctor(w.app, { quick: true })).find((c) => c.name === "jellyfin")!;
+		}
+		assert.deepEqual([noKey.state, noKey.cause.text, noKey.also], ["failed", "Jellyfin API key missing", ["media server"]]);
+		assert.deepEqual(noKey.action, { label: { key: "jellyfin:checks.add_key", text: "Add the key" }, anchor: "secret-plugins.jellyfin.api_key" });
+		const folders = (await runOperation(w.app, "media.folder_checks", {}, { actor: "owner:web" })).output as { kind: string; media_server: { state: string; cause: { key: string; values: unknown } } }[];
+		const lib = folders.find((f) => f.kind === "library")!;
+		assert.deepEqual([lib.media_server.state, lib.media_server.cause], ["skipped", { key: "folder.server_unverified", values: { server: "Jellyfin" } }], "never a pass while it is not connected");
 		await assert.rejects(runOperation(w.app, "jellyfin.refresh", {}, { actor: "owner:web" }), /Settings → Plugins → jellyfin/);
 		await assert.rejects(runOperation(w.app, "config.set", { path: "media_server", value: "plex" }, { actor: "agent:test" }), (e: { code?: string }) => e.code === "owner_only" || e.code === "needs_owner" || /owner/.test(String(e)), "the active media server is the owner's choice");
 	} finally {

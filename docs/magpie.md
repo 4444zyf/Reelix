@@ -75,7 +75,7 @@ For the owner, "refused" items other than protected keys become "needs approval"
 
 - **In chat:** applying a plan that needs approval shows the plan as a yes/no question. Only the owner's answer counts.
 - **In a background job:** it posts the plan to the Inbox with *Approve* / *Decline* and parks. When the owner approves, the job resumes and applies it.
-- An approval only counts when it comes from the owner (`owner:web`, `owner:cli`, or a chat channel the owner has allowed to approve, such as `owner:telegram`: Settings → Chat channels, on by default only for a Telegram linked before channels existed). An agent answering an Inbox item itself does not approve anything.
+- An approval only counts when it comes from the owner (`owner:web`, `owner:cli`, or a chat channel the owner has allowed to approve, such as `owner:telegram`: Settings → Notifications, on by default only for a Telegram linked before channels existed). An agent answering an Inbox item itself does not approve anything.
 
 ## After a change
 

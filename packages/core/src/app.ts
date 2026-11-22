@@ -25,7 +25,7 @@ import { proxyFor } from "./http.ts";
 import { HookHub } from "./hooks.ts";
 import { NotificationDispatcher } from "./notify.ts";
 import { CORE_OPERATIONS } from "./ops/index.ts";
-import type { Check } from "./doctor.ts";
+import type { Check, CheckResult } from "./doctor.ts";
 import type { PluginCardKind, PluginControl } from "./plugins.ts";
 import { OperationRegistry } from "./registry.ts";
 import { SeamHub } from "./seams.ts";
@@ -67,8 +67,10 @@ export class Reelix {
 	private otherSecrets = new Map<string, string>();
 	/** Chat card kinds registered by plugins, as `<plugin>.<kind>` (docs/plugins.md §12.3). */
 	cards = new Map<string, PluginCardKind>();
-	/** Doctor checks registered by plugins. */
-	checks = new Map<string, (o: { quick: boolean }) => Promise<Omit<Check, "name"> | undefined>>();
+	/** Doctor checks registered by plugins, by check name, with the plugin that registered each. */
+	checks = new Map<string, { plugin: string; run: (o: { quick: boolean }) => Promise<CheckResult | undefined> }>();
+	/** Each plugin's last check results, until the plugin restarts. */
+	lastChecks = new Map<string, { at: string; results: Check[] }>();
 	events = new EventEmitter();
 	pluginEvents = new EventEmitter<PluginEventMap>();
 	private clients = new Map<string, unknown>();
@@ -150,13 +152,20 @@ export class Reelix {
 
 	/** `byPlugin`: the plugin stored it itself, and need not restart for it. */
 	setSecret(key: string, value: string | undefined, byPlugin?: string): void {
+		this.setSecrets({ [key]: value }, byPlugin);
+	}
+
+	/** Several secrets in one write; undefined or "" removes one. `byPlugin`: that plugin is not restarted for them (it stored them, or its caller restarts it). */
+	setSecrets(changes: Record<string, string | undefined>, byPlugin?: string): void {
 		const next = { ...this.secrets };
-		if (value === undefined || value === "") delete next[key];
-		else next[key] = value;
+		for (const [key, value] of Object.entries(changes)) {
+			if (value === undefined || value === "") delete next[key];
+			else next[key] = value;
+		}
 		saveSecrets(this.paths, next);
 		this.secrets = next;
 		this.clients.clear();
-		this.emit({ type: "secrets", keys: [key], byPlugin });
+		this.emit({ type: "secrets", keys: Object.keys(changes), byPlugin });
 	}
 
 	/** A secret that lives outside secrets.yaml (the owner's socket token): `redact` blanks it too. */

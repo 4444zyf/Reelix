@@ -9,7 +9,7 @@ import { startFakeJackett } from "./fake-jackett.ts";
 
 const PLUGIN = join(import.meta.dirname, "..");
 const SEAM = "reelix:indexer@1";
-const start = () => startPlugins([PLUGIN], { settings: { jackett: check.settings }, secrets: { "plugins.jackett.api_key": KEY }, http: check.http });
+const start = () => startPlugins([PLUGIN], { settings: { jackett: check.settings }, secrets: { "plugins.jackett.servers.0.api_key": KEY }, http: check.http });
 
 test("one broken site does not hide the others", async () => {
 	const t = await start();
@@ -43,14 +43,19 @@ test("handles record their provider and never show the link; fetching goes back 
 test("the operation, the Doctor check and the nightly health all go through the plugin", async () => {
 	const t = await start();
 	try {
+		const untested = (await doctor(t.app, { quick: true })).find((c) => c.name === "jackett")!;
+		assert.deepEqual([untested.state, untested.cause.values, untested.raw], ["not_tested", { count: 2 }, "2 indexers: Alpha & Co, Beta"]);
+		assert.deepEqual(untested.action, { label: { key: "jackett:checks.test_each", text: "Test each indexer" }, operation: "jackett.indexers", input: { test: true } });
+		assert.equal(untested.cause.text, "2 indexers, not tested one by one");
 		const op = await runOperation(t.app, "jackett.indexers", { test: true }, { actor: "agent:t" });
 		assert.match(op.text, /alpha \| Alpha & Co \| private \| ok/);
 		assert.match(op.text, /beta \| Beta \|  \| ERROR Cloudflare/);
 		const check = (await doctor(t.app, { quick: true })).find((c) => c.name === "jackett")!;
-		assert.deepEqual([check.ok, check.detail], [true, "2 indexers: Alpha & Co, Beta"]);
+		assert.equal(check.state, "degraded", "after the test, the quick check shows each indexer's own result");
+		assert.equal(check.cause.text, "1 of 2 indexers do not answer");
 		const full = (await doctor(t.app)).find((c) => c.name === "jackett")!;
-		assert.equal(full.ok, true, "one site still answers");
-		assert.match(full.detail, /Beta: ERROR Cloudflare/);
+		assert.equal(full.state, "degraded", "one site still answers");
+		assert.match(full.raw!, /Beta: ERROR Cloudflare/);
 		assert.deepEqual((await indexerHealth(t.app)).filter((o) => !o.ok).map((o) => [o.name, o.error]), [["Beta", "Cloudflare"]]);
 	} finally {
 		await t.close();
@@ -63,7 +68,8 @@ test("without a server set up: no provider, and the check says so", async () => 
 		assert.equal(t.info("jackett").state, "active");
 		assert.equal(t.app.seams.providers(SEAM).length, 0);
 		await assert.rejects(searchReleases(t.app, { query: "x" }), (e: any) => e.code === "no_indexers");
-		assert.equal((await doctor(t.app, { quick: true })).find((c) => c.name === "jackett")!.detail, "not configured");
+		const check = (await doctor(t.app, { quick: true })).find((c) => c.name === "jackett")!;
+		assert.deepEqual([check.state, check.cause.key, check.raw, check.cause_id], ["failed", "jackett:checks.not_set_up", "not configured", "jackett:setup"]);
 		assert.match((await runOperation(t.app, "jackett.indexers", {}, { actor: "agent:t" })).text, /No Jackett server/);
 	} finally {
 		await t.close();
@@ -74,7 +80,7 @@ test("two servers are two providers; results merge by info-hash, keeping the bes
 	const release = (seeders: number) => ({ title: "Sintel.2010.1080p.BluRay.x264-GRP", size: 1000, seeders, peers: 1, category: [2040], infoHash: "a".repeat(40), magnet: `magnet:?xt=urn:btih:${"a".repeat(40)}` });
 	const one = await startFakeJackett({ apiKey: "k1", indexers: [{ id: "a", name: "A", results: [release(5)] }] });
 	const two = await startFakeJackett({ apiKey: "k2", indexers: [{ id: "b", name: "B", results: [release(50)] }] });
-	const t = await startPlugins([PLUGIN], { settings: { jackett: { servers: [{ url: one.url }, { url: two.url }] } }, secrets: { "plugins.jackett.api_key": "k1", "plugins.jackett.api_key_2": "k2" } });
+	const t = await startPlugins([PLUGIN], { settings: { jackett: { servers: [{ url: one.url }, { url: two.url }] } }, secrets: { "plugins.jackett.servers.0.api_key": "k1", "plugins.jackett.servers.1.api_key": "k2" } });
 	try {
 		assert.deepEqual(t.app.seams.providers(SEAM).map((p) => p.id), ["jackett", "jackett-2"]);
 		const s = await searchReleases(t.app, { query: "Sintel" });

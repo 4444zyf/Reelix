@@ -4,5 +4,11 @@
 	"settings": {
 		"base_url": "Adresse de l'API Bangumi",
 		"base_url_help": "https://api.bgm.tv, sauf si vous utilisez un miroir."
+	},
+	"checks": {
+		"ok": "Bangumi répond",
+		"unreachable": "Bangumi ne répond pas",
+		"unreachable_impact": "Les saisons d'anime ne peuvent pas être alignées sur les fiches de Bangumi, et ce qui est diffusé en ce moment n'est pas affiché.",
+		"change_address": "Vérifier l'adresse"
 	}
 }

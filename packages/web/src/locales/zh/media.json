@@ -87,7 +87,7 @@
 		"machine": "机器翻译",
 		"hearingImpaired": "听障字幕",
 		"wanted": "需要：{{languages}}",
-		"needsKey": "未搜索 {{source}}：需要 {{keys}}（设置 → 密钥）。",
+		"needsKey": "未搜索 {{source}}：需要 {{keys}}（设置 → 服务 → 字幕站点）。",
 		"lang": {
 			"zh": "中文",
 			"en": "英语",

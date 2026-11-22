@@ -1,6 +1,7 @@
 import { type CardLayout, type HookId, outsideLine } from "@reelix/plugin";
 import { Type } from "typebox";
 import type { Reelix } from "./app.ts";
+import type { Check } from "./doctor.ts";
 import { KNOWN_SECRETS, LANGUAGES, type Language, MODEL_ROLES, type ModelRole } from "./config.ts";
 import { json, kvGet, kvSet } from "./db.ts";
 import { HOOK_DECLARATIONS, type TrialSummary, setHookOrder, setTrial, trialPlugins } from "./hooks.ts";
@@ -178,8 +179,16 @@ export type PluginInfo = {
 	jobs: string[];
 	events: string[];
 	runs: string[];
-	/** Full names of the secrets it declares. */
+	/** Full names of the secrets the owner gives it: one per entry for a secret declared per list entry. */
 	secrets: string[];
+	/** Full names of the secrets it makes and renews itself; never asked for or shown as a field. */
+	managedSecrets: string[];
+	/** Optional and nothing of it set up: "not used", not "needs setup" (`needsSetup` is empty then). */
+	unused: boolean;
+	/** It declares network access (`uses.network`) or asked for its proxy: its requests can go through the proxy. */
+	network: boolean;
+	/** What it cannot work without and is not filled in yet: settings (paths, `servers`) and secret names. Empty for a plugin that is off. */
+	needsSetup: string[];
 	/** Its typed agent tools (`<id>_<name>`), and whether the owner lets the agent have them. */
 	tools: string[];
 	toolsOn: boolean;
@@ -207,6 +216,8 @@ export type PluginInfo = {
 	processAllowed: boolean;
 	/** The screen it ships, in the owner's language; shown while it runs (docs/plugins.md §16, phase 8). */
 	screen?: { title: string };
+	/** Its own checks' last results (Doctor or "Test connection"), kept until it restarts; absent: not tested since. */
+	lastCheck?: { at: string; results: Check[] };
 };
 
 /**
@@ -229,7 +240,10 @@ export type PluginSettingsView = {
 	values: Record<string, unknown>;
 	/** The plugin's own strings for the form in the asked language: `settings.*`, `buttons.*` and `secrets.*`. */
 	strings: Record<string, string>;
-	secrets: { name: string; key: string; set: boolean }[];
+	/** One row per secret; for a secret declared per list entry, one per entry (`entry`: its index). */
+	secrets: { name: string; key: string; set: boolean; managed: boolean; required: boolean; per?: string; entry?: number }[];
+	/** Secrets declared per entry of a list setting, so a new entry gets its fields. */
+	perEntry: { per: string; name: string; required: boolean }[];
 	/** Buttons: operations of the plugin, full names. */
 	buttons: string[];
 	note?: string;
@@ -252,7 +266,7 @@ export type PluginControl = {
 	enable(id: string): Promise<PluginActionResult>;
 	disable(id: string, options?: { withDependents?: boolean }): Promise<PluginActionResult>;
 	settings(id: string, lang: Language): PluginSettingsView;
-	configure(id: string, settings: unknown): Promise<PluginConfigureResult>;
+	configure(id: string, settings: unknown, secrets?: Record<string, string | null>, origins?: Record<string, (number | null)[]>): Promise<PluginConfigureResult>;
 	inspect(id?: string): PluginInspection;
 	/** What a declared secret is, in the owner's language. */
 	secretLabel(key: string): string | undefined;
@@ -450,10 +464,16 @@ defineOperation({
 	name: "plugin.configure",
 	summary: "Replace a plugin's settings, checked against its schema; the plugin starts again with them",
 	effect: "admin",
-	input: Type.Object({ id: PluginId, settings: Type.Unknown({ description: "the whole settings object" }) }),
+	input: Type.Object({
+		id: PluginId,
+		settings: Type.Optional(Type.Unknown({ description: "the whole settings object" })),
+		secrets: Type.Optional(Type.Record(Type.String(), Type.Union([Type.String(), Type.Null()]), { description: "owner only (the web form): secrets by name, a value or null to remove; stored with the settings, one restart" })),
+		origins: Type.Optional(Type.Record(Type.String(), Type.Array(Type.Union([Type.Integer({ minimum: 0 }), Type.Null()])), { description: "for a list with a secret per entry: each entry's index before the change, null for a new one" })),
+	}),
 	positional: ["id"],
+	recordInput: (i) => ({ ...i, ...(i.secrets ? { secrets: Object.fromEntries(Object.keys(i.secrets).map((k) => [k, i.secrets![k] === null ? null : "[secret]"])) } : {}) }),
 	async run(ctx, i) {
-		return control(ctx.app).configure(i.id, i.settings);
+		return control(ctx.app).configure(i.id, i.settings, i.secrets, i.origins);
 	},
 	toText: (o: PluginConfigureResult) => [actionText(o), ...(o.errors ?? []).map((e) => `${e.path}: ${e.message}`)].join("\n"),
 });

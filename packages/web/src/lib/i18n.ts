@@ -13,7 +13,7 @@ export const LANGUAGES = [
 ] as const;
 
 export type Lang = (typeof LANGUAGES)[number]["id"];
-export const NAMESPACES = ["common", "nav", "appearance", "chat", "media", "library", "settings", "activity"] as const;
+export const NAMESPACES = ["common", "nav", "appearance", "chat", "media", "library", "settings", "activity", "doctor", "models"] as const;
 
 const KEY = "reelix.lang";
 const ids = LANGUAGES.map((l) => l.id) as string[];

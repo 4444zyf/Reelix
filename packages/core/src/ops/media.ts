@@ -1,10 +1,10 @@
 import { Type } from "typebox";
 import { getPath, KNOWN_SECRETS, configChange, describeConfig } from "../config.ts";
 import { consumeApproval } from "../approvals.ts";
-import { checksToText, doctor } from "../doctor.ts";
+import { checksToText, doctor, folderChecks, folderChecksToText, pluginChecks } from "../doctor.ts";
 import { DOWNLOADER, MARK, downloaderOf } from "../downloader.ts";
 import { addDownload, downloadLine, fileDownload, getDownload, listDownloads, markFiled, reconcileAdd, setDownloadState } from "../downloads.ts";
-import { MEDIA_SERVER, tellMediaServer } from "../media-server.ts";
+import { MEDIA_SERVER, activeMediaServer, tellMediaServer } from "../media-server.ts";
 import { type EnrichResult, enrichTitle } from "../metadata.ts";
 import { type Survey, decidedText, folderLabel, foldersOf, libraryFolderFor, setLibraryChoice, surveyLibraryFolders, whenText } from "../library-folders.ts";
 import { mediaClassOf } from "../naming.ts";
@@ -14,11 +14,14 @@ import { grabFrame, probe, probeToText } from "../probe.ts";
 import { defineOperation } from "../registry.ts";
 import { describeFiles, fetchRelease, getHandle, searchReleases, searchToText } from "../releases.ts";
 import { addTitleNote, createLocalTitle, fetchTitle, findTitle, linkBangumi, linkDouban, requireTitle, titleSummary, type Title } from "../titles.ts";
-import { libraryPlayLinks, playTarget, playTargetText } from "../playback.ts";
+import { PLAYER, libraryPlayLinks, playTarget, playTargetText } from "../playback.ts";
+import type { SeamId } from "@reelix/plugin";
+
+const SUBTITLE_SOURCE = "reelix:subtitle.source@1";
 import { trendingTitles } from "../trends.ts";
 import { ReelixError, humanBytes } from "../util.ts";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { existsSync } from "node:fs";
 
 const Episode = Type.Object({ season: Type.Integer({ minimum: 0 }), episode: Type.Integer({ minimum: 0 }) });
 
@@ -92,6 +95,31 @@ defineOperation({
 		return doctor(ctx.app, { quick: i.quick });
 	},
 	toText: checksToText,
+});
+
+defineOperation({
+	name: "plugin.check",
+	summary: "Run one plugin's own Doctor checks in full (Test connection)",
+	description: "qBittorrent's check also sends one login after a refused one.",
+	effect: "read",
+	input: Type.Object({ plugin: Type.String({ description: "the plugin id" }) }),
+	positional: ["plugin"],
+	async run(ctx, i) {
+		return pluginChecks(ctx.app, i.plugin);
+	},
+	toText: checksToText,
+});
+
+defineOperation({
+	name: "media.folder_checks",
+	summary: "For the downloads folder and each library folder: exists, writable, hard link from the downloads, seen by the media server",
+	effect: "read",
+	input: Type.Object({ path: Type.Optional(Type.String({ description: "only this folder (one not in the settings must be inside media_root)" })) }),
+	positional: ["path"],
+	async run(ctx, i) {
+		return folderChecks(ctx.app, i.path);
+	},
+	toText: folderChecksToText,
 });
 
 // ------------------------------------------------------------------ titles
@@ -229,7 +257,7 @@ defineOperation({
 defineOperation({
 	name: "title.library_folder.set",
 	summary: "Choose the library folder a title goes to, before it is filed (when its media type has several folders)",
-	description: "folder: a folder's path or name from Settings → Paths; empty clears the choice. A title already in the library stays where it is.",
+	description: "folder: a folder's path or name from Settings → Folders; empty clears the choice. A title already in the library stays where it is.",
 	effect: "write",
 	input: Type.Object({ id: Type.String(), folder: Type.String() }),
 	positional: ["id", "folder"],
@@ -638,6 +666,73 @@ defineOperation({
 		return { active: ctx.app.config.media_server, running: providers.some((p) => p.id === ctx.app.config.media_server), providers };
 	},
 	toText: (o: ProviderChoice) => `Active: ${o.active}${o.running ? "" : " (not running or not set up)"}\n${o.providers.map((p) => `${p.id} | ${p.label} | plugin ${p.plugin}`).join("\n") || "No media server is running."}`,
+});
+
+// ------------------------------------------------------------------ players and the proxy, for Settings
+
+defineOperation({
+	name: "library.players",
+	summary: "The players that make play links, in the owner's order (config players), and which need the media server",
+	effect: "read",
+	input: Type.Object({}),
+	async run(ctx) {
+		const order = ctx.app.config.players;
+		const place = (id: string) => (order.includes(id) ? order.indexOf(id) : order.length);
+		const server = !!activeMediaServer(ctx.app);
+		return ctx.app.seams
+			.providers(PLAYER)
+			.map((p) => ({ id: p.id, label: p.label, plugin: p.plugin, needs_media_server: !!p.impl.needsMediaServer, works: server || !p.impl.needsMediaServer }))
+			.sort((a, b) => place(a.id) - place(b.id));
+	},
+	toText: (o: { id: string; label: string; needs_media_server: boolean; works: boolean }[]) => o.map((p) => `${p.id} | ${p.label}${p.needs_media_server ? ` | needs the media server${p.works ? "" : " (none connected)"}` : ""}`).join("\n") || "No player is running.",
+});
+
+defineOperation({
+	name: "proxy.services",
+	summary: "The outside services the proxy can be used for (config proxy.use_for and proxy.per_service), by name",
+	effect: "read",
+	input: Type.Object({}),
+	async run(ctx) {
+		const out = new Map<string, string>([["tmdb", "TMDB"]]);
+		for (const p of ctx.app.plugins?.list() ?? []) {
+			if (p.state === "disabled" || !p.network) continue;
+			// A plugin's requests go by its id, a subtitle site's by the site's id.
+			const own = p.provides.flatMap((seam) => ctx.app.seams.providers(seam as SeamId).filter((x) => x.plugin === p.id));
+			if (p.provides.includes(SUBTITLE_SOURCE)) for (const x of own) out.set(x.id, x.label);
+			else out.set(p.id, own[0]?.label ?? p.id.replace(/^./, (c) => c.toUpperCase()));
+		}
+		return [...out].map(([id, label]) => ({ id, label }));
+	},
+	toText: (o: { id: string; label: string }[]) => o.map((s) => `${s.id} | ${s.label}`).join("\n"),
+});
+
+// ------------------------------------------------------------------ the owner's preferences note (Settings → Assistant)
+
+const PREFERENCES_LIMIT = 20_000;
+
+defineOperation({
+	name: "preferences.show",
+	summary: "The owner's preferences note (notes/preferences.md), as the agent reads it",
+	effect: "read",
+	input: Type.Object({}),
+	async run(ctx) {
+		const f = join(ctx.app.paths.notes, "preferences.md");
+		return { text: existsSync(f) ? readFileSync(f, "utf8") : "" };
+	},
+	toText: (o: { text: string }) => o.text || "(empty)",
+});
+
+defineOperation({
+	name: "preferences.set",
+	summary: "Replace the owner's preferences note (notes/preferences.md); the agent reads it from its next conversation",
+	effect: "write",
+	input: Type.Object({ text: Type.String({ maxLength: PREFERENCES_LIMIT }) }),
+	async run(ctx, i) {
+		mkdirSync(ctx.app.paths.notes, { recursive: true });
+		writeFileSync(join(ctx.app.paths.notes, "preferences.md"), i.text.trim() ? `${i.text.trim()}\n` : "");
+		return { saved: true };
+	},
+	toText: () => "Preferences saved.",
 });
 
 // ------------------------------------------------------------------ the ledger (Activity)

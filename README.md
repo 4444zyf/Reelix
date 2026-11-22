@@ -129,10 +129,10 @@ No image is published yet: your machine builds Reelix from the repository.
 **5. Finish in the browser.**
 
 - Open `http://<nas>:7878`. The first visit sets your password.
-- Sign in to a model provider (use the `PUID` and `PGID` from `.env`): `docker compose exec -u <PUID>:<PGID> reelix pi`
-- In Reelix's chat, say "Set yourself up." It asks for the service addresses, takes logins through a secret field, and tests each connection.
+- Connect a model in **Settings → Models**: sign in with your provider's account, or enter its API key (or connect a magpie gateway).
+- In Reelix's chat, say "Set yourself up." It asks for the service addresses, takes logins through a secret field, and tests each connection. Or do it yourself in **Settings**: Status at the top lists what still needs you, and each service (qBittorrent, Jackett, Jellyfin, TMDB, subtitle sites, Telegram) has a card with its address, its password and **Test connection**.
 
-Something wrong? `docker compose exec -u <PUID>:<PGID> reelix reelix doctor` checks every connection and the hard link. The full guide is [docs/deployment.md](docs/deployment.md).
+Something wrong? Settings → Doctor, or `docker compose exec -u <PUID>:<PGID> reelix reelix doctor`, checks every connection and the hard link. The full guide is [docs/deployment.md](docs/deployment.md).
 
 ### For agents
 

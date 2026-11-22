@@ -4,6 +4,7 @@ import type { ChatItem } from "../../lib/chat";
 import { cn } from "../../lib/utils";
 import { ChatCard } from "../cards/ChatCard";
 import { Markdown } from "../common/Markdown";
+import { FailureNote, FallbackNote } from "../common/ModelFailure";
 import { ToolLines } from "./ToolLine";
 
 export function MessageView({ item, threadId, live }: { item: ChatItem; threadId: string; live: boolean }) {
@@ -40,10 +41,16 @@ export function MessageView({ item, threadId, live }: { item: ChatItem; threadId
 			);
 		case "notice":
 			return (
-				<div className={cn("flex items-center justify-center gap-1.5 text-xs", item.level === "error" ? "text-destructive-foreground" : "text-muted-foreground")}>
-					{item.level === "error" ? <AlertTriangle className="h-3 w-3" /> : <Info className="h-3 w-3" />}
-					<span>{item.text}</span>
-				</div>
+				item.failure ? (
+					<div className="flex justify-center">
+						<FailureNote failure={item.failure} className="max-w-[85%] rounded-md bg-destructive/20 px-2.5 py-1.5 text-destructive-foreground" />
+					</div>
+				) : (
+					<div className={cn("flex items-center justify-center gap-1.5 text-xs", item.level === "error" ? "text-destructive-foreground" : "text-muted-foreground")}>
+						{item.level === "error" ? <AlertTriangle className="h-3 w-3" /> : <Info className="h-3 w-3" />}
+						<span>{item.text}</span>
+					</div>
+				)
 			);
 		case "assistant": {
 			const cards = [...item.tools.filter((t) => t.card).map((t) => ({ key: t.id, card: t.card! })), ...item.cards.map((c, i) => ({ key: `c${i}`, card: c }))];
@@ -53,12 +60,15 @@ export function MessageView({ item, threadId, live }: { item: ChatItem; threadId
 						<Bot className="h-4 w-4" />
 					</div>
 					<div className="min-w-0 flex-1 space-y-2">
+						{item.fallback && <FallbackNote failure={item.fallback} to={item.model} />}
 						<ToolLines tools={item.tools} live={live} />
 						{cards.map(({ key, card }) => (
 							<ChatCard key={key} card={card} threadId={threadId} />
 						))}
 						{item.text && <Markdown text={item.text} />}
-						{item.error && (
+						{item.failure ? (
+							<FailureNote failure={item.failure} className="rounded-md bg-destructive/20 px-2.5 py-1.5 text-destructive-foreground" />
+						) : item.error && (
 							<p className="flex items-start gap-1.5 rounded-md bg-destructive/20 px-2.5 py-1.5 text-xs text-destructive-foreground">
 								<AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
 								{item.error}

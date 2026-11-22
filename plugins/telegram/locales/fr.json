@@ -21,5 +21,15 @@
 		"status": "Vérifier le bot",
 		"link": "Obtenir un code de liaison",
 		"test": "Envoyer un message de test"
+	},
+	"checks": {
+		"not_used": "Telegram n'est pas configuré",
+		"set_up": "Configurer Telegram",
+		"not_linked": "Le bot @{{bot}} fonctionne, mais votre compte n'est pas encore lié",
+		"not_linked_impact": "Les avis n'arrivent pas dans Telegram tant que votre compte n'est pas lié. La boîte de réception fonctionne sans lui.",
+		"link": "Lier votre compte",
+		"unreachable": "Telegram ne répond pas",
+		"unreachable_impact": "Les avis n'arrivent pas dans Telegram ; ils restent dans la boîte de réception.",
+		"ok": "Bot @{{bot}}, votre compte est lié"
 	}
 }

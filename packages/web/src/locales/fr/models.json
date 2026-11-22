@@ -1,0 +1,86 @@
+{
+	"failure": {
+		"reason": {
+			"signed_out": "déconnecté, ou sa clé a expiré",
+			"timeout": "pas de réponse à temps",
+			"rate_limited": "trop de demandes pour le moment",
+			"budget": "sa limite de dépenses est atteinte",
+			"capability_images": "il ne sait pas lire les images",
+			"capability_context": "la conversation est trop longue pour lui",
+			"other": "il a répondu par une erreur"
+		},
+		"failed": "{{model}} a échoué : {{reason}}.",
+		"failedUnnamed": "Le modèle a échoué : {{reason}}.",
+		"action": {
+			"reconnect": "Reconnecter son fournisseur",
+			"retry": "Renvoyer votre message",
+			"wait": "Attendre un peu, puis réessayer",
+			"waitUntil": "De nouveau utilisable à partir de {{time}}",
+			"choose_model": "Choisir un modèle qui en est capable"
+		},
+		"fallback": "{{from}} n'a pas pu répondre ({{reason}}), alors {{to}}, le modèle suivant de votre liste, a répondu.",
+		"fallbackJob": "{{from}} n'a pas pu répondre ({{reason}}) ; le modèle suivant de votre liste a pris le relais.",
+		"details": "Ce qu'a dit le fournisseur"
+	},
+	"job": {
+		"model": "Fait par {{model}}"
+	},
+	"test": {
+		"button": "Tester",
+		"running": "Test en cours…",
+		"answered": "{{model}} a répondu en {{seconds}} s :",
+		"noAnswer": "Aucun modèle n'a répondu ({{seconds}} s).",
+		"failed": "Le test n'a pas pu être lancé"
+	},
+	"setup": {
+		"title": "Aucun modèle connecté",
+		"effect": "Le chat, les tâches de fond, la traduction des sous-titres et la lecture d'images sont arrêtés tant qu'aucun modèle n'est connecté.",
+		"step1": "Connecter un fournisseur de modèles",
+		"step1Help": "Il y a deux façons. L'une ou l'autre suffit.",
+		"magpieTitle": "Utiliser une passerelle magpie",
+		"magpieHelp": "Si vous utilisez magpie, connectez-le ici et ses modèles deviennent disponibles.",
+		"magpieButton": "Connecter magpie",
+		"waiting": "En attente d'un fournisseur de modèles…",
+		"connected_one": "Connecté : {{count}} modèle disponible.",
+		"connected_many": "Connecté : {{count}} modèles disponibles.",
+		"connected_other": "Connecté : {{count}} modèles disponibles.",
+		"step2": "Choisir un modèle pour le chat",
+		"step2Help": "Le modèle avec qui vous parlez. Les autres travaux l'utilisent aussi, tant que vous n'en choisissez pas d'autre.",
+		"needsStep1": "Connectez d'abord un fournisseur de modèles.",
+		"choose": "Choisir un modèle",
+		"save": "Utiliser ce modèle",
+		"saved": "Modèle du chat enregistré",
+		"notSaved": "Impossible d'enregistrer le modèle du chat",
+		"current": "Le chat utilise {{model}}.",
+		"step3": "Le tester",
+		"step3Help": "Une courte question au modèle du chat : vous voyez sa réponse et le temps qu'il a mis.",
+		"needsStep2": "Choisissez d'abord un modèle pour le chat.",
+		"done": "Terminé",
+		"ready": "Votre modèle répond. Le chat et les tâches de fond sont actifs.",
+		"providerTitle": "Se connecter à un fournisseur",
+		"providerHelp": "Avec la connexion du fournisseur, ou sa clé API. Rien à lancer sur le NAS."
+	},
+	"providers": {
+		"signedIn": "connecté",
+		"models_one": "{{count}} modèle",
+		"models_other": "{{count}} modèles",
+		"signIn": "Se connecter",
+		"enterKey": "Saisir une clé API",
+		"signOut": "Se déconnecter",
+		"signOutTitle": "Se déconnecter de {{name}} ?",
+		"signOutBody": "Ses modèles ne fonctionnent plus ici jusqu'à une nouvelle connexion. Les rôles qui les listent passent au modèle suivant.",
+		"loginTitle": "Connecter {{name}}",
+		"openSignIn": "Ouvrir la page de connexion",
+		"afterSignIn": "Connectez-vous là-bas ; si elle affiche un code, collez-le ci-dessous.",
+		"deviceCode": "Saisissez ce code sur la page ci-dessous :",
+		"continue": "Continuer",
+		"keyStays": "La clé va directement sur ce NAS ; l'assistant ne la voit jamais.",
+		"working": "Connexion…",
+		"done": "{{name}} est connecté. Ses modèles sont listés.",
+		"failed": "Non connecté : {{error}}",
+		"close": "Fermer",
+		"models_many": "{{count}} modèles",
+		"find": "Chercher un fournisseur ({{count}})",
+		"none": "Aucun fournisseur de ce nom."
+	}
+}

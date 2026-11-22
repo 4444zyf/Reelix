@@ -134,8 +134,9 @@ test("a refused login and an unreachable qBittorrent are outcomes, not failures 
 		assert.equal(w.t.info("qbittorrent").failures, 0);
 		assert.deepEqual(w.app.seams.outcomes(SEAM, "qbittorrent", "2000-01-01").map((o) => o.outcome), ["needs_auth", "needs_auth"]);
 		const check = (await doctor(w.app, { quick: true })).find((c) => c.name === "qbittorrent")!;
-		assert.equal(check.ok, false);
-		assert.match(check.detail, /refused the login/);
+		assert.equal(check.state, "failed");
+		assert.match(check.raw!, /refused the login/);
+		assert.deepEqual([check.cause.key, check.cause_id], ["qbittorrent:checks.login_refused", "qbittorrent:unreachable"]);
 	} finally {
 		await w.close();
 	}
@@ -158,11 +159,16 @@ test("after a refused login no more logins are sent, until the owner tests the c
 		await assert.rejects(w.p().call("list", [{}]), (e: any) => e.code === "needs_auth");
 		assert.equal(logins(), 1, "the watcher's and the agent's calls send no login while it is refused");
 		const check = (await doctor(w.app, { quick: true })).find((c) => c.name === "qbittorrent")!;
-		assert.equal(check.ok, false);
-		assert.match(check.detail, /refused the login.*sends no more logins until the username or password is changed/);
+		assert.equal(check.state, "failed");
+		assert.match(check.raw!, /refused the login.*sends no more logins until the username or password is changed/);
+		assert.equal(check.impact?.text, "Downloads are paused: Reelix sends no more logins until the password changes or you test the connection.");
 		assert.equal(logins(), 2, "the Doctor check tries once more");
 		await assert.rejects(w.p().call("list", [{}]), (e: any) => e.code === "needs_auth");
 		assert.equal(logins(), 2);
+		const tested = (await w.run("plugin.check", { plugin: "qbittorrent" }, "owner:web")).output as { name: string; state: string }[];
+		assert.deepEqual(tested.map((c) => [c.name, c.state]), [["qbittorrent", "failed"]]);
+		assert.equal(logins(), 3, "Test connection allows exactly one more login");
+		assert.equal(w.t.info("qbittorrent").lastCheck?.results[0]?.cause.key, "qbittorrent:checks.login_refused");
 	} finally {
 		await w.close();
 	}
@@ -180,12 +186,13 @@ test("operations and the Doctor check go through the plugin; set_prefs is admin,
 		assert.match((await w.run("qbittorrent.torrents", { filter: "elses" })).text, /^1 torrents\n.*Someone\.Elses\.Film/);
 		assert.equal(w.app.operations.get("qb.prefs"), undefined, "the old names are gone");
 		const checks = await doctor(w.app, { quick: true });
-		assert.match(checks.find((c) => c.name === "qbittorrent")!.detail, /^qBittorrent v5\.0\.2 \(API 2\.11\.2\); saves to \/downloads$/);
+		assert.match(checks.find((c) => c.name === "qbittorrent")!.raw!, /^qBittorrent v5\.0\.2 \(API 2\.11\.2\); saves to \/downloads$/);
 		const d = checks.find((c) => c.name === "downloader")!;
-		assert.equal(d.ok, false, "no path map yet: /downloads is not a folder here");
+		assert.equal(d.state, "failed", "no path map yet: /downloads is not a folder here");
+		assert.deepEqual(d.action, { label: { key: "actions.set_path_map" }, anchor: "field-path_maps.downloaders.qbittorrent" });
 		w.app.setConfig("path_maps.downloaders.qbittorrent", [{ theirs: "/downloads", ours: w.downloads }]);
 		const mapped = (await doctor(w.app, { quick: true })).find((c) => c.name === "downloader")!;
-		assert.deepEqual([mapped.ok, mapped.detail], [true, `qBittorrent (qbittorrent) saves to /downloads (${w.downloads} here)`], "a plugin from a folder, so its label names it");
+		assert.deepEqual([mapped.state, mapped.raw], ["passed", `qBittorrent (qbittorrent) saves to /downloads (${w.downloads} here)`], "a plugin from a folder, so its label names it");
 	} finally {
 		await w.close();
 	}
@@ -214,7 +221,10 @@ test("without an address: no downloader, and the check and the operations say wh
 	try {
 		assert.equal(t.info("qbittorrent").state, "active");
 		assert.equal(t.app.seams.providers(SEAM).length, 0);
-		assert.equal((await doctor(w.app, { quick: true })).find((c) => c.name === "qbittorrent")!.detail, "not configured");
+		const checks = await doctor(w.app, { quick: true });
+		assert.equal(checks.some((c) => c.name === "downloader"), false, "the downloader check and the plugin's see one cause");
+		const check = checks.find((c) => c.name === "qbittorrent")!;
+		assert.deepEqual([check.state, check.cause_id, check.also, check.raw], ["failed", "qbittorrent:setup", ["downloader"], "not configured"]);
 		await assert.rejects(runOperation(w.app, "qbittorrent.prefs", {}, { actor: "owner:web" }), /plugins\.qbittorrent\.url/);
 		await assert.rejects(runOperation(w.app, "download.add", { magnet: `magnet:?xt=urn:btih:${"a".repeat(40)}` }, { actor: "owner:web" }), /its plugin is running but offers no downloader/);
 	} finally {
@@ -234,7 +244,7 @@ test("an old data folder moves once: address, user, password, path map, the open
 	writeFileSync(join(data, "secrets.yaml"), "qbittorrent:\n  password: old-secret-password\n");
 	// The database as phase 5 left it: no downloader column, and an open "unreachable" notice under the old key.
 	const db = new DatabaseSync(join(data, "reelix.db"));
-	db.exec("ALTER TABLE downloads DROP COLUMN downloader; ALTER TABLE titles DROP COLUMN ratings_json; ALTER TABLE titles ADD COLUMN douban_rating REAL; ALTER TABLE titles DROP COLUMN original_language; ALTER TABLE titles DROP COLUMN origin_country_json; ALTER TABLE titles DROP COLUMN genres_json; ALTER TABLE titles DROP COLUMN library_choice; UPDATE schema_version SET v = 9;");
+	db.exec("ALTER TABLE downloads DROP COLUMN downloader; ALTER TABLE titles DROP COLUMN ratings_json; ALTER TABLE titles ADD COLUMN douban_rating REAL; ALTER TABLE titles DROP COLUMN original_language; ALTER TABLE titles DROP COLUMN origin_country_json; ALTER TABLE titles DROP COLUMN genres_json; ALTER TABLE titles DROP COLUMN library_choice; ALTER TABLE job_runs DROP COLUMN models_json; UPDATE schema_version SET v = 9;");
 	db.prepare("INSERT INTO inbox (id, kind, title, status, payload_json, created_at) VALUES ('in_old', 'notice', 'qBittorrent is unreachable', 'open', ?, datetime('now'))").run(JSON.stringify({ dedupeKey: "qb-unreachable" }));
 	db.close();
 

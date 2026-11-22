@@ -1,0 +1,83 @@
+{
+	"failure": {
+		"reason": {
+			"signed_out": "已退出登录，或密钥已过期",
+			"timeout": "没有按时回答",
+			"rate_limited": "请求过多，暂时受限",
+			"budget": "已达到它的花费上限",
+			"capability_images": "它不能读取图片",
+			"capability_context": "对话太长，超出它能处理的长度",
+			"other": "它返回了错误"
+		},
+		"failed": "{{model}} 失败：{{reason}}。",
+		"failedUnnamed": "模型失败：{{reason}}。",
+		"action": {
+			"reconnect": "重新连接它的服务商",
+			"retry": "再发送一次你的消息",
+			"wait": "稍等片刻再试",
+			"waitUntil": "{{time}} 起可再次使用",
+			"choose_model": "选择一个能做到的模型"
+		},
+		"fallback": "{{from}} 无法回答（{{reason}}），因此由你列表中的下一个模型 {{to}} 回答。",
+		"fallbackJob": "{{from}} 无法回答（{{reason}}）；由你列表中的下一个模型接手。",
+		"details": "服务商的原话"
+	},
+	"job": {
+		"model": "由 {{model}} 完成"
+	},
+	"test": {
+		"button": "测试",
+		"running": "正在测试…",
+		"answered": "{{model}} 用了 {{seconds}} 秒回答：",
+		"noAnswer": "没有模型回答（{{seconds}} 秒）。",
+		"failed": "无法进行测试"
+	},
+	"setup": {
+		"title": "尚未连接模型",
+		"effect": "连接模型之前，聊天、后台任务、字幕翻译和图片识别都不可用。",
+		"step1": "连接模型服务商",
+		"step1Help": "有两种方式，任选其一。",
+		"magpieTitle": "使用 magpie 网关",
+		"magpieHelp": "如果你在运行 magpie，在这里连接它，它的模型就可以使用了。",
+		"magpieButton": "连接 magpie",
+		"waiting": "正在等待模型服务商…",
+		"connected_other": "已连接：有 {{count}} 个模型可用。",
+		"step2": "选择聊天模型",
+		"step2Help": "和你对话的模型。在你另行选择之前，其他工作也会使用它。",
+		"needsStep1": "请先连接模型服务商。",
+		"choose": "选择模型",
+		"save": "使用这个模型",
+		"saved": "聊天模型已保存",
+		"notSaved": "无法保存聊天模型",
+		"current": "聊天使用 {{model}}。",
+		"step3": "测试",
+		"step3Help": "向聊天模型提一个简短的问题：你会看到它的回答和所用的时间。",
+		"needsStep2": "请先选择聊天模型。",
+		"done": "完成",
+		"ready": "你的模型可以回答了。聊天和后台工作已开启。",
+		"providerTitle": "登录一个服务商",
+		"providerHelp": "用服务商自己的登录，或它的 API 密钥。无需在 NAS 上运行任何命令。"
+	},
+	"providers": {
+		"signedIn": "已登录",
+		"models_one": "{{count}} 个模型",
+		"models_other": "{{count}} 个模型",
+		"signIn": "登录",
+		"enterKey": "输入 API 密钥",
+		"signOut": "退出登录",
+		"signOutTitle": "退出 {{name}}？",
+		"signOutBody": "在你重新登录之前，它的模型在这里无法使用。列出它们的角色会改用下一个模型。",
+		"loginTitle": "连接 {{name}}",
+		"openSignIn": "打开登录页面",
+		"afterSignIn": "在那里登录；如果页面显示一个代码，把它粘贴到下面。",
+		"deviceCode": "在下面的页面中输入这个代码：",
+		"continue": "继续",
+		"keyStays": "密钥直接保存到这台 NAS；助手永远看不到它。",
+		"working": "正在连接…",
+		"done": "{{name}} 已连接，它的模型已经列出。",
+		"failed": "未连接：{{error}}",
+		"close": "关闭",
+		"find": "查找服务商（共 {{count}} 个）",
+		"none": "没有这个名字的服务商。"
+	}
+}

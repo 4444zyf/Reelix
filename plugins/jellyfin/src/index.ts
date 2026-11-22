@@ -1,4 +1,4 @@
-import { type Ids, OperationError, type Outcome, OutcomeError, type ServerItem, type ServerItemsQuery, Type, definePlugin } from "@reelix/plugin";
+import { type Ids, OperationError, type Outcome, OutcomeError, type PluginCheck, SETTINGS, type ServerItem, type ServerItemsQuery, Type, definePlugin } from "@reelix/plugin";
 import { JellyfinClient, JellyfinError, type JellyfinItem } from "./client.ts";
 
 const SEAM = "reelix:media.server@1";
@@ -50,7 +50,7 @@ const notSetUp = () => new OperationError("not_configured", "Jellyfin is not set
 
 export default definePlugin({
 	config: Type.Object({
-		url: Type.Optional(Type.String()),
+		url: Type.Optional(Type.String({ [SETTINGS.required]: true })),
 		public_url: Type.Optional(Type.String()),
 		watch_users: Type.Array(Type.String(), { default: [] }),
 	}),
@@ -135,15 +135,24 @@ export default definePlugin({
 			toText: (o: { result: string }) => o.result,
 		});
 
-		await ctx.check("jellyfin", async () => {
-			if (!url) return { ok: null, detail: "not configured (optional)", fix: "reelix config set plugins.jellyfin '{\"url\":\"http://jellyfin:8096\"}', then its API key in Settings → Plugins → jellyfin" };
-			if (!jf) return { ok: false, detail: "no API key", fix: "Settings → Plugins → jellyfin: the API key (Jellyfin → Dashboard → API keys)" };
+		await ctx.check("jellyfin", async (): Promise<PluginCheck> => {
+			if (!url)
+				return { state: "not_used", cause: { key: "checks.not_set_up" }, action: { label: { key: "checks.set_up" }, setting: "url" }, cli: "reelix config set plugins.jellyfin '{\"url\":\"http://jellyfin:8096\"}', then its API key in Settings", raw: "not configured (optional)", cause_id: "setup" };
+			if (!jf) return { state: "failed", cause: { key: "checks.no_key" }, impact: { key: "checks.off" }, action: { label: { key: "checks.add_key" }, secret: "api_key" }, raw: "no API key (Jellyfin → Dashboard → API keys)", cause_id: "setup" };
 			try {
 				const i = await jf.info(ctx.signal);
-				return { ok: true, detail: `${i.ServerName} ${i.Version} at ${jf.url}` };
+				return { state: "passed", cause: { key: "checks.ok", values: { name: i.ServerName, version: i.Version } }, raw: `${i.ServerName} ${i.Version} at ${jf.url}` };
 			} catch (e) {
 				if (!expected(e)) throw e;
-				return { ok: false, detail: message(e) };
+				const refused = e instanceof JellyfinError && e.kind === "auth";
+				return {
+					state: "failed",
+					cause: refused ? { key: "checks.key_refused" } : { key: "checks.unreachable", values: { url } },
+					impact: { key: "checks.off" },
+					action: refused ? { label: { key: "checks.add_key" }, secret: "api_key" } : { label: { key: "checks.set_up" }, setting: "url" },
+					raw: message(e),
+					cause_id: "unreachable",
+				};
 			}
 		});
 	},

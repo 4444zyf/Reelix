@@ -153,7 +153,6 @@ export const ConfigSchema = Type.Object({
 				{ default: {} },
 			),
 			thinking: Type.String({ default: "low" }),
-			main_reads_images: Type.Boolean({ default: true }),
 		},
 		{ default: {} },
 	),
@@ -236,6 +235,8 @@ function migrateConfig(raw: any): any {
 		if (typeof m.background === "string" && m.background && !m.roles.background?.length) m.roles.background = [m.background];
 		delete m.main;
 		delete m.background;
+		// A switch nothing read; whether the model reads images is the model's own (pi's model list).
+		delete m.main_reads_images;
 	}
 	// A media type had one library folder, a path; it is now a list of folders (docs/library-folders.md).
 	if (raw?.library && typeof raw.library === "object") {
@@ -458,8 +459,8 @@ function settingNeedsOwner(c: ConfigAndSecrets, path: string, value: unknown): b
 }
 
 /** What a `config.set` would do, after refusing what it can never do. */
-export function configChange(c: ConfigAndSecrets & { plugins?: { list(): { secrets: string[] }[] } }, i: { path: string; value?: unknown }): { value: unknown; needsOwner: boolean } {
-	if (i.path.startsWith("secrets") || Object.hasOwn(KNOWN_SECRETS, i.path) || c.plugins?.list().some((p) => p.secrets.includes(i.path))) throw new ReelixError("use_secret", `"${i.path}" is a secret; use secret.set (the secret field), not config.`);
+export function configChange(c: ConfigAndSecrets & { plugins?: { list(): { secrets: string[]; managedSecrets: string[] }[] } }, i: { path: string; value?: unknown }): { value: unknown; needsOwner: boolean } {
+	if (i.path.startsWith("secrets") || Object.hasOwn(KNOWN_SECRETS, i.path) || c.plugins?.list().some((p) => p.secrets.includes(i.path) || p.managedSecrets.includes(i.path))) throw new ReelixError("use_secret", `"${i.path}" is a secret; use secret.set (the secret field), not config.`);
 	if (!isKnownConfigPath(i.path)) throw new ReelixError("unknown_setting", `There is no setting "${i.path}". See \`reelix config show\`.`);
 	const value = i.value === "" || i.value === null ? undefined : typeof i.value === "string" ? parseLooseValue(i.value) : i.value;
 	return { value, needsOwner: settingNeedsOwner(c, i.path, value) };
@@ -489,7 +490,11 @@ export const KNOWN_SECRETS: Record<string, string> = {
 
 /** Secrets of services that became plugins (docs/plugins.md §12.2). */
 const MOVED_SECRETS: Record<string, string> = {
-	"jackett.api_key": "plugins.jackett.api_key",
+	"jackett.api_key": "plugins.jackett.servers.0.api_key",
+	// Jackett's keys became one per server (docs/settings.md, "Jackett").
+	"plugins.jackett.api_key": "plugins.jackett.servers.0.api_key",
+	"plugins.jackett.api_key_2": "plugins.jackett.servers.1.api_key",
+	"plugins.jackett.api_key_3": "plugins.jackett.servers.2.api_key",
 	"qbittorrent.password": "plugins.qbittorrent.password",
 	"jellyfin.api_key": "plugins.jellyfin.api_key",
 	"assrt.token": "plugins.subtitle-sites.assrt_token",

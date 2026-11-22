@@ -34,7 +34,7 @@ const tools = (app: any) => buildTools({ app, threadId: "t1", kind: "chat", acto
 
 test("settings form: schema from the manifest's copy before any code runs, labels from the plugin, invalid values refused, secrets never shown", async () => {
 	const jackett = join(REPO, "plugins/jackett");
-	const t = await startPlugins([jackett], { secrets: { "plugins.jackett.api_key": "k-123456789" } });
+	const t = await startPlugins([jackett], { secrets: { "plugins.jackett.servers.0.api_key": "k-123456789" } });
 	try {
 		await t.manager.disable("jackett");
 		const off = (await runOperation(t.app, "plugin.settings", { id: "jackett", lang: "fr" }, { actor: "owner:web" })).output as any;
@@ -42,8 +42,8 @@ test("settings form: schema from the manifest's copy before any code runs, label
 		assert.equal(off.schema.properties.servers.maxItems, 3, "read without loading the code");
 		assert.deepEqual(off.values, { servers: [] }, "defaults filled in");
 		assert.equal(off.strings["settings.servers.url"], "Adresse");
-		assert.equal(off.strings["secrets.api_key"], "Clé API du premier serveur");
-		assert.deepEqual(off.secrets.map((s: any) => [s.key, s.set]), [["plugins.jackett.api_key", true], ["plugins.jackett.api_key_2", false], ["plugins.jackett.api_key_3", false]]);
+		assert.equal(off.strings["secrets.api_key"], "Clé API");
+		assert.deepEqual(off.secrets, [], "a key per server: no server, no key field");
 		assert.ok(!JSON.stringify(off).includes("k-123456789"), "a secret's value never leaves");
 
 		const bad = (await runOperation(t.app, "plugin.configure", { id: "jackett", settings: { servers: [{ url: 5 }, {}, {}, {}] } }, { actor: "owner:web" })).output as any;
@@ -55,12 +55,24 @@ test("settings form: schema from the manifest's copy before any code runs, label
 		assert.equal(saved.result, "applied");
 		assert.match(saved.next, /switched on/);
 		assert.deepEqual(t.app.config.plugins.jackett, { servers: [{ url: "http://jackett:9117" }] });
+		const one = (await runOperation(t.app, "plugin.settings", { id: "jackett" }, { actor: "owner:web" })).output as any;
+		assert.deepEqual(one.secrets, [{ name: "api_key", key: "plugins.jackett.servers.0.api_key", set: true, managed: false, required: true, per: "servers", entry: 0 }]);
 		await assert.rejects(runOperation(t.app, "plugin.configure", { id: "jackett", settings: {} }, { actor: "agent:t1" }), refusedAs("owner_only"));
 
 		// A declared secret is the secret field's, not config's; its label comes from the plugin.
-		await assert.rejects(runOperation(t.app, "config.set", { path: "plugins.jackett.api_key", value: "x" }, { actor: "owner:web" }), refusedAs("use_secret"));
+		await assert.rejects(runOperation(t.app, "config.set", { path: "plugins.jackett.servers.0.api_key", value: "x" }, { actor: "owner:web" }), refusedAs("use_secret"));
 		const listed = (await runOperation(t.app, "secret.list", {}, { actor: "owner:web" })).output as any[];
-		assert.deepEqual(listed.find((s) => s.key === "plugins.jackett.api_key_2"), { key: "plugins.jackett.api_key_2", what: "API key of the second server", set: false });
+		assert.deepEqual(listed.find((s) => s.key === "plugins.jackett.servers.0.api_key"), { key: "plugins.jackett.servers.0.api_key", what: "API key", set: true });
+
+		// Settings and keys in one save; a key follows its server when the one above it goes.
+		const two = (await runOperation(t.app, "plugin.configure", { id: "jackett", settings: { servers: [{ url: "http://a:9117" }, { url: "http://b:9117" }] }, secrets: { "servers.1.api_key": "k-second-1234" }, origins: { servers: [0, null] } }, { actor: "owner:web" })).output as any;
+		assert.equal(two.result, "applied");
+		assert.deepEqual([t.app.secrets["plugins.jackett.servers.0.api_key"], t.app.secrets["plugins.jackett.servers.1.api_key"]], ["k-123456789", "k-second-1234"]);
+		await runOperation(t.app, "plugin.configure", { id: "jackett", settings: { servers: [{ url: "http://b:9117" }] }, origins: { servers: [1] } }, { actor: "owner:web" });
+		assert.equal(t.app.secrets["plugins.jackett.servers.0.api_key"], "k-second-1234", "the second server's key moved up with it");
+		assert.equal(t.app.secrets["plugins.jackett.servers.1.api_key"], undefined, "the removed server's key is gone");
+		const refused = (await runOperation(t.app, "plugin.configure", { id: "jackett", secrets: { password: "x" } }, { actor: "owner:web" })).output as any;
+		assert.deepEqual([refused.result, refused.errors[0].path], ["failed", "/secrets/password"]);
 
 		await t.manager.enable("jackett");
 		const on = (await runOperation(t.app, "plugin.configure", { id: "jackett", settings: { servers: [{ url: "http://jackett:9118" }] } }, { actor: "owner:web" })).output as any;
@@ -249,5 +261,45 @@ test("plugin_inspect: the catalogue and live state, plugin text marked as outsid
 	} finally {
 		await t.close();
 		f.cleanup();
+	}
+});
+
+test("Settings lists: players with what they need, the proxy's services by name, and the preferences note", async () => {
+	const t = await startPlugins([join(REPO, "plugins/players"), join(REPO, "plugins/subtitle-sites"), join(REPO, "plugins/douban")]);
+	try {
+		const players = (await runOperation(t.app, "library.players", {}, { actor: "owner:web" })).output as any[];
+		assert.deepEqual(
+			players.map((p) => [p.id, p.needs_media_server, p.works]),
+			[["infuse", false, true], ["swiftfin", true, false], ["jellyfin", true, false]],
+			"in the owner's order; without a media server, the ones that need it say so",
+		);
+		const services = (await runOperation(t.app, "proxy.services", {}, { actor: "owner:web" })).output as { id: string; label: string }[];
+		assert.deepEqual(services.map((s) => s.id).sort(), ["assrt", "douban", "gestdown", "jimaku", "opensubtitles", "subdl", "subhd", "tmdb"].sort(), "a site per subtitle source, a plugin by its id; players make no requests");
+		assert.equal(((await runOperation(t.app, "preferences.show", {}, { actor: "owner:web" })).output as { text: string }).text, "");
+		await runOperation(t.app, "preferences.set", { text: "  Films in 1080p.\n" }, { actor: "owner:web" });
+		assert.equal(((await runOperation(t.app, "preferences.show", {}, { actor: "owner:web" })).output as { text: string }).text, "Films in 1080p.\n");
+	} finally {
+		await t.close();
+	}
+});
+
+test("what a plugin needs before it works, and the secrets it makes itself, are known without running it", async () => {
+	const t = await startPlugins([join(REPO, "plugins/jackett"), join(REPO, "plugins/push"), join(REPO, "plugins/jellyfin"), join(REPO, "plugins/telegram")], { settings: { jellyfin: { url: "http://jellyfin:8096" } } });
+	try {
+		const info = (id: string) => t.manager.list().find((p) => p.id === id)!;
+		assert.deepEqual(info("jackett").needsSetup, ["servers"], "no server yet");
+		await runOperation(t.app, "plugin.configure", { id: "jackett", settings: { servers: [{ url: "http://jackett:9117" }, {}] } }, { actor: "owner:web" });
+		assert.deepEqual(info("jackett").needsSetup, ["servers.1.url", "servers.0.api_key", "servers.1.api_key"]);
+		assert.deepEqual([info("jellyfin").needsSetup, info("jellyfin").unused], [["api_key"], false], "an optional plugin half set up needs the rest");
+		assert.deepEqual([info("telegram").needsSetup, info("telegram").unused], [[], true], "an optional plugin with nothing set up is not used, not broken");
+		assert.deepEqual([info("push").secrets, info("push").managedSecrets], [[], ["plugins.push.vapid_private"]]);
+		const push = (await runOperation(t.app, "plugin.settings", { id: "push" }, { actor: "owner:web" })).output as any;
+		assert.equal(push.secrets[0].managed, true);
+		const refused = (await runOperation(t.app, "plugin.configure", { id: "push", secrets: { vapid_private: "x" } }, { actor: "owner:web" })).output as any;
+		assert.deepEqual([refused.result, refused.errors[0].message], ["failed", "made by the plugin itself"]);
+		await t.manager.disable("jellyfin");
+		assert.deepEqual(info("jellyfin").needsSetup, [], "a plugin that is off needs nothing");
+	} finally {
+		await t.close();
 	}
 });

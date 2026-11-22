@@ -2,10 +2,22 @@
 	"description": "Скачивает через Web API qBittorrent (4.x и 5.x).",
 	"settings": {
 		"url": "Адрес веб-интерфейса qBittorrent",
-		"url_help": "Например, http://qbittorrent:8080. Как его папки видны Reelix, задаётся сопоставлением путей в «Настройки → Загрузки».",
+		"url_help": "Например, http://qbittorrent:8080. Как его папки видны Reelix, задаётся в «Как он называет папки» на этой карточке.",
 		"username": "Имя пользователя"
 	},
 	"secrets": {
 		"password": "Пароль веб-интерфейса"
+	},
+	"checks": {
+		"not_set_up": "Адрес qBittorrent не указан",
+		"off": "Пока qBittorrent не подключён, ничего нельзя скачать.",
+		"set_address": "Указать адрес",
+		"login_refused": "qBittorrent не принял имя пользователя или пароль",
+		"paused": "Загрузки приостановлены: Reelix не будет входить, пока не изменится пароль или вы не проверите подключение.",
+		"change_password": "Изменить пароль",
+		"banned": "qBittorrent заблокировал адрес Reelix после неудачных входов",
+		"banned_impact": "Загрузки приостановлены. Подождите или перезапустите qBittorrent, затем проверьте подключение.",
+		"unreachable": "qBittorrent не отвечает по адресу {{url}}",
+		"ok": "qBittorrent {{version}}, сохраняет в {{folder}}"
 	}
 }

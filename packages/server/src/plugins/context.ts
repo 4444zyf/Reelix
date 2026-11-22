@@ -6,8 +6,9 @@ import { type CardLayout, type HookId, type ModelAnswer, type PluginContext, typ
 import { type Catalog, type DownloadRow, INSTRUCTION_TEXT_LIMIT, LANGUAGE_LABEL, MODEL_ROLES, type ModelRole, PLUGIN_EVENTS, type PluginModelState, type Reelix, ReelixError, type SpendScope, TMDB_LOCALES, TranslationPaused, addInbox, countTmdbTitles, schemaProblem, createProposal, existingSubtitles, fileMatches, freeSpace, getDownload, getInbox, getTitle, json, kvDelete, kvGet, kvSet, errorMessage as messageOf, messageFrom, ownerLanguage, proxyFor, runOperation, tr, trialCall, videosOf, wantedLanguages } from "@reelix/core";
 import type { ChatBridge } from "../chat.ts";
 import { CapReached, type JobContext, type JobRunner, Postpone } from "../jobs.ts";
+import { pluginCheckResult } from "./checks.ts";
 import { type HttpTransport, pluginFetch } from "./http.ts";
-import type { Manifest, OwnedEventDeclaration } from "./manifest.ts";
+import { type Manifest, type OwnedEventDeclaration, declaredSecret } from "./manifest.ts";
 import type { PiExtensions } from "./pi.ts";
 import type { PluginRoutes } from "./routes.ts";
 import { type Scope, ScopeClosed } from "./scope.ts";
@@ -49,6 +50,9 @@ type ContextDeps = {
  * Every call of `ctx`, and the manifest entry it needs (docs/plugins.md §6). The generated
  * reference is built from this list and from the type `PluginContext`; a test keeps them equal.
  */
+/** Plugins that asked for their proxy (a browser they drive themselves): Settings offers the proxy for them too. */
+export const readsProxy = new Set<string>();
+
 export const CONTEXT_CALLS: Record<string, string | null> = {
 	"ctx.signal": null,
 	"ctx.job": "uses.jobs",
@@ -331,9 +335,13 @@ export function createContext(d: ContextDeps): { ctx: PluginContext; registered:
 		async check(name, run) {
 			scope.assertOpen();
 			if (app.checks.has(name)) throw new Error(`there is already a Doctor check named "${name}"`);
-			app.checks.set(name, (o) => guarded(`check ${name}`, async () => plain(await run(o))));
+			const shape = { plugin: id, messages: d.messages, operations: uses.operations };
+			app.checks.set(name, { plugin: id, run: (o) => guarded(`check ${name}`, async () => pluginCheckResult({ ...shape, language: ownerLanguage(app) }, plain(await run(o)))) });
 			registered.checks.push(name);
-			scope.add(() => void app.checks.delete(name));
+			scope.add(() => {
+				app.checks.delete(name);
+				app.lastChecks.delete(id);
+			});
 		},
 		async on(event: string, fn: (payload: never) => void | Promise<void>) {
 			scope.assertOpen();
@@ -369,12 +377,12 @@ export function createContext(d: ContextDeps): { ctx: PluginContext; registered:
 		secret: {
 			async get(name) {
 				scope.assertNotClosed();
-				if (!uses.secrets.includes(name)) throw refuse(`secret "${name}"`, "secrets");
+				if (!declaredSecret(uses.secrets, name)) throw refuse(`secret "${name}"`, "secrets");
 				return app.secrets[`plugins.${id}.${name}`];
 			},
 			async set(name, value) {
 				scope.assertNotClosed();
-				if (!uses.secrets.includes(name)) throw refuse(`secret "${name}"`, "secrets");
+				if (!declaredSecret(uses.secrets, name)) throw refuse(`secret "${name}"`, "secrets");
 				app.setSecret(`plugins.${id}.${name}`, value, id);
 			},
 		},
@@ -424,7 +432,8 @@ export function createContext(d: ContextDeps): { ctx: PluginContext; registered:
 					if (!state.roles.includes(role as ModelRole)) return { outcome: "unavailable", message: tr(app, "plugins.roleRefused", { id, role }) };
 					if (state.reached) return { outcome: "unavailable", message: tr(app, "plugins.budgetReached", { id, usd: state.budgetUsd }) };
 					if (!d.model) return { outcome: "unavailable", message: "The model runtime is not available." };
-					return plain(await d.model.complete(role as ModelRole, system, user, { scope: `plugin:${id}`, signal: stop }));
+					const { text, model } = await d.model.complete(role as ModelRole, system, user, { scope: `plugin:${id}`, signal: stop });
+					return { text, model };
 				} catch (e) {
 					// No model could answer for now: an expected answer, not a broken plugin.
 					if (e instanceof TranslationPaused) return { outcome: "unavailable", message: app.redact(e.message) };
@@ -571,6 +580,7 @@ export function createContext(d: ContextDeps): { ctx: PluginContext; registered:
 				},
 				async proxy() {
 					scope.assertNotClosed();
+					readsProxy.add(id);
 					return { url: proxyFor(app.config, id) };
 				},
 			},

@@ -227,7 +227,7 @@ export function subSearchToText(o: SubSearchOutput): string {
 			return `${x.ref} | ${outsideLine(x.title)} | ${outsideLine(x.release)} | ${outsideLine(x.languages.join("/"), 80)} ${outsideLine(x.formats.join("/"), 80)}${x.tags.length ? ` | ${outsideLine(x.tags.join(","))}` : ""}${flags.length ? ` | ${flags.join(",")}` : ""}${x.downloads ? ` | ${x.downloads} dl` : ""}${x.date ? ` | ${x.date.slice(0, 10)}` : ""}`;
 		})
 		.join("\n");
-	return `${o.title}${o.season !== undefined ? ` season ${o.season}` : ""} — wanted: ${o.languages.map((l) => LANGUAGE_LABEL[l]).join(" > ")}\nAlready there:\n${have || "(no library files recorded)"}\nCandidates (${o.candidates.length}):\n${c || "none"}${o.errors.length ? `\nErrors: ${o.errors.join("; ")}` : ""}${o.skipped.length ? `\nNot asked (no key; the owner can add one under Settings → Secrets): ${o.skipped.map((x) => `${x.label} needs ${x.needs.join(", ")}`).join("; ")}` : ""}${o.note ? `\nNote: ${o.note}` : ""}`;
+	return `${o.title}${o.season !== undefined ? ` season ${o.season}` : ""} — wanted: ${o.languages.map((l) => LANGUAGE_LABEL[l]).join(" > ")}\nAlready there:\n${have || "(no library files recorded)"}\nCandidates (${o.candidates.length}):\n${c || "none"}${o.errors.length ? `\nErrors: ${o.errors.join("; ")}` : ""}${o.skipped.length ? `\nNot asked (no key; the owner can add one under Settings → Services → Subtitle sites): ${o.skipped.map((x) => `${x.label} needs ${x.needs.join(", ")}`).join("; ")}` : ""}${o.note ? `\nNote: ${o.note}` : ""}`;
 }
 
 // ------------------------------------------------------------------ fetch, clean, place

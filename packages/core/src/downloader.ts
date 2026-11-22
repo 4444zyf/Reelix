@@ -33,7 +33,7 @@ export function downloader(app: Reelix): Downloader {
 			? `its plugin is ${plugin.state}${plugin.error ? ` (${plugin.error})` : ""}`
 			: `its plugin is running but offers no downloader, so its settings are probably incomplete (Settings → Plugins → ${id})`;
 	const others = all.map((x) => x.id);
-	throw new ReelixError("no_downloader", `The active downloader "${id}" is not available: ${why}.${others.length ? ` Other downloaders: ${others.join(", ")}; only the owner can choose one (Settings → Downloads).` : ""}`);
+	throw new ReelixError("no_downloader", `The active downloader "${id}" is not available: ${why}.${others.length ? ` Other downloaders: ${others.join(", ")}; only the owner can choose one (Settings → Services → Downloader).` : ""}`);
 }
 
 /** The downloader that holds a download Reelix recorded. A download in another one is left alone. */

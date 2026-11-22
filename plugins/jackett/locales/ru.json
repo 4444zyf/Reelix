@@ -2,13 +2,35 @@
 	"description": "Ищет релизы через один или несколько серверов Jackett.",
 	"settings": {
 		"servers": "Серверы Jackett",
-		"servers_help": "Не больше трёх. API-ключ каждого сервера — отдельный секрет ниже.",
+		"servers_help": "Не больше трёх, у каждого свой API-ключ (в правом верхнем углу страницы Jackett).",
 		"servers.url": "Адрес",
 		"servers.url_help": "Например, http://jackett:9117"
 	},
 	"secrets": {
-		"api_key": "API-ключ первого сервера",
-		"api_key_2": "API-ключ второго сервера",
-		"api_key_3": "API-ключ третьего сервера"
+		"api_key": "API-ключ"
+	},
+	"checks": {
+		"not_set_up": "Сервер Jackett не настроен",
+		"no_search": "Поиск релизов невозможен.",
+		"add_server": "Проверить серверы",
+		"no_key": "{{server}}: нет API-ключа",
+		"add_key": "Добавить ключ",
+		"unreachable": "{{server}} не отвечает",
+		"no_indexers": "На {{server}} в Jackett не настроено ни одного индексатора",
+		"not_tested_one": "{{count}} индексатор, по отдельности не проверен",
+		"not_tested_few": "{{count}} индексатора, по отдельности не проверены",
+		"not_tested_many": "{{count}} индексаторов, по отдельности не проверены",
+		"not_tested_other": "{{count}} индексатора, по отдельности не проверены",
+		"test_each": "Проверить каждый индексатор",
+		"all_answer_one": "{{count}} индексатор отвечает",
+		"all_answer_few": "Все {{count}} индексатора отвечают",
+		"all_answer_many": "Все {{count}} индексаторов отвечают",
+		"all_answer_other": "Все {{count}} индексатора отвечают",
+		"some_fail_one": "Не отвечают {{failed}} из {{count}} индексатора",
+		"some_fail_few": "Не отвечают {{failed}} из {{count}} индексаторов",
+		"some_fail_many": "Не отвечают {{failed}} из {{count}} индексаторов",
+		"some_fail_other": "Не отвечают {{failed}} из {{count}} индексатора",
+		"some_fail_impact": "В поиске нет релизов от индексаторов, которые не отвечают.",
+		"none_answer": "Ни один индексатор не отвечает"
 	}
 }

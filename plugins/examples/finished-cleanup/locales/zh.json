@@ -27,7 +27,10 @@
 		"schedule_manual": "我要求时",
 		"schedule_daily": "每天",
 		"at_most": "每天最多",
-		"at_most_help": "每天一次提议中的步骤数。"
+		"at_most_help": "每天一次提议中的步骤数。",
+		"kind_all": "电影和剧集",
+		"kind_movie": "仅电影",
+		"kind_tv": "仅剧集"
 	},
 	"buttons": {
 		"scan": "立即扫描"

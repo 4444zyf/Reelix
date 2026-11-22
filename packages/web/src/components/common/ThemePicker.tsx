@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { LANGUAGES } from "../../lib/i18n";
 import { type ThemeManifest, findTheme, localized, resolve, themeAttrs, useTheme } from "../../lib/theme";
 import { cn } from "../../lib/utils";
-import { Section } from "../../screens/SettingsScreen";
+import { Searchable, Section } from "../settings/form";
 import { Badge } from "./Badge";
 import { useChangeLanguage } from "./LanguageMenu";
 
@@ -92,21 +92,21 @@ export function AppearanceSection() {
 	const { t } = useTranslation("appearance");
 	return (
 		<Section id="appearance" icon={<Palette />} title={t("title")} description={t("description")}>
-			<div className="space-y-2">
+			<Searchable text={[t("language")]} className="space-y-2">
 				<p className="flex items-center gap-2 text-sm font-medium">
 					<Languages className="h-4 w-4 text-primary" />
 					{t("language")}
 				</p>
 				<LanguagePicker />
-			</div>
-			<div className="space-y-2">
+			</Searchable>
+			<Searchable text={[t("theme"), t("makeYourOwn", { dir: "/data/themes" })]} className="space-y-2">
 				<p className="flex items-center gap-2 text-sm font-medium">
 					<Palette className="h-4 w-4 text-primary" />
 					{t("theme")}
 				</p>
 				<ThemePicker />
 				<p className="text-xs text-muted-foreground">{t("makeYourOwn", { dir: "/data/themes" })}</p>
-			</div>
+			</Searchable>
 		</Section>
 	);
 }

@@ -26,11 +26,11 @@ const jellyfinWeb = ({ server: s }: PlayRequest): PlayerLink | null => (s?.publi
 
 export default definePlugin({
 	async activate(ctx) {
-		for (const [id, label, link] of [
-			["infuse", "Infuse", infuse],
-			["swiftfin", "Swiftfin", swiftfin],
-			["jellyfin", "Jellyfin", jellyfinWeb],
+		for (const [id, label, link, needsMediaServer] of [
+			["infuse", "Infuse", infuse, false],
+			["swiftfin", "Swiftfin", swiftfin, true],
+			["jellyfin", "Jellyfin", jellyfinWeb, true],
 		] as const)
-			await ctx.provide(SEAM, { id, label, links: async (requests) => requests.map(link) });
+			await ctx.provide(SEAM, { id, label, needsMediaServer, links: async (requests) => requests.map(link) });
 	},
 });

@@ -138,9 +138,18 @@ at_most: Type.Integer({ default: 20, [SETTINGS.showWhen]: { field: "schedule", e
 
 Telegram uses a button for linking and a test message (`plugins/telegram/src/index.ts`).
 
+Two more say how the form is shown:
+
+```ts
+url: Type.Optional(Type.String({ [SETTINGS.required]: true })),                   // "needs setup" while it is empty (a list: without an entry)
+api_url: Type.String({ default: "https://api.telegram.org", [SETTINGS.advanced]: true }), // under Advanced
+```
+
+Put the fields in the order a person fills them in. Settings shows the plugin's fields and its secrets as one form with one Save, and for a connection also on its card under Services with "Test connection", which runs your `ctx.check`. If Reelix works fully without your plugin (a chat app, a media server), set `"optional": true` in the manifest: until any required setting or secret is filled in, it shows as "optional, not connected" instead of something to fix.
+
 ### 4.5 Secrets
 
-Declare a secret by name in `uses.secrets`. The owner enters it in the secret field on the plugin's page; it is stored as `plugins.<id>.<name>` and removed from logs, the ledger and the agent's text. Read it with `ctx.secret.get(name)`. A value the plugin makes itself, such as a generated key, is stored with `ctx.secret.set` (`plugins/push/src/index.ts`). Never return a secret from an operation or put it in a log line.
+Declare a secret by name in `uses.secrets`, or as `{ "name": "api_key", "required": true }` when the plugin cannot work without it. `{ "name": "token", "managed": true }` is one the plugin makes and renews itself: Settings shows it as a state and nobody is asked for it. `{ "name": "api_key", "per": "servers" }` gives each entry of the list setting `servers` its own key, read as `ctx.secret.get("servers.0.api_key")` (`plugins/jackett`). The owner enters secrets in the plugin's form; it is stored as `plugins.<id>.<name>` and removed from logs, the ledger and the agent's text. Read it with `ctx.secret.get(name)`. A value the plugin makes itself, such as a generated key, is stored with `ctx.secret.set` (`plugins/push/src/index.ts`). Never return a secret from an operation or put it in a log line.
 
 ### 4.6 The network
 
@@ -192,7 +201,7 @@ Built-in: `plugins/telegram/src/index.ts`. A chat app is two seams on one connec
 
 Built-in: `plugins/qbittorrent/src/index.ts`. No template yet: the seam is *provisional* until a second client (Transmission) passes its conformance suite, and its contract may still change.
 
-- Of this seam one provider is active, the one the owner picks in Settings → Downloader. When it is off or broken, downloads stop with a clear error; Reelix never switches to another by itself.
+- Of this seam one provider is active, the one the owner picks in Settings → Services → Downloader. When it is off or broken, downloads stop with a clear error; Reelix never switches to another by itself.
 - A transfer's `id` is its v1 info-hash in lower case. `add` returns `{ id, duplicate }`; when it returns, the transfer exists with the mark Reelix gave (`reelix`), paused when asked. If your client already had it, return `duplicate: true` and leave it as it is: Reelix adds its mark itself with `addMark`.
 - **An empty list does nothing.** `start([])`, `stop([])`, `remove([], …)`, `addMark([], …)`, `setWanted(id, [], …)` and `list({ ids: [] })` must not reach the service: on some clients an empty or missing list means "every torrent".
 - `done` is the only completion test Reelix makes: metadata present, nothing wanted missing, nothing being checked or moved, no local error. A tracker's message is a `problem` of kind `tracker`; the state stays.
@@ -273,7 +282,7 @@ Reference: `plugins/examples/finished-cleanup/src/index.ts`.
 
 ### 5.14 Checks in Doctor
 
-`ctx.check(name, run)` adds a line to Doctor. `plugins/jackett/src/index.ts` checks each server; with `quick` it only lists indexers. `plugins/qbittorrent` reports the client's version and save folder; Reelix's own "downloader" line checks the path map.
+`ctx.check(name, run)` adds a line to Doctor. It returns `{ state, cause, impact?, action?, cli?, raw?, cause_id? }` with messages from your own strings ([plugins.md](plugins.md) §6, "Checks"): say what was found, what it stops, and the one thing to do. `plugins/jackett/src/index.ts` checks each server; with `quick` it only lists indexers and reports them `not_tested`, with an action that runs its own `indexers` operation with `test`. `plugins/qbittorrent` reports the client's version and save folder, and points a refused login at its password; Reelix's own "downloader" line checks the path map. "Test connection" in Settings runs your checks alone (`plugin.check`).
 
 ### 5.15 Skill packs and setup skills
 
@@ -296,7 +305,7 @@ A plugin may ship skills too (`uses.skills: true`). A skill named `setup-<id>` i
 
 Built-in: `plugins/jellyfin/src/index.ts`. No template yet: the seam is *provisional* until a second server passes its conformance suite.
 
-- Of this seam one provider is active, the one the owner picks in Settings → Media server (`media_server`). It is optional: without it Reelix still files, and only what needs the server is missing.
+- Of this seam one provider is active, the one the owner picks in Settings → Services → Media server (`media_server`). It is optional: without it Reelix still files, and only what needs the server is missing.
 - `changed(paths)` gets folders and files as your server names them; the owner's path map (`path_maps.media_servers.<your id>`) translates them. An empty list never reaches the service. When `changed` fails, Reelix asks for `refreshAll`.
 - `items` is about one user. `filter: "played"` means a film the user played, or a show with at least one played episode; give a show's `episodesPlayed` and its last `lastPlayedAt`. `sort: "lastPlayed"` is the most recent first.
 - `watchUsers` is the owner's setting of whose history counts, by name; Reelix chooses the users from `users()` with it.

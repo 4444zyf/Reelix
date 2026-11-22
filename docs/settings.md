@@ -57,7 +57,7 @@ The section bar becomes, in order:
 - runtime switches;
 - the summary "as the agent sees it", which is the one existing `<details>`.
 
-`Field` stops printing the config path under the label. It moves into the field's own **Technical details** disclosure, with a copy button, for people who use the CLI.
+Fields stop printing the config path under the label. The page has one **Technical details** switch beside the search (below): on, every field shows its config path with a copy button, and every plugin card its id and version, for people who use the CLI.
 
 ## Credentials
 
@@ -89,6 +89,15 @@ Each secret then moves to the flow that uses it:
 A secret that belongs to a feature that is not set up shows "not needed while magpie is not used", never "missing" (#3).
 
 Every password field gets a visible label and an accessible name: the account's current and new password, and `SecretRow`. Today `SecretRow`'s `aria-label` is the raw key.
+
+## Search and filter (the owner's review of 2026-11-22)
+
+Settings has many sections and 26 plugins; the owner asked to search and filter the page. Beside the section links:
+- **Search** finds a section by its title, a field by its label or help, a service or plugin by its name or description. Everything else is hidden (not unmounted: a draft survives a search); a section whose title matches shows whole. With nothing found, the page says so.
+- **Needs attention** leaves only what needs the owner: the Status list, a field that is required and empty, a service card that needs setup, is paused or cannot be reached, a plugin that failed or waits.
+- **Technical details** shows config paths and plugin ids (above).
+
+The Plugins list has its own filter: all, on, off, with their counts.
 
 ## Forms and saving (#4, and the owner's review of 2026-11-22)
 
@@ -208,7 +217,7 @@ The editor checks each row:
 ## Models
 
 **No usable model** (#3). When `/api/status` lists no models (pi has no provider signed in), Models shows one state: "No model connected: chat, background jobs, translation and image reading are off." It offers three steps:
-1. **Connect a model provider.** Explains the two ways: sign in with `pi` on the NAS (the command, with copy), or connect magpie (its card).
+1. **Connect a model provider**, in the page: the provider's own sign-in or its API key (pi's login, run by Reelix), or magpie (its card). Never a command to type (the owner's review of 2026-11-22).
 2. **Choose a chat model**, from the models available once connected.
 3. **Test**: one short call through the chat role, with the answer and how long it took.
 
@@ -221,8 +230,6 @@ The status refreshes while this flow is open.
 
 **Labels.**
 - "Thinking" becomes **Reasoning effort**.
-- "Main model reads images" becomes **Image reading**, shown as "detected from the model" or "set by you", with a reset.
-- When the chat role has no model, the image reading switch shows "needs a chat model".
 
 **Translation.** The translator card says that subtitle search and download work without a translation model; only translating subtitles needs one.
 
@@ -371,3 +378,20 @@ From #3, each a test (core or plugin tests, and a browser walk-through of the fo
 2. **Doctor's CLI line** is shown in the web UI only inside the check's collapsed Details; the default view words the cause, effect and action in the owner's language.
 3. **The push key is not rotatable** from Settings. It is shown as made by Reelix, with no input.
 4. **One Save per section** for core settings too (Folders, Subtitles, Proxy, Models, Limits), as for the cards.
+
+## Implementation status (2026-11-22)
+
+Built:
+- **Page:** the section order above, with Status first (what needs attention, from the plugins' states, the model, the TMDB key, the budget and Doctor's quick checks, each with cause, effect and a button to the place to fix it; a cause shown once) and Advanced last; search, "Needs attention" and "Technical details"; config paths only with Technical details on; a gutter for the chat button.
+- **Forms:** one form and one Save (with Discard and "Unsaved changes") per section and per card (`components/settings/form.tsx`); secrets are fields of their form, shown masked with "Saved", Replace and Remove; ordered pickers for subtitle sites, languages, players and model roles; a path-map editor with a folder picker and checks for a missing folder, a letter-case mistake and a folder outside the media folder; per-service proxies as rows; folder checks under each saved folder.
+- **Plugins and credentials:** `uses.secrets` entries with `managed`, `required` and `per`; `SETTINGS.required` and `SETTINGS.advanced`; the manifest's `optional`; `plugin.list` gives `managedSecrets`, `needsSetup`, `unused` and `network`; `plugin.configure` saves settings and secrets in one change (one restart), refuses managed and undeclared secrets, and moves a key with its entry (`origins`); Jackett has one key per server (the old three move once); push's key and the OpenSubtitles token are shown as made by Reelix. The global Secrets section is gone: TMDB and magpie have their cards, plugin secrets are in their forms, the one-time provider key is only asked in the agent's flow.
+- **Services:** cards for the downloader (with its path map and, when another is running, the switch, which asks first), indexers, media server (likewise), TMDB, subtitle sites (grouped by site, with what an account adds), Telegram (four steps, each waiting for the one before) and magpie (address and key, admin key under Advanced). A card's state comes from the plugin, its setup needs and its last check (`lastCheck`); "Test connection" runs `plugin.check`.
+- **Doctor:** structured results, states, a shared cause shown once, actions that jump to the field, raw output and the command line under Details (`components/settings/Doctor.tsx`, `core/doctor.ts`; `media.folder_checks`, `plugin.check`).
+- **Models:** with no model, the three steps (connect a provider in the page, with its own sign-in or its API key, or magpie; choose a chat model; test it), and a Providers list (sign in, sign out) once one is connected, refreshing while open (`components/settings/ModelSetup.tsx`); roles as ordered pickers showing the model each uses and those resting; "Reasoning effort", the translator. Failed model calls are classed (signed out, timed out, rate limited, budget, missing capability, other) with an action; the chat shows a failure and the next model's answer names it; an agent job hands its task to the role's next model and records both (`job_runs.models_json`); `model.test` (docs/models.md).
+- **Other operations:** `library.players`, `proxy.services`, `preferences.show`, `preferences.set`.
+
+Different from the text above, and why:
+- Technical details is one switch for the page, not a disclosure per field: one disclosure per field doubled the clutter it was meant to remove.
+- The switch "main model reads images" is gone instead of becoming "Image reading": nothing read it (`models.main_reads_images` is dropped from old settings).
+- `KNOWN_SECRETS` keeps its English descriptions: the command line and the agent read them. The web UI has its own labels in four languages.
+- The browser plugin is offered in the proxy list once it has asked for its proxy (it drives Chromium itself and declares no network hosts).

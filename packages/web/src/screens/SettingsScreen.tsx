@@ -1,17 +1,22 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Bell, Bot, CheckCircle2, CircleDashed, Cpu, Download, FolderOpen, FolderTree, Gauge, Globe, KeyRound, Lock, MessageSquare, Plug, Puzzle, Send, Stethoscope, Trash2, Tv, XCircle } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { AlertTriangle, Bell, Bot, CheckCircle2, CircleDashed, Cpu, Film, FolderOpen, FolderTree, Gauge, Globe, Lock, MessageSquare, Play, Plug, Puzzle, Search, Send, SlidersHorizontal, Stethoscope, Subtitles, Trash2, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useStatus } from "../app/Sidebar";
 import { Badge } from "../components/common/Badge";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { Screen } from "../components/common/Screen";
 import { AppearanceSection } from "../components/common/ThemePicker";
-import { FolderPicker } from "../components/settings/FolderPicker";
-import { LibraryFolders } from "../components/settings/LibraryFolders";
-import { Plugins, SecretRow } from "../components/settings/Plugins";
 import { ErrorState, Loading, Spinner } from "../components/common/States";
 import { toast } from "../components/hooks/use-toast";
+import { FolderPicker } from "../components/settings/FolderPicker";
+import { type Folder, LibraryFolders, tidyFolders } from "../components/settings/LibraryFolders";
+import { CheckRow, Doctor, FolderChecks } from "../components/settings/Doctor";
+import { HookOrder, Plugins, pluginNeedsAttention } from "../components/settings/Plugins";
+import { ModelSetup, ModelTest } from "../components/settings/ModelSetup";
+import { Providers } from "../components/settings/Providers";
+import { Services } from "../components/settings/Services";
+import { type ConfigDraft, Disclosure, OrderedPicker, Row, SaveBar, Searchable, Section, type SettingsView, SettingsViewProvider, getPath, useConfigDraft } from "../components/settings/form";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Switch } from "../components/ui/switch";
@@ -27,208 +32,431 @@ const usd = (x: number) => new Intl.NumberFormat(intlLocale(), { style: "currenc
 
 /** The operation does not exist: its plugin is switched off. */
 const isPluginOff = (e: unknown) => e instanceof ApiError && e.code === "unknown_operation";
+const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-function get(obj: unknown, path: string): unknown {
-	return path.split(".").reduce<unknown>((o, k) => (o && typeof o === "object" ? (o as Record<string, unknown>)[k] : undefined), obj);
+/** Jump to a section or card of this page. */
+function jump(id: string) {
+	const el = document.getElementById(id);
+	if (!el) return;
+	history.replaceState(null, "", `#${id}`);
+	el.scrollIntoView({ behavior: "smooth", block: "start" });
+	el.querySelector<HTMLElement>("input, select, textarea, button")?.focus({ preventScroll: true });
 }
 
-export function Section({ id, icon, title, description, children }: { id: string; icon: ReactNode; title: string; description?: string; children: ReactNode }) {
+/** A form that saves with its SaveBar (Enter in a field saves too). */
+function DraftForm({ draft, children }: { draft: ConfigDraft; children: React.ReactNode }) {
 	return (
-		<section id={id} className="surface-card scroll-mt-28 rounded-xl p-4 md:p-6">
-			<div className="mb-4 flex items-start gap-3">
-				<span className="mt-0.5 text-primary [&_svg]:h-5 [&_svg]:w-5">{icon}</span>
-				<div>
-					<h2 className="font-semibold">{title}</h2>
-					{description && <p className="text-sm text-muted-foreground">{description}</p>}
-				</div>
-			</div>
-			<div className="space-y-4">{children}</div>
-		</section>
+		<form
+			className="space-y-4"
+			noValidate
+			onSubmit={(e) => {
+				e.preventDefault();
+				if (draft.dirty) void draft.save();
+			}}
+		>
+			{children}
+			<SaveBar dirty={draft.dirty} busy={draft.busy} onSave={() => void draft.save()} onDiscard={draft.discard} />
+		</form>
 	);
 }
 
-type FieldType = "text" | "number" | "list" | "json" | "select" | "bool" | "folder";
-
-function toText(v: unknown, type: FieldType): string {
-	if (v === undefined || v === null) return "";
-	if (type === "list") return Array.isArray(v) ? v.join(", ") : String(v);
-	if (type === "json") return JSON.stringify(v, null, 2);
-	return String(v);
-}
-
-function fromText(s: string, type: FieldType): unknown {
-	if (type === "number") return s.trim() === "" ? "" : Number(s);
-	if (type === "list")
-		return s
-			.split(",")
-			.map((x) => x.trim())
-			.filter(Boolean);
-	if (type === "json") return s.trim() === "" ? "" : JSON.parse(s);
-	return s;
-}
-
-/** One setting from config.yaml; saved with config.set (validated and recorded by the server). */
-function Field({ config, path, label, help, type = "text", options, placeholder }: { config: Record<string, unknown>; path: string; label: string; help?: string; type?: FieldType; options?: { value: string; label: string }[]; placeholder?: string }) {
-	const { t } = useTranslation(["settings", "common"]);
-	const qc = useQueryClient();
-	const current = get(config, path);
-	const [text, setText] = useState(toText(current, type));
-	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string>();
-	const [picking, setPicking] = useState(false);
-	useEffect(() => setText(toText(current, type)), [JSON.stringify(current), type]);
-	const dirty = text !== toText(current, type);
-
-	const save = async (value: unknown) => {
-		setBusy(true);
-		setError(undefined);
-		try {
-			const r = await runOp("config.set", { path, value });
-			toast({ title: t("field.saved"), description: r.text });
-			await qc.invalidateQueries({ queryKey: ["config"] });
-			qc.invalidateQueries({ queryKey: ["status"] });
-		} catch (e) {
-			setError(e instanceof Error ? e.message : String(e));
-		} finally {
-			setBusy(false);
-		}
-	};
-
-	const onSave = () => {
-		try {
-			void save(fromText(text, type));
-		} catch (e) {
-			setError(t("field.invalidJson", { error: e instanceof Error ? e.message : String(e) }));
-		}
-	};
-
+/** A text or number field of a config draft. */
+function TextField({ draft, path, label, help, number, placeholder }: { draft: ConfigDraft; path: string; label: string; help?: string; number?: boolean; placeholder?: string }) {
+	const v = draft.get(path);
 	return (
-		<div className="grid gap-1.5 md:grid-cols-[220px_1fr] md:gap-4">
-			<div>
-				<label className="text-sm font-medium" htmlFor={path}>
-					{label}
-				</label>
-				<p className="font-mono text-[11px] text-muted-foreground">{path}</p>
-			</div>
-			<div className="min-w-0">
-				{type === "bool" ? (
-					<Switch id={path} checked={!!current} disabled={busy} onCheckedChange={(v) => void save(v)} />
-				) : (
-					<div className="flex gap-2">
-						{type === "select" ? (
-							<select id={path} value={text} onChange={(e) => setText(e.target.value)} className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm">
-								<option value="">{t("field.notSet")}</option>
-								{options?.map((o) => (
-									<option key={o.value} value={o.value}>
-										{o.label}
-									</option>
-								))}
-								{text && !options?.some((o) => o.value === text) && <option value={text}>{text}</option>}
-							</select>
-						) : type === "json" ? (
-							<textarea id={path} value={text} onChange={(e) => setText(e.target.value)} rows={Math.min(8, Math.max(2, text.split("\n").length))} spellCheck={false} placeholder={placeholder} className="min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-						) : (
-							<Input id={path} type={type === "number" ? "number" : "text"} value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder} onKeyDown={(e) => e.key === "Enter" && dirty && onSave()} />
-						)}
-						{type === "folder" && (
-							<>
-								<Button variant="outline" className="shrink-0" disabled={busy} onClick={() => setPicking(true)}>
-									<FolderOpen />
-									{t("folderPicker.browse")}
+		<Row label={label} htmlFor={path} help={help} technical={path} error={draft.errors[path]}>
+			<Input
+				id={path}
+				type={number ? "number" : "text"}
+				value={v === undefined || v === null ? "" : String(v)}
+				placeholder={placeholder}
+				onChange={(e) => draft.set(path, e.target.value === "" ? undefined : number ? Number(e.target.value) : e.target.value)}
+			/>
+		</Row>
+	);
+}
+
+// ---------------------------------------------------------------- Status: what needs the owner, most important first
+
+type Attention = { key: string; cause: string; effect: string; action: string; target: string };
+
+function StatusSection({ warning }: { warning?: string }) {
+	const { t } = useTranslation("settings");
+	const { data: status } = useStatus();
+	const plugins = useQuery({ queryKey: ["plugins"], queryFn: endpoints.plugins });
+	const secrets = useQuery({ queryKey: ["secrets"], queryFn: endpoints.secrets });
+	// Doctor's quick checks add what the states above do not know (a folder, a path map, a tool).
+	const quick = useQuery({ queryKey: ["doctor-quick"], queryFn: () => endpoints.doctor(true), staleTime: 60_000 });
+	const items: Attention[] = [];
+	if (warning) items.push({ key: "config", cause: warning, effect: t("attention.configEffect"), action: t("attention.openDoctor"), target: "doctor" });
+	if (status && !status.models.length) items.push({ key: "model", cause: t("attention.noModel"), effect: t("attention.noModelEffect"), action: t("attention.connectModel"), target: "models" });
+	if (secrets.data && !secrets.data.find((s) => s.key === "tmdb.api_key")?.set) items.push({ key: "tmdb", cause: t("attention.noTmdb"), effect: t("attention.noTmdbEffect"), action: t("attention.addKey"), target: "service-tmdb" });
+	const services = ["qbittorrent", "jackett", "jellyfin", "subtitle-sites", "telegram"];
+	for (const p of plugins.data ?? []) {
+		if (p.state === "disabled" || !pluginNeedsAttention(p)) continue;
+		const where = services.includes(p.id) ? `service-${p.id}` : `plugin-${p.id}`;
+		const cause = p.needsSetup.length ? t("attention.needsSetup", { name: p.id }) : p.state === "waiting" ? t("attention.waiting", { name: p.id }) : t("attention.failed", { name: p.id });
+		items.push({ key: p.id, cause, effect: p.description, action: p.needsSetup.length ? t("attention.setUp") : t("attention.look"), target: where });
+	}
+	if (status?.spend.reached) items.push({ key: "spend", cause: t("attention.capReached"), effect: t("attention.capReachedEffect"), action: t("attention.openLimits"), target: "limits" });
+	const shown = new Set([...items.map((i) => i.key), "tmdb"]);
+	const checks = (quick.data ?? []).filter((c) => (c.state === "failed" || c.state === "degraded") && !shown.has(c.name) && !c.also?.some((n) => shown.has(n)));
+	const roles = status?.model.roles;
+	return (
+		<Section id="status" icon={<Gauge />} title={t("status.title")} keywords={[t("attention.title")]}>
+			<Searchable text={[t("attention.title"), ...items.map((i) => i.cause), ...checks.map((c) => c.name)]} attention={items.length + checks.length > 0}>
+				{items.length + checks.length ? (
+					<ul className="space-y-2">
+						{items.map((i) => (
+							<li key={i.key} className="flex flex-wrap items-start gap-3 rounded-md bg-warning/10 px-3 py-2">
+								<AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
+								<div className="min-w-0 flex-1 text-sm">
+									<p className="font-medium">{i.cause}</p>
+									<p className="text-xs text-muted-foreground">{i.effect}</p>
+								</div>
+								<Button size="sm" variant="outline" onClick={() => jump(i.target)}>
+									{i.action}
 								</Button>
-								<FolderPicker open={picking} onOpenChange={setPicking} start={text} onChoose={(p) => void save(p)} level={path === "downloads" ? "downloads" : "library"} />
-							</>
-						)}
-						{dirty && (
-							<Button onClick={onSave} disabled={busy} className="shrink-0">
-								{busy && <Spinner />}
-								{t("common:actions.save")}
-							</Button>
-						)}
-					</div>
+							</li>
+						))}
+						{checks.map((c) => (
+							<li key={c.name}>
+								<CheckRow check={c} onRerun={() => void quick.refetch()} />
+							</li>
+						))}
+					</ul>
+				) : (
+					<p className="flex items-center gap-2 text-sm text-muted-foreground">
+						<CheckCircle2 className="size-4 text-success" /> {t("attention.none")}
+					</p>
 				)}
-				{help && <p className="mt-1 text-xs text-muted-foreground">{help}</p>}
-				{error && <p className="mt-1 text-xs text-destructive-foreground">{error}</p>}
-			</div>
-		</div>
-	);
-}
-
-function Secrets() {
-	const { t } = useTranslation("settings");
-	const { data, isLoading, error, refetch } = useQuery({ queryKey: ["secrets"], queryFn: endpoints.secrets });
-	if (isLoading) return <Spinner />;
-	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
-	// The web password has its own form below; a plugin's secrets are on its own page under Plugins.
-	const list = (data ?? []).filter((s) => !s.key.startsWith("web.") && !s.key.startsWith("plugins."));
-	return (
-		<>
-			<p className="text-xs text-muted-foreground">{t("secrets.intro")}</p>
-			{list.map((s) => (
-				<SecretRow key={s.key} s={s} />
-			))}
-		</>
-	);
-}
-
-function CheckIcon({ ok }: { ok: boolean | null }) {
-	if (ok === true) return <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />;
-	if (ok === false) return <XCircle className="h-4 w-4 shrink-0 text-destructive-foreground" />;
-	return <CircleDashed className="h-4 w-4 shrink-0 text-muted-foreground" />;
-}
-
-function Doctor() {
-	const { t } = useTranslation("settings");
-	const { askAbout } = useChat();
-	const [checks, setChecks] = useState<DoctorCheck[]>();
-	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string>();
-	const run = async (quick: boolean) => {
-		setBusy(true);
-		setError(undefined);
-		try {
-			setChecks(await endpoints.doctor(quick));
-		} catch (e) {
-			setError(e instanceof Error ? e.message : String(e));
-		} finally {
-			setBusy(false);
-		}
-	};
-	const failed = checks?.filter((c) => c.ok === false) ?? [];
-	return (
-		<>
-			<div className="flex flex-wrap gap-2">
-				<Button onClick={() => run(false)} disabled={busy}>
-					{busy ? <Spinner /> : <Stethoscope />}
-					{t("doctor.runAll")}
-				</Button>
-				<Button variant="outline" onClick={() => run(true)} disabled={busy}>
-					{t("doctor.quick")}
-				</Button>
-				{failed.length > 0 && (
-					<Button variant="ghost" onClick={() => askAbout(t("doctor.askFixPrompt", { count: failed.length, list: failed.map((c) => `${c.name}: ${c.detail}`).join("; ") }))}>
-						<MessageSquare /> {t("doctor.askFix")}
-					</Button>
-				)}
-			</div>
-			{error && <p className="text-sm text-destructive-foreground">{error}</p>}
-			{checks && (
-				<div className="space-y-1.5">
-					{checks.map((c, i) => (
-						<div key={`${c.name}${i}`} className={cn("flex items-start gap-2 rounded-md px-3 py-2 text-sm", c.ok === false ? "bg-destructive/15" : "bg-surface")}>
-							<CheckIcon ok={c.ok} />
-							<div className="min-w-0 flex-1">
-								<p className="font-medium">{c.name}</p>
-								<p className="break-words text-xs text-muted-foreground">{c.detail}</p>
-								{c.fix && c.ok === false && <p className="mt-0.5 text-xs text-warning">{t("doctor.fix", { fix: c.fix })}</p>}
-							</div>
-						</div>
-					))}
+			</Searchable>
+			<Searchable text={[t("status.mainModel"), t("status.spendToday"), t("status.jobs")]}>
+				<div className="grid gap-2 text-sm sm:grid-cols-2">
+					<p>
+						<span className="text-muted-foreground">{t("status.mainModel")} </span>
+						{roles?.chat?.uses.join(" › ") || t("status.notSet")}
+					</p>
+					<p>
+						<span className="text-muted-foreground">{t("status.backgroundModel")} </span>
+						{roles?.background?.own.join(" › ") || t("status.sameAsMain")}
+					</p>
+					<p>
+						<span className="text-muted-foreground">{t("status.spendToday")} </span>
+						{t("status.spendValue", { usd: formatNumber(status?.spend.usd ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), capUsd: status?.spend.capUsd ?? "?", tokens: (status?.spend.tokens ?? 0).toLocaleString(intlLocale()), capTokens: (status?.spend.capTokens ?? 0).toLocaleString(intlLocale()) })}
+					</p>
+					<p>
+						<span className="text-muted-foreground">{t("status.jobs")} </span>
+						{t("status.jobsValue", { running: status?.jobs.running ?? 0, queued: status?.jobs.queued ?? 0, parked: status?.jobs.parked ?? 0 })}
+					</p>
 				</div>
-			)}
-		</>
+			</Searchable>
+		</Section>
 	);
 }
+
+// ---------------------------------------------------------------- Models
+
+const ROLES = ["chat", "background", "glossary", "translate", "review"] as const;
+const INHERITS = { background: "chat", glossary: "background", translate: "background", review: "translate" } as const;
+type ProviderChoice = { active: string; running: boolean; providers: { id: string; label: string; plugin: string }[] };
+
+function ModelsSection({ config }: { config: Record<string, unknown> }) {
+	const { t } = useTranslation("settings");
+	const { data: status } = useStatus();
+	const translators = useQuery({ queryKey: ["translators", config.translator], queryFn: () => op<ProviderChoice>("subtitle.translators") });
+	const draft = useConfigDraft(config, [...ROLES.map((r) => `models.roles.${r}`), "models.thinking", "translator"]);
+	const available = status?.models ?? [];
+	const magpie = status?.model.magpie;
+	return (
+		<Section id="models" icon={<Cpu />} title={t("models.title")} description={t("models.descriptionShort")}>
+			<Searchable text={[t("attention.noModel")]} attention={!!status && !available.length}>
+				<ModelSetup />
+			</Searchable>
+			{!!available.length && (
+				<Row label={t("models.providers")} help={t("models.providersHelp")}>
+					<Providers compact />
+				</Row>
+			)}
+			<DraftForm draft={draft}>
+				{ROLES.map((r) => {
+					const path = `models.roles.${r}`;
+					const value = (draft.get(path) as string[] | undefined) ?? [];
+					const uses = status?.model.roles[r]?.uses ?? [];
+					const resting = status?.model.roles[r]?.resting ?? [];
+					const inherits = r !== "chat" && !value.length;
+					return (
+						<Row
+							key={r}
+							label={t(`models.role.${r}`)}
+							technical={path}
+							error={draft.errors[path]}
+							help={
+								<>
+									{t(`models.roleHelp.${r}`)} {uses.length > 0 && (inherits ? t("models.usesInherited", { models: uses.join(" › "), role: t(`models.role.${INHERITS[r as keyof typeof INHERITS]}`) }) : t("models.uses", { models: uses.join(" › ") }))}
+									{resting.length > 0 && <span className="block text-warning">{t("models.resting", { models: resting.join(", ") })}</span>}
+								</>
+							}
+							attention={r === "chat" && !uses.length}
+						>
+							<OrderedPicker items={available.map((m) => ({ id: m, label: m }))} value={value} onChange={(v) => draft.set(path, v.length ? v : undefined)} unknownNote={t("models.notAvailable")} />
+						</Row>
+					);
+				})}
+				<Row label={t("models.testRole")} help={t("models.testRoleHelp")}>
+					<ModelTest disabled={!available.length} />
+				</Row>
+				<Row label={t("models.reasoning")} htmlFor="models.thinking" help={t("models.reasoningHelp")} technical="models.thinking" error={draft.errors["models.thinking"]}>
+					<select id="models.thinking" value={(draft.get("models.thinking") as string | undefined) ?? ""} onChange={(e) => draft.set("models.thinking", e.target.value || undefined)} className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm">
+						<option value="">{t("field.notSet")}</option>
+						{(["off", "minimal", "low", "medium", "high"] as const).map((v) => (
+							<option key={v} value={v}>
+								{t(`models.thinkingLevel.${v}`)}
+							</option>
+						))}
+					</select>
+				</Row>
+				<Row label={t("models.translator")} htmlFor="translator" help={t("models.translatorHelpShort")} technical="translator" error={draft.errors.translator}>
+					{translators.data ? (
+						<select id="translator" value={(draft.get("translator") as string | undefined) ?? translators.data.active} onChange={(e) => draft.set("translator", e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm">
+							{translators.data.providers.map((p) => (
+								<option key={p.id} value={p.id}>
+									{p.label}
+								</option>
+							))}
+						</select>
+					) : (
+						<Spinner />
+					)}
+					{translators.data && !translators.data.running && <p className="mt-1 text-xs text-warning">{t("models.translatorNotRunning", { id: translators.data.active })}</p>}
+				</Row>
+			</DraftForm>
+			{magpie?.ok && (
+				<Searchable text={["magpie"]}>
+					<p className="text-xs text-muted-foreground">
+						{(magpie.limits ?? [])
+							.filter((l) => l.costLimit)
+							.map((l) => t(l.spent ? "models.magpieSpent" : "models.magpieLimit", { used: usd(l.cost ?? 0), limit: usd(l.costLimit ?? 0), period: t(`models.magpiePeriod.${(["day", "week", "month", "total"].includes(l.period) ? l.period : "other") as "day"}`), reset: l.reset ? new Date(l.reset).toLocaleString(intlLocale(), { dateStyle: "medium", timeStyle: "short" }) : "" }))
+							.join(" ")}{" "}
+						{t(magpie.admin ? "models.magpieAdmin" : "models.magpieReadOnly")}
+					</p>
+				</Searchable>
+			)}
+		</Section>
+	);
+}
+
+// ---------------------------------------------------------------- Folders
+
+const KINDS = ["movies", "shows", "anime"] as const;
+
+function FoldersSection({ config }: { config: Record<string, unknown> }) {
+	const { t } = useTranslation("settings");
+	const libraryPaths = KINDS.map((k) => `library.${k}`);
+	const draft = useConfigDraft(config, ["media_root", "downloads", ...libraryPaths], Object.fromEntries(libraryPaths.map((p) => [p, (v: unknown) => tidyFolders((v as Folder[]) ?? [])])));
+	const [picking, setPicking] = useState(false);
+	const downloads = (draft.get("downloads") as string | undefined) ?? "";
+	return (
+		<Section id="folders" icon={<FolderTree />} title={t("folders.title")} description={t("folders.description")}>
+			<DraftForm draft={draft}>
+				<TextField draft={draft} path="media_root" label={t("folders.mediaRoot")} help={t("folders.mediaRootHelp")} />
+				<Row label={t("folders.downloads")} htmlFor="downloads" help={t("folders.downloadsHelp")} technical="downloads" error={draft.errors.downloads} attention={!downloads}>
+					<div className="flex gap-2">
+						<Input id="downloads" value={downloads} onChange={(e) => draft.set("downloads", e.target.value || undefined)} />
+						<Button type="button" variant="outline" className="shrink-0" onClick={() => setPicking(true)}>
+							<FolderOpen />
+							{t("folderPicker.browse")}
+						</Button>
+					</div>
+					<FolderPicker open={picking} onOpenChange={setPicking} start={downloads} onChoose={(p) => draft.set("downloads", p)} level="downloads" />
+					{typeof config.downloads === "string" && config.downloads === downloads && <FolderChecks path={downloads} className="mt-2" />}
+				</Row>
+				<p className="text-xs text-muted-foreground">{t("folders.libraryIntro")}</p>
+				{KINDS.map((k) => (
+					<LibraryFolders
+						key={k}
+						kind={k}
+						label={t(`folders.${k}`)}
+						value={(draft.get(`library.${k}`) as Folder[] | undefined) ?? []}
+						onChange={(v) => draft.set(`library.${k}`, v)}
+						showsFolders={((draft.get("library.shows") as unknown[]) ?? []).length}
+						learn={((getPath(config, `library.${k}`) as unknown[]) ?? []).length > 1 && !draft.dirty}
+						error={draft.errors[`library.${k}`]}
+						saved={((getPath(config, `library.${k}`) as Folder[] | undefined) ?? []).map((f) => f.path)}
+					/>
+				))}
+			</DraftForm>
+		</Section>
+	);
+}
+
+// ---------------------------------------------------------------- Subtitles, playback, proxy
+
+const SUB_LANGS = ["zh", "en", "fr", "ru", "ja"] as const;
+type Site = { id: string; label: string; ready: string };
+
+function SubtitlesSection({ config }: { config: Record<string, unknown> }) {
+	const { t } = useTranslation("settings");
+	const sites = useQuery({ queryKey: ["site.status"], queryFn: () => op<Site[]>("site.status"), retry: false });
+	const draft = useConfigDraft(config, ["subtitles.sources", "subtitles.languages"]);
+	return (
+		<Section id="subtitles" icon={<Subtitles />} title={t("subtitles.title")} description={t("subtitles.description")}>
+			<DraftForm draft={draft}>
+				<Row label={t("subtitles.sources")} help={t("subtitles.sourcesHelp")} technical="subtitles.sources" error={draft.errors["subtitles.sources"]}>
+					{sites.data ? (
+						<OrderedPicker
+							items={sites.data.map((s) => ({ id: s.id, label: s.label, note: s.ready === "ready" ? undefined : t("subtitles.needsAccount"), warn: s.ready !== "ready" }))}
+							value={(draft.get("subtitles.sources") as string[] | undefined) ?? []}
+							onChange={(v) => draft.set("subtitles.sources", v)}
+							unknownNote={t("subtitles.notRunning")}
+						/>
+					) : isPluginOff(sites.error) ? (
+						<p className="text-sm text-muted-foreground">{t("subtitles.sitesOff")}</p>
+					) : (
+						<Spinner />
+					)}
+				</Row>
+				<Row label={t("subtitles.languages")} help={t("subtitles.languagesHelp")} technical="subtitles.languages" error={draft.errors["subtitles.languages"]}>
+					<OrderedPicker items={SUB_LANGS.map((l) => ({ id: l, label: t(`subtitles.lang.${l}`) }))} value={(draft.get("subtitles.languages") as string[] | undefined) ?? []} onChange={(v) => draft.set("subtitles.languages", v.length ? v : undefined)} />
+				</Row>
+			</DraftForm>
+		</Section>
+	);
+}
+
+type Player = { id: string; label: string; needs_media_server: boolean; works: boolean };
+
+function PlaybackSection({ config }: { config: Record<string, unknown> }) {
+	const { t } = useTranslation("settings");
+	const players = useQuery({ queryKey: ["library.players", config.media_server], queryFn: () => op<Player[]>("library.players"), retry: false });
+	const draft = useConfigDraft(config, ["players"]);
+	return (
+		<Section id="playback" icon={<Play />} title={t("playback.title")} description={t("playback.description")}>
+			<DraftForm draft={draft}>
+				<Row label={t("playback.players")} help={t("playback.playersHelp")} technical="players" error={draft.errors.players}>
+					{players.data ? (
+						<OrderedPicker
+							items={players.data.map((p) => ({ id: p.id, label: p.label, note: p.needs_media_server ? t(p.works ? "playback.needsServer" : "playback.needsServerMissing") : undefined, warn: !p.works }))}
+							value={(draft.get("players") as string[] | undefined) ?? []}
+							onChange={(v) => draft.set("players", v)}
+							unknownNote={t("playback.notRunning")}
+						/>
+					) : (
+						<Spinner />
+					)}
+				</Row>
+			</DraftForm>
+		</Section>
+	);
+}
+
+function ProxySection({ config }: { config: Record<string, unknown> }) {
+	const { t } = useTranslation("settings");
+	const services = useQuery({ queryKey: ["proxy.services"], queryFn: () => op<{ id: string; label: string }[]>("proxy.services") });
+	const draft = useConfigDraft(config, ["proxy.default", "proxy.use_for"]);
+	const useFor = (draft.get("proxy.use_for") as string[] | undefined) ?? [];
+	const known = services.data ?? [];
+	const listed = [...known, ...useFor.filter((s) => !known.some((k) => k.id === s)).map((id) => ({ id, label: id }))];
+	return (
+		<Section id="proxy" icon={<Globe />} title={t("proxy.title")} description={t("proxy.description")}>
+			<DraftForm draft={draft}>
+				<TextField draft={draft} path="proxy.default" label={t("proxy.url")} placeholder={t("proxy.urlPlaceholder")} />
+				<Row label={t("proxy.useFor")} help={t("proxy.useForHelpNamed")} technical="proxy.use_for" error={draft.errors["proxy.use_for"]}>
+					<div className="flex flex-wrap gap-x-4 gap-y-2">
+						{listed.map((s) => (
+							<label key={s.id} className="flex items-center gap-2 text-sm">
+								<input type="checkbox" checked={useFor.includes(s.id)} onChange={(e) => draft.set("proxy.use_for", e.target.checked ? [...useFor, s.id] : useFor.filter((x) => x !== s.id))} />
+								{s.label}
+							</label>
+						))}
+					</div>
+				</Row>
+			</DraftForm>
+		</Section>
+	);
+}
+
+// ---------------------------------------------------------------- Limits and Advanced
+
+function LimitsSection({ config }: { config: Record<string, unknown> }) {
+	const { t } = useTranslation("settings");
+	const { data: status } = useStatus();
+	const draft = useConfigDraft(config, ["limits.background_daily_usd", "limits.background_daily_tokens", "limits.plugin_daily_usd", "limits.suggestions_daily_usd", "limits.stalled_after_h", "limits.trash_days", "schedule.nightly_at", "schedule.timezone"]);
+	return (
+		<Section id="limits" icon={<Gauge />} title={t("limits.title")} description={t("limits.description")}>
+			{status?.spend.reached && (
+				<p className="flex items-center gap-2 text-sm text-warning">
+					<AlertTriangle className="size-4" /> {t("attention.capReachedEffect")}
+				</p>
+			)}
+			<DraftForm draft={draft}>
+				<TextField draft={draft} path="limits.background_daily_usd" number label={t("limits.dailyUsd")} help={t("limits.dailyHelp")} />
+				<TextField draft={draft} path="limits.background_daily_tokens" number label={t("limits.dailyTokens")} help={t("limits.dailyHelp")} />
+				<TextField draft={draft} path="limits.plugin_daily_usd" number label={t("limits.pluginDailyUsd")} help={t("limits.pluginDailyUsdHelp")} />
+				<TextField draft={draft} path="limits.suggestions_daily_usd" number label={t("limits.suggestionsDailyUsd")} help={t("limits.suggestionsHelp")} />
+				<TextField draft={draft} path="limits.stalled_after_h" number label={t("limits.stalledAfter")} help={t("limits.stalledHelp")} />
+				<TextField draft={draft} path="limits.trash_days" number label={t("limits.trashDays")} help={t("limits.trashHelp")} />
+				<TextField draft={draft} path="schedule.nightly_at" label={t("limits.nightlyAt")} placeholder="03:30" help={t("limits.nightlyHelp")} />
+				<TextField draft={draft} path="schedule.timezone" label={t("limits.timezone")} placeholder="Asia/Shanghai" />
+			</DraftForm>
+		</Section>
+	);
+}
+
+type PerService = { service: string; proxy: string }[];
+
+function AdvancedSection({ config, summary }: { config: Record<string, unknown>; summary?: string }) {
+	const { t } = useTranslation("settings");
+	const services = useQuery({ queryKey: ["proxy.services"], queryFn: () => op<{ id: string; label: string }[]>("proxy.services") });
+	const draft = useConfigDraft(config, ["limits.shell_timeout_s", "limits.shell_timeout_max_s", "proxy.per_service"], {
+		"proxy.per_service": (v) => Object.fromEntries(((v as PerService | undefined) ?? []).filter((r) => r.service).map((r) => [r.service, r.proxy || "none"])),
+	});
+	// The per-service proxies as rows while they are edited; saved as the object config.yaml holds.
+	const raw = draft.get("proxy.per_service");
+	const rows: PerService = Array.isArray(raw) ? raw : Object.entries((raw as Record<string, string> | undefined) ?? {}).map(([service, proxy]) => ({ service, proxy: proxy === "none" ? "" : proxy }));
+	const setRows = (r: PerService) => draft.set("proxy.per_service", r);
+	return (
+		<Section id="advanced" icon={<SlidersHorizontal />} title={t("advanced.title")} description={t("advanced.description")}>
+			<DraftForm draft={draft}>
+				<TextField draft={draft} path="limits.shell_timeout_s" number label={t("limits.shellTimeout")} help={t("advanced.shellHelp")} />
+				<TextField draft={draft} path="limits.shell_timeout_max_s" number label={t("limits.shellTimeoutMax")} />
+				<Row label={t("proxy.perService")} help={t("advanced.perServiceHelp")} technical="proxy.per_service" error={draft.errors["proxy.per_service"]}>
+					<div className="space-y-2">
+						{rows.map((r, i) => (
+							<div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+								<select aria-label={t("advanced.service")} value={r.service} onChange={(e) => setRows(rows.map((x, n) => (n === i ? { ...x, service: e.target.value } : x)))} className="h-10 rounded-md border border-input bg-background px-2 text-sm">
+									<option value="">{t("advanced.chooseService")}</option>
+									{[...(services.data ?? []), ...(r.service && !services.data?.some((s) => s.id === r.service) ? [{ id: r.service, label: r.service }] : [])].map((s) => (
+										<option key={s.id} value={s.id}>
+											{s.label}
+										</option>
+									))}
+								</select>
+								<Input aria-label={t("proxy.url")} value={r.proxy} placeholder={t("advanced.noProxy")} onChange={(e) => setRows(rows.map((x, n) => (n === i ? { ...x, proxy: e.target.value } : x)))} />
+								<Button type="button" variant="ghost" size="icon" aria-label={t("pathMap.remove")} onClick={() => setRows(rows.filter((_, n) => n !== i))}>
+									<Trash2 />
+								</Button>
+							</div>
+						))}
+						<Button type="button" variant="outline" size="sm" onClick={() => setRows([...rows, { service: "", proxy: "" }])}>
+							{t("advanced.addService")}
+						</Button>
+					</div>
+				</Row>
+			</DraftForm>
+			<HookOrder />
+			{summary && (
+				<Searchable text={[t("status.summary")]}>
+					<Disclosure title={t("status.summary")}>
+						<pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-well p-3 text-xs text-muted-foreground">{summary}</pre>
+					</Disclosure>
+				</Searchable>
+			)}
+		</Section>
+	);
+}
+
+// ---------------------------------------------------------------- Notifications and chat apps
 
 /** Native notifications on this device, and the other devices that have them (docs/web-app.md). */
 function Notifications() {
@@ -249,53 +477,60 @@ function Notifications() {
 			await qc.invalidateQueries({ queryKey: ["push"] });
 			setState(await pushState((await endpoints.push()).devices));
 		} catch (e) {
-			toast({ title: t("notifications.failed"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+			toast({ title: t("notifications.failed"), description: message(e), variant: "destructive" });
 		} finally {
 			setBusy(undefined);
 		}
 	};
-	if (isPluginOff(info.error)) return <p className="text-sm text-muted-foreground">{t("notifications.pluginOff")}</p>;
-	const hint = state === "needs_https" ? t("notifications.needsHttps") : state === "needs_install" ? t("notifications.needsInstall") : state === "unsupported" ? t(isIos() ? "notifications.unsupportedIos" : "notifications.unsupported") : state === "denied" ? t("notifications.denied") : null;
+	if (isPluginOff(info.error))
+		return (
+			<Searchable text={[t("notifications.thisDevice")]}>
+				<p className="text-sm text-muted-foreground">{t("notifications.pluginOff")}</p>
+			</Searchable>
+		);
+	const hint = state === "needs_https" ? t("notifications.needsHttpsInbox") : state === "needs_install" ? t("notifications.needsInstall") : state === "unsupported" ? t(isIos() ? "notifications.unsupportedIos" : "notifications.unsupported") : state === "denied" ? t("notifications.denied") : null;
 	return (
-		<>
-			<div className="flex flex-wrap items-center gap-2">
-				<Badge tone={state === "on" ? "success" : state === "off" ? "muted" : "warning"}>{state === "on" ? t("notifications.on") : state === "off" ? t("notifications.off") : t("notifications.notReady")}</Badge>
-				{state === "off" && (
-					<Button variant="outline" disabled={!!busy} onClick={() => run("on", enablePush)}>
-						{busy === "on" ? <Spinner /> : <Bell />}
-						{t("notifications.enable")}
-					</Button>
-				)}
-				{state === "on" && (
-					<>
-						<Button variant="outline" disabled={!!busy} onClick={() => run("test", testPush, t("notifications.sent"))}>
-							{busy === "test" ? <Spinner /> : <Send />}
-							{t("notifications.sendTest")}
+		<Row label={t("notifications.thisDevice")} badge={<Badge tone={state === "on" ? "success" : state === "off" ? "muted" : "warning"}>{state === "on" ? t("notifications.on") : state === "off" ? t("notifications.off") : t("notifications.notReady")}</Badge>} search={[hint ?? undefined]}>
+			<div className="space-y-2">
+				{hint && <p className="text-sm text-muted-foreground">{hint}</p>}
+				<div className="flex flex-wrap items-center gap-2">
+					{state === "off" && (
+						<Button variant="outline" disabled={!!busy} onClick={() => run("on", enablePush)}>
+							{busy === "on" ? <Spinner /> : <Bell />}
+							{t("notifications.enable")}
 						</Button>
-						<Button variant="ghost" disabled={!!busy} onClick={() => run("off", disablePush)}>
-							{t("notifications.disable")}
-						</Button>
-					</>
+					)}
+					{state === "on" && (
+						<>
+							<Button variant="outline" disabled={!!busy} onClick={() => run("test", testPush, t("notifications.sent"))}>
+								{busy === "test" ? <Spinner /> : <Send />}
+								{t("notifications.sendTest")}
+							</Button>
+							<Button variant="ghost" disabled={!!busy} onClick={() => run("off", disablePush)}>
+								{t("notifications.disable")}
+							</Button>
+						</>
+					)}
+					{state && state !== "on" && state !== "off" && <span className="text-xs text-muted-foreground">{t("notifications.inboxWorks")}</span>}
+				</div>
+				{!!devices?.length && (
+					<div className="space-y-1">
+						<p className="text-xs font-semibold text-muted-foreground">{t("notifications.devices")}</p>
+						{devices.map((d) => (
+							<div key={d.id} className="flex items-center gap-2 rounded-md bg-surface px-2.5 py-1.5 text-xs">
+								<div className="min-w-0 flex-1">
+									<p className="font-medium">{d.label}</p>
+									<p className={cn("break-words text-muted-foreground", d.last_error && "text-warning")}>{d.last_error ?? (d.last_ok_at ? t("notifications.lastSent", { ago: timeAgo(d.last_ok_at) }) : t("notifications.notSentYet"))}</p>
+								</div>
+								<Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("notifications.remove")} title={t("notifications.remove")} disabled={!!busy} onClick={() => run(d.id, () => endpoints.pushUnsubscribe({ id: d.id }))}>
+									<Trash2 />
+								</Button>
+							</div>
+						))}
+					</div>
 				)}
 			</div>
-			{hint && <p className="text-sm text-muted-foreground">{hint}</p>}
-			{!!devices?.length && (
-				<div className="space-y-1">
-					<p className="text-xs font-semibold text-muted-foreground">{t("notifications.devices")}</p>
-					{devices.map((d) => (
-						<div key={d.id} className="flex items-center gap-2 rounded-md bg-surface px-2.5 py-1.5 text-xs">
-							<div className="min-w-0 flex-1">
-								<p className="font-medium">{d.label}</p>
-								<p className={cn("break-words text-muted-foreground", d.last_error && "text-warning")}>{d.last_error ?? (d.last_ok_at ? t("notifications.lastSent", { ago: timeAgo(d.last_ok_at) }) : t("notifications.notSentYet"))}</p>
-							</div>
-							<Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("notifications.remove")} title={t("notifications.remove")} disabled={!!busy} onClick={() => run(d.id, () => endpoints.pushUnsubscribe({ id: d.id }))}>
-								<Trash2 />
-							</Button>
-						</div>
-					))}
-				</div>
-			)}
-		</>
+		</Row>
 	);
 }
 
@@ -312,77 +547,125 @@ function Channels() {
 			await fn();
 			await qc.invalidateQueries({ queryKey: ["channels"] });
 		} catch (e) {
-			toast({ title: t("channels.notChanged"), description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+			toast({ title: t("channels.notChanged"), description: message(e), variant: "destructive" });
 		} finally {
 			setBusy(undefined);
 		}
 	};
 	if (channels.isLoading) return <Spinner />;
 	if (channels.error) return <ErrorState error={channels.error} onRetry={() => channels.refetch()} />;
-	if (!channels.data?.length) return <p className="text-sm text-muted-foreground">{t("channels.empty")}</p>;
 	return (
-		<div className="space-y-2">
-			{channels.data.map((c) => (
-				<div key={c.id} className="space-y-2 rounded-md bg-surface px-3 py-2">
-					<div className="flex flex-wrap items-center gap-2">
-						<span className="text-sm font-medium">{c.label}</span>
-						<Badge tone={c.linked ? "success" : "muted"}>{c.linked ? t("channels.linked") : t("channels.notLinked")}</Badge>
+		<Row label={t("channels.title")} help={t("channels.setUpHere")}>
+			<div className="space-y-2">
+				{!channels.data?.length && <p className="text-sm text-muted-foreground">{t("channels.empty")}</p>}
+				{channels.data?.map((c) => (
+					<div key={c.id} className="space-y-2 rounded-md bg-surface px-3 py-2">
+						<div className="flex flex-wrap items-center gap-2">
+							<span className="text-sm font-medium">{c.label}</span>
+							<Badge tone={c.linked ? "success" : "muted"}>{c.linked ? t("channels.linked") : t("channels.notLinked")}</Badge>
+							{c.linked ? (
+								<Button variant="ghost" size="sm" className="ml-auto h-7 px-2 text-xs" disabled={!!busy} onClick={() => setUnlink(c.id)}>
+									{t("channels.unlink")}
+								</Button>
+							) : (
+								<Button variant="ghost" size="sm" className="ml-auto h-7 px-2 text-xs" onClick={() => jump(`service-${c.id}`)}>
+									{t("channels.link")}
+								</Button>
+							)}
+						</div>
+						{c.last_error && <p className="break-words text-xs text-warning">{t("channels.sendFailed", { ago: c.last_error_at ? timeAgo(c.last_error_at) : "", error: c.last_error })}</p>}
 						{c.linked && (
-							<Button variant="ghost" size="sm" className="ml-auto h-7 px-2 text-xs" disabled={!!busy} onClick={() => setUnlink(c.id)}>
-								{t("channels.unlink")}
-							</Button>
+							<div className="flex items-start gap-3">
+								<Switch id={`approve-${c.id}`} checked={c.may_approve} disabled={!!busy} onCheckedChange={(on) => void change(c.id, () => endpoints.allowChannelApproval(c.id, on))} />
+								<label htmlFor={`approve-${c.id}`} className="min-w-0 text-sm">
+									<span className="font-medium">{t("channels.mayApprove")}</span>
+									<span className="block text-xs text-muted-foreground">{t("channels.mayApproveHelp")}</span>
+								</label>
+							</div>
 						)}
 					</div>
-					{c.last_error && <p className="break-words text-xs text-warning">{t("channels.sendFailed", { ago: c.last_error_at ? timeAgo(c.last_error_at) : "", error: c.last_error })}</p>}
-					{c.linked && (
-						<div className="flex items-start gap-3">
-							<Switch id={`approve-${c.id}`} checked={c.may_approve} disabled={!!busy} onCheckedChange={(on) => void change(c.id, () => endpoints.allowChannelApproval(c.id, on))} />
-							<label htmlFor={`approve-${c.id}`} className="min-w-0 text-sm">
-								<span className="font-medium">{t("channels.mayApprove")}</span>
-								<span className="block text-xs text-muted-foreground">{t("channels.mayApproveHelp")}</span>
-							</label>
-						</div>
-					)}
-				</div>
-			))}
-			<p className="text-xs text-muted-foreground">{t("channels.setUp")}</p>
+				))}
+			</div>
 			<ConfirmDialog open={!!unlink} onOpenChange={(o) => !o && setUnlink(undefined)} title={t("channels.unlinkTitle", { channel: unlink })} description={t("channels.unlinkBody")} confirmLabel={t("channels.unlink")} destructive onConfirm={() => change(unlink!, () => endpoints.unlinkChannel(unlink!)).then(() => setUnlink(undefined))} />
-		</div>
+		</Row>
 	);
 }
 
+// ---------------------------------------------------------------- Assistant
+
+/** The preferences note, edited in place; or in chat, when a model can be used. */
+function Preferences() {
+	const { t } = useTranslation("settings");
+	const { askAbout } = useChat();
+	const { data: status } = useStatus();
+	const qc = useQueryClient();
+	const note = useQuery({ queryKey: ["preferences"], queryFn: () => op<{ text: string }>("preferences.show") });
+	const [text, setText] = useState<string>();
+	const [busy, setBusy] = useState(false);
+	useEffect(() => setText(note.data?.text), [note.data?.text]);
+	const dirty = text !== undefined && text !== note.data?.text;
+	const save = async () => {
+		setBusy(true);
+		try {
+			await runOp("preferences.set", { text: text ?? "" });
+			toast({ title: t("field.saved") });
+			await qc.invalidateQueries({ queryKey: ["preferences"] });
+		} catch (e) {
+			toast({ title: t("field.notSaved"), description: message(e), variant: "destructive" });
+		} finally {
+			setBusy(false);
+		}
+	};
+	return (
+		<Row label={t("assistant.preferences")} htmlFor="preferences" search={[t("assistant.preferencesHelp")]}>
+			<form className="space-y-2" onSubmit={(e) => (e.preventDefault(), void save())}>
+				<p className="text-xs text-muted-foreground">{t("assistant.preferencesHelp")}</p>
+				<textarea id="preferences" value={text ?? ""} onChange={(e) => setText(e.target.value)} rows={Math.min(14, Math.max(4, (text ?? "").split("\n").length + 1))} placeholder={t("assistant.preferencesEmpty")} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+				{!!status?.models.length && (
+					<Button type="button" variant="ghost" size="sm" onClick={() => askAbout(t("agent.editPrefsPrompt"))}>
+						<MessageSquare /> {t("assistant.editInChat")}
+					</Button>
+				)}
+				<SaveBar dirty={dirty} busy={busy} onSave={() => void save()} onDiscard={() => setText(note.data?.text)} />
+			</form>
+		</Row>
+	);
+}
+
+/** Skills the assistant wrote: the description first; the name and body under Technical details. */
 function Learned() {
 	const { t } = useTranslation(["settings", "common"]);
 	const qc = useQueryClient();
 	const { askAbout } = useChat();
+	const { data: status } = useStatus();
 	const { data, isLoading, error, refetch } = useQuery({ queryKey: ["skills"], queryFn: endpoints.skills });
-	const [open, setOpen] = useState<string>();
 	const [remove, setRemove] = useState<string>();
 	if (isLoading) return <Spinner />;
 	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
-	if (!data?.length) return <p className="text-sm text-muted-foreground">{t("learned.empty")}</p>;
 	return (
-		<div className="space-y-2">
-			{data.map((s) => (
-				<div key={s.name} className="rounded-md bg-surface px-3 py-2">
-					<div className="flex flex-wrap items-center gap-2">
-						<span className="font-mono text-sm">{s.name}</span>
-						<span className="min-w-0 flex-1 text-xs text-muted-foreground">{s.description}</span>
+		<Row label={t("assistant.learned")} search={[t("learned.description")]}>
+			<div className="space-y-2">
+				{!data?.length && <p className="text-sm text-muted-foreground">{t("learned.empty")}</p>}
+				{data?.map((s) => (
+					<div key={s.name} className="space-y-1 rounded-md bg-surface px-3 py-2">
+						<p className="text-sm">{s.description}</p>
+						<div className="flex flex-wrap gap-1">
+							{!!status?.models.length && (
+								<Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => askAbout(t("learned.changePrompt", { name: s.name }))}>
+									<MessageSquare /> {t("learned.changeInChat")}
+								</Button>
+							)}
+							<Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive-foreground" onClick={() => setRemove(s.name)}>
+								<Trash2 /> {t("learned.delete")}
+							</Button>
+						</div>
+						<Disclosure title={t("form.technical")}>
+							<p className="font-mono text-xs">{s.name}</p>
+							<pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-well p-3 text-xs text-muted-foreground">{s.body}</pre>
+						</Disclosure>
 					</div>
-					<div className="mt-1 flex flex-wrap gap-1">
-						<Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setOpen(open === s.name ? undefined : s.name)}>
-							{open === s.name ? t("common:actions.hide") : t("learned.read")}
-						</Button>
-						<Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => askAbout(t("learned.changePrompt", { name: s.name }))}>
-							<MessageSquare /> {t("learned.changeInChat")}
-						</Button>
-						<Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive-foreground" onClick={() => setRemove(s.name)}>
-							<Trash2 /> {t("learned.delete")}
-						</Button>
-					</div>
-					{open === s.name && <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-well p-3 text-xs text-muted-foreground">{s.body}</pre>}
-				</div>
-			))}
+				))}
+			</div>
 			<ConfirmDialog
 				open={!!remove}
 				onOpenChange={(o) => !o && setRemove(undefined)}
@@ -395,7 +678,7 @@ function Learned() {
 					await qc.invalidateQueries({ queryKey: ["skills"] });
 				}}
 			/>
-		</div>
+		</Row>
 	);
 }
 
@@ -406,282 +689,165 @@ function PasswordForm() {
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string>();
 	return (
-		<form
-			className="grid max-w-md gap-2"
-			onSubmit={async (e) => {
-				e.preventDefault();
-				setError(undefined);
-				if (next.length < 8) return setError(t("account.tooShort"));
-				setBusy(true);
-				try {
-					await endpoints.changePassword(current, next);
-					setCurrent("");
-					setNext("");
-					toast({ title: t("account.changed") });
-				} catch (err) {
-					setError(err instanceof Error ? err.message : String(err));
-				} finally {
-					setBusy(false);
-				}
-			}}
-		>
-			<Input type="password" autoComplete="current-password" placeholder={t("account.current")} value={current} onChange={(e) => setCurrent(e.target.value)} />
-			<Input type="password" autoComplete="new-password" placeholder={t("account.new")} value={next} onChange={(e) => setNext(e.target.value)} />
-			{error && <p className="text-xs text-destructive-foreground">{error}</p>}
-			<Button type="submit" disabled={busy || !current || !next} className="justify-self-start">
-				{busy && <Spinner />}
-				{t("account.change")}
-			</Button>
-		</form>
+		<Row label={t("account.change")}>
+			<form
+				className="grid max-w-md gap-3"
+				onSubmit={async (e) => {
+					e.preventDefault();
+					setError(undefined);
+					if (next.length < 8) return setError(t("account.tooShort"));
+					setBusy(true);
+					try {
+						await endpoints.changePassword(current, next);
+						setCurrent("");
+						setNext("");
+						toast({ title: t("account.changed") });
+					} catch (err) {
+						setError(message(err));
+					} finally {
+						setBusy(false);
+					}
+				}}
+			>
+				<label className="grid gap-1 text-sm">
+					{t("account.current")}
+					<Input type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+				</label>
+				<label className="grid gap-1 text-sm">
+					{t("account.new")}
+					<Input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
+				</label>
+				{error && <p className="text-xs text-destructive-foreground">{error}</p>}
+				<Button type="submit" disabled={busy || !current || !next} className="justify-self-end">
+					{busy && <Spinner />}
+					{t("account.change")}
+				</Button>
+			</form>
+		</Row>
 	);
 }
 
-/** The providers of a seam of the kind "one of several", and the owner's choice among them. */
-type ProviderChoice = { active: string; running: boolean; providers: { id: string; label: string; plugin: string }[] };
-
-/** Which downloader Reelix uses (the owner's choice; Reelix never switches by itself), and how its folders look here. */
-function DownloaderChoice({ config }: { config: Record<string, unknown> }) {
-	const { t } = useTranslation("settings");
-	const list = useQuery({ queryKey: ["downloaders", config.downloader], queryFn: () => op<ProviderChoice>("download.downloaders") });
-	if (list.isLoading) return <Loading />;
-	if (list.error) return <ErrorState error={list.error} onRetry={() => void list.refetch()} />;
-	const d = list.data!;
-	return (
-		<>
-			<Field config={config} path="downloader" label={t("downloader.active")} type="select" options={d.providers.map((p) => ({ value: p.id, label: p.label }))} help={t("downloader.activeHelp")} />
-			{!d.running && <p className="text-sm text-warning">{t("downloader.notRunning", { id: d.active })}</p>}
-			<Field config={config} path={`path_maps.downloaders.${d.active}`} label={t("downloader.pathMap")} type="json" help={t("downloader.pathMapHelp", { example: '[{"theirs": "/downloads", "ours": "/media/downloads"}]' })} />
-		</>
-	);
-}
-
-/** Which media server Reelix tells about filed files and reads watch history from (the owner's choice), and how its folders look. */
-function MediaServerChoice({ config }: { config: Record<string, unknown> }) {
-	const { t } = useTranslation("settings");
-	const list = useQuery({ queryKey: ["media-servers", config.media_server], queryFn: () => op<ProviderChoice>("library.media_servers") });
-	if (list.isLoading) return <Loading />;
-	if (list.error) return <ErrorState error={list.error} onRetry={() => void list.refetch()} />;
-	const d = list.data!;
-	return (
-		<>
-			<Field config={config} path="media_server" label={t("mediaServer.active")} type="select" options={d.providers.map((p) => ({ value: p.id, label: p.label }))} help={t("mediaServer.activeHelp")} />
-			{!d.running && <p className="text-sm text-muted-foreground">{t("mediaServer.notRunning", { id: d.active })}</p>}
-			<Field config={config} path={`path_maps.media_servers.${d.active}`} label={t("mediaServer.pathMap")} type="json" help={t("mediaServer.pathMapHelp", { example: '[{"theirs": "/data/media", "ours": "/media"}]' })} />
-			<Field config={config} path="players" label={t("mediaServer.players")} type="list" help={t("mediaServer.playersHelp")} />
-		</>
-	);
-}
-
-/** Which translator writes the lines of a subtitle translation (the owner's choice; Reelix never switches by itself). */
-function TranslatorChoice({ config }: { config: Record<string, unknown> }) {
-	const { t } = useTranslation("settings");
-	const list = useQuery({ queryKey: ["translators", config.translator], queryFn: () => op<ProviderChoice>("subtitle.translators") });
-	if (list.isLoading) return <Loading />;
-	if (list.error) return <ErrorState error={list.error} onRetry={() => void list.refetch()} />;
-	const d = list.data!;
-	return (
-		<>
-			<Field config={config} path="translator" label={t("models.translator")} type="select" options={d.providers.map((p) => ({ value: p.id, label: p.label }))} help={t("models.translatorHelp")} />
-			{!d.running && <p className="text-sm text-warning">{t("models.translatorNotRunning", { id: d.active })}</p>}
-		</>
-	);
-}
+// ---------------------------------------------------------------- the page
 
 const SECTIONS = [
 	["status", "nav.status"],
-	["appearance", "nav.appearance"],
-	["doctor", "nav.doctor"],
-	["paths", "nav.paths"],
-	["downloaders", "nav.downloader"],
-	["media-server", "nav.mediaServer"],
-	["services", "nav.services"],
-	["secrets", "nav.secrets"],
-	["proxy", "nav.proxy"],
 	["models", "nav.models"],
+	["services", "nav.services"],
+	["folders", "nav.folders"],
+	["subtitles", "nav.subtitles"],
+	["playback", "nav.playback"],
+	["proxy", "nav.proxy"],
 	["limits", "nav.limits"],
 	["notifications", "nav.notifications"],
-	["channels", "nav.channels"],
-	["agent", "nav.agent"],
-	["learned", "nav.learned"],
+	["appearance", "nav.appearance"],
 	["plugins", "nav.plugins"],
+	["assistant", "nav.assistant"],
 	["account", "nav.account"],
+	["doctor", "nav.doctor"],
+	["advanced", "nav.advanced"],
 ] as const;
 
-/** Settings from config.yaml, secrets, doctor, chat channels, plugins and the account. */
+function Toolbar({ view, setView }: { view: SettingsView; setView: (v: SettingsView) => void }) {
+	const { t } = useTranslation("settings");
+	return (
+		<div className="space-y-2">
+			<div className="flex flex-wrap items-center gap-2">
+				<label className="relative min-w-0 flex-1 basis-56">
+					<Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+					<Input type="search" value={view.query} onChange={(e) => setView({ ...view, query: e.target.value })} placeholder={t("search.placeholder")} aria-label={t("search.label")} className="h-9 pl-9" />
+				</label>
+				<Button type="button" size="sm" variant={view.attention ? "secondary" : "ghost"} aria-pressed={view.attention} onClick={() => setView({ ...view, attention: !view.attention })}>
+					<AlertTriangle /> {t("search.attention")}
+				</Button>
+				<Button type="button" size="sm" variant={view.technical ? "secondary" : "ghost"} aria-pressed={view.technical} onClick={() => setView({ ...view, technical: !view.technical })}>
+					{t("search.technical")}
+				</Button>
+			</div>
+			<nav className="-mx-1 flex gap-1 overflow-x-auto pb-1" aria-label={t("search.sections")}>
+				{SECTIONS.map(([id, labelKey]) => (
+					<a key={id} href={`#${id}`} className="shrink-0 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground">
+						{t(labelKey)}
+					</a>
+				))}
+			</nav>
+		</div>
+	);
+}
+
+/** Settings (docs/settings.md): what needs attention first, then each part of Reelix as a form with one Save. */
 export function SettingsScreen() {
 	const { t } = useTranslation("settings");
-	const { askAbout } = useChat();
 	const config = useQuery({ queryKey: ["config"], queryFn: endpoints.config });
 	const { data: status } = useStatus();
+	const [view, setView] = useState<SettingsView>({ query: "", attention: false, technical: false });
 	const c = (config.data?.config ?? {}) as Record<string, unknown>;
-	const models = (status?.models ?? []).map((m) => ({ value: m, label: m }));
+	// A link to a part of the page (#service-qbittorrent) lands there once the page has loaded.
+	useEffect(() => {
+		if (config.data && location.hash) setTimeout(() => document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: "start" }), 300);
+	}, [!!config.data]);
 	return (
-		<Screen
-			title={t("title")}
-			subtitle={t("subtitle")}
-			toolbar={
-				<div className="-mx-1 flex gap-1 overflow-x-auto pb-1">
-					{SECTIONS.map(([id, labelKey]) => (
-						<a key={id} href={`#${id}`} className="shrink-0 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground">
-							{t(labelKey)}
-						</a>
-					))}
-				</div>
-			}
-		>
+		<Screen title={t("title")} subtitle={t("subtitle")} toolbar={<Toolbar view={view} setView={setView} />} className="md:pr-36">
 			{config.isLoading ? (
 				<Loading />
 			) : config.error ? (
 				<ErrorState error={config.error} onRetry={() => config.refetch()} />
 			) : (
-				<div className="max-w-4xl space-y-4">
-					<Section id="status" icon={<Gauge />} title={t("status.title")}>
-						{(config.data?.warning || status?.configWarning) && (
-							<p className="flex items-start gap-2 rounded-md bg-warning/15 p-3 text-sm text-warning">
-								<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-								{config.data?.warning ?? status?.configWarning}
-							</p>
-						)}
-						<div className="grid gap-2 text-sm sm:grid-cols-2">
-							<p>
-								<span className="text-muted-foreground">{t("status.mainModel")} </span>
-								{status?.model.roles.chat?.uses.join(" › ") || t("status.notSet")}
-							</p>
-							<p>
-								<span className="text-muted-foreground">{t("status.backgroundModel")} </span>
-								{status?.model.roles.background?.own.join(" › ") || t("status.sameAsMain")}
-							</p>
-							<p>
-								<span className="text-muted-foreground">{t("status.spendToday")} </span>
-								{t("status.spendValue", { usd: formatNumber(status?.spend.usd ?? 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), capUsd: status?.spend.capUsd ?? "?", tokens: (status?.spend.tokens ?? 0).toLocaleString(intlLocale()), capTokens: (status?.spend.capTokens ?? 0).toLocaleString(intlLocale()) })}
-								{status?.spend.reached && <Badge tone="warning" className="ml-2">{t("status.capReached")}</Badge>}
-							</p>
-							<p>
-								<span className="text-muted-foreground">{t("status.jobs")} </span>
-								{t("status.jobsValue", { running: status?.jobs.running ?? 0, queued: status?.jobs.queued ?? 0, parked: status?.jobs.parked ?? 0 })}
-							</p>
-						</div>
-						{config.data?.summary && (
-							<details className="text-xs">
-								<summary className="cursor-pointer text-muted-foreground">{t("status.summary")}</summary>
-								<pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-well p-3 text-muted-foreground">{config.data.summary}</pre>
-							</details>
-						)}
-					</Section>
-
-					<AppearanceSection />
-					<Section id="doctor" icon={<Stethoscope />} title={t("doctor.title")} description={t("doctor.description")}>
-						<Doctor />
-					</Section>
-
-					<Section id="paths" icon={<FolderTree />} title={t("paths.title")} description={t("paths.description")}>
-						<Field config={c} path="media_root" label={t("paths.mediaRoot")} />
-						<Field config={c} path="downloads" label={t("paths.downloads")} type="folder" />
-						{(["movies", "shows", "anime"] as const).map((k) => (
-							<LibraryFolders key={k} kind={k} label={t(`paths.${k === "movies" ? "films" : k}`)} folders={(get(c, `library.${k}`) as never[]) ?? []} showsFolders={((get(c, "library.shows") as unknown[]) ?? []).length} />
-						))}
-					</Section>
-
-					<Section id="downloaders" icon={<Download />} title={t("downloader.title")} description={t("downloader.description")}>
-						<DownloaderChoice config={c} />
-					</Section>
-
-					<Section id="media-server" icon={<Tv />} title={t("mediaServer.title")} description={t("mediaServer.description")}>
-						<MediaServerChoice config={c} />
-					</Section>
-
-					<Section id="services" icon={<Plug />} title={t("services.title")} description={t("services.description")}>
-						<Field config={c} path="subtitles.sources" label={t("services.subtitleSources")} type="list" help={t("services.subtitleSourcesHelp")} />
-						<Field config={c} path="subtitles.languages" label={t("services.subtitleLanguages")} type="list" placeholder="zh, en" help={t("services.subtitleLanguagesHelp")} />
-					</Section>
-
-					<Section id="secrets" icon={<KeyRound />} title={t("secrets.title")}>
-						<Secrets />
-					</Section>
-
-					<Section id="proxy" icon={<Globe />} title={t("proxy.title")} description={t("proxy.description")}>
-						<Field config={c} path="proxy.default" label={t("proxy.url")} placeholder={t("proxy.urlPlaceholder")} />
-						<Field config={c} path="proxy.use_for" label={t("proxy.useFor")} type="list" help={t("proxy.useForHelp")} />
-						<Field config={c} path="proxy.per_service" label={t("proxy.perService")} type="json" help='{"telegram": "socks5://…"}' />
-					</Section>
-
-					<Section id="models" icon={<Cpu />} title={t("models.title")} description={t("models.description")}>
-						{(["chat", "background", "glossary", "translate", "review"] as const).map((r) => (
-							<Field
-								key={r}
-								config={c}
-								path={`models.roles.${r}`}
-								label={t(`models.role.${r}`)}
-								type="list"
-								placeholder={r === "chat" ? (models[0]?.value ?? "provider/model") : t("models.inherits", { role: t(`models.role.${({ background: "chat", glossary: "background", translate: "background", review: "translate" } as const)[r]}`) })}
-								help={`${t(`models.roleHelp.${r}`)}${status?.model.roles[r]?.resting.length ? ` ${t("models.resting", { models: status.model.roles[r]!.resting.join(", ") })}` : ""}`}
-							/>
-						))}
-						<p className="text-xs text-muted-foreground">{t("models.listHelp", { models: models.map((m) => m.value).join(", ") || "—" })}</p>
-						<Field config={c} path="magpie.url" label={t("models.magpieUrl")} placeholder="http://127.0.0.1:3425" help={t("models.magpieHelp")} />
-						{status?.model.magpie.url && <p className={`text-xs ${status.model.magpie.ok ? "text-muted-foreground" : "text-warning"}`}>{status.model.magpie.ok ? t("models.magpieOk", { count: status.model.magpie.models.length }) : t("models.magpieDown", { error: status.model.magpie.error ?? "" })}</p>}
-						{status?.model.magpie.ok && (
-							<p className="text-xs text-muted-foreground">
-								{(status.model.magpie.limits ?? []).filter((l) => l.costLimit).map((l) => t(l.spent ? "models.magpieSpent" : "models.magpieLimit", { used: usd(l.cost ?? 0), limit: usd(l.costLimit ?? 0), period: t(`models.magpiePeriod.${(["day", "week", "month", "total"].includes(l.period) ? l.period : "other") as "day" | "week" | "month" | "total" | "other"}`), reset: l.reset ? new Date(l.reset).toLocaleString(intlLocale(), { dateStyle: "medium", timeStyle: "short" }) : "" })).join(" ")}{" "}
-								{t(status.model.magpie.admin ? "models.magpieAdmin" : "models.magpieReadOnly")}
-							</p>
-						)}
-						<Field
-							config={c}
-							path="models.thinking"
-							label={t("models.thinking")}
-							type="select"
-							options={(["off", "minimal", "low", "medium", "high"] as const).map((v) => ({ value: v, label: t(`models.thinkingLevel.${v}`) }))}
-						/>
-						<Field config={c} path="models.main_reads_images" label={t("models.readsImages")} type="bool" />
-						<TranslatorChoice config={c} />
-					</Section>
-
-					<Section id="limits" icon={<Gauge />} title={t("limits.title")} description={t("limits.description")}>
-						<Field config={c} path="limits.background_daily_usd" label={t("limits.dailyUsd")} type="number" />
-						<Field config={c} path="limits.background_daily_tokens" label={t("limits.dailyTokens")} type="number" />
-						<Field config={c} path="limits.plugin_daily_usd" label={t("limits.pluginDailyUsd")} type="number" help={t("limits.pluginDailyUsdHelp")} />
-						<Field config={c} path="limits.suggestions_daily_usd" label={t("limits.suggestionsDailyUsd")} type="number" />
-						<Field config={c} path="limits.shell_timeout_s" label={t("limits.shellTimeout")} type="number" />
-						<Field config={c} path="limits.shell_timeout_max_s" label={t("limits.shellTimeoutMax")} type="number" />
-						<Field config={c} path="limits.stalled_after_h" label={t("limits.stalledAfter")} type="number" />
-						<Field config={c} path="limits.trash_days" label={t("limits.trashDays")} type="number" />
-						<Field config={c} path="schedule.nightly_at" label={t("limits.nightlyAt")} placeholder="03:30" />
-						<Field config={c} path="schedule.timezone" label={t("limits.timezone")} placeholder="Asia/Shanghai" />
-					</Section>
-
-					<Section id="notifications" icon={<Bell />} title={t("notifications.title")} description={t("notifications.description")}>
-						<Notifications />
-					</Section>
-
-					<Section id="channels" icon={<Send />} title={t("channels.title")} description={t("channels.description")}>
-						<Channels />
-					</Section>
-
-					<Section id="agent" icon={<Bot />} title={t("agent.title")} description={t("agent.description")}>
-						<div className="flex flex-wrap gap-2">
-							<Button variant="outline" onClick={() => askAbout(t("agent.editPrefsPrompt"))}>
-								<MessageSquare /> {t("agent.editPrefs")}
-							</Button>
-							<Button variant="ghost" onClick={() => askAbout(t("agent.whatLearnedPrompt"))}>
-								<Bot /> {t("agent.whatLearned")}
-							</Button>
-						</div>
-					</Section>
-
-					<Section id="learned" icon={<Bot />} title={t("learned.title")} description={t("learned.description")}>
-						<Learned />
-					</Section>
-
-					<Section id="plugins" icon={<Puzzle />} title={t("plugins.title")} description={t("plugins.description")}>
-						<Plugins />
-					</Section>
-
-					<Section id="account" icon={<Lock />} title={t("account.title")}>
-						<PasswordForm />
-					</Section>
-				</div>
+				<SettingsViewProvider value={view}>
+					<div className="max-w-4xl space-y-4">
+						<StatusSection warning={config.data?.warning ?? status?.configWarning} />
+						<ModelsSection config={c} />
+						<Section id="services" icon={<Plug />} title={t("services.title")} description={t("services.descriptionCards")}>
+							<Services config={c} />
+						</Section>
+						<FoldersSection config={c} />
+						<SubtitlesSection config={c} />
+						<PlaybackSection config={c} />
+						<ProxySection config={c} />
+						<LimitsSection config={c} />
+						<Section id="notifications" icon={<Bell />} title={t("notifications.title")} description={t("notifications.description")}>
+							<Notifications />
+							<Channels />
+						</Section>
+						<AppearanceSection />
+						<Section id="plugins" icon={<Puzzle />} title={t("plugins.title")} description={t("plugins.description")}>
+							<Plugins />
+						</Section>
+						<Section id="assistant" icon={<Bot />} title={t("assistant.title")} description={t("assistant.description")}>
+							<Preferences />
+							<Learned />
+						</Section>
+						<Section id="account" icon={<Lock />} title={t("account.title")}>
+							<PasswordForm />
+						</Section>
+						<Section id="doctor" icon={<Stethoscope />} title={t("doctor.title")} description={t("doctor.description")}>
+							<Searchable text={[t("doctor.title"), t("doctor.description")]}>
+								<Doctor />
+							</Searchable>
+						</Section>
+						<AdvancedSection config={c} summary={config.data?.summary} />
+						{view.query && <NothingFound />}
+					</div>
+				</SettingsViewProvider>
 			)}
 		</Screen>
+	);
+}
+
+/** Shown under the sections; visible only when every section is hidden by the search. */
+function NothingFound() {
+	const { t } = useTranslation("settings");
+	const [none, setNone] = useState(false);
+	useEffect(() => {
+		const check = () => setNone(![...document.querySelectorAll("section[id]")].some((s) => !(s as HTMLElement).hidden));
+		check();
+		const watch = new MutationObserver(check);
+		watch.observe(document.body, { subtree: true, attributes: true, attributeFilter: ["hidden"] });
+		return () => watch.disconnect();
+	}, []);
+	if (!none) return null;
+	return (
+		<p className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+			<Film className="size-4" /> {t("search.nothing")}
+		</p>
 	);
 }

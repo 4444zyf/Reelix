@@ -82,7 +82,7 @@ export function applyPlan(app: Reelix, plan: Plan): ApplyItemResult[] {
 	if (!downloads) throw new ReelixError("not_configured", "The download folder is not set (config downloads).");
 	const downloadsReal = realOrResolved(downloads);
 	const roots = allLibraryFolders(app).map(realOrResolved);
-	if (!roots.length) throw new ReelixError("not_configured", "No library folders are set (Settings → Paths, setting library).");
+	if (!roots.length) throw new ReelixError("not_configured", "No library folders are set (Settings → Folders, setting library).");
 
 	const results: ApplyItemResult[] = [];
 	for (const item of plan.items) {

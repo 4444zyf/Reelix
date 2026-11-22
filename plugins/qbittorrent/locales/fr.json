@@ -2,10 +2,22 @@
 	"description": "Télécharge par l'API Web de qBittorrent (4.x et 5.x).",
 	"settings": {
 		"url": "Adresse de l'interface Web de qBittorrent",
-		"url_help": "Par exemple http://qbittorrent:8080. La correspondance de ses dossiers avec ceux de Reelix se règle dans Réglages → Téléchargements.",
+		"url_help": "Par exemple http://qbittorrent:8080. La correspondance de ses dossiers se règle dans « Comment il nomme les dossiers », sur cette carte.",
 		"username": "Nom d'utilisateur"
 	},
 	"secrets": {
 		"password": "Mot de passe de l'interface Web"
+	},
+	"checks": {
+		"not_set_up": "L'adresse de qBittorrent n'est pas définie",
+		"off": "Rien ne peut être téléchargé tant que qBittorrent n'est pas connecté.",
+		"set_address": "Définir l'adresse",
+		"login_refused": "qBittorrent a refusé le nom d'utilisateur ou le mot de passe",
+		"paused": "Les téléchargements sont en pause : Reelix n'essaie plus de se connecter tant que le mot de passe n'a pas changé ou que vous n'avez pas testé la connexion.",
+		"change_password": "Changer le mot de passe",
+		"banned": "qBittorrent a banni l'adresse de Reelix après des connexions échouées",
+		"banned_impact": "Les téléchargements sont en pause. Patientez ou redémarrez qBittorrent, puis testez la connexion.",
+		"unreachable": "qBittorrent ne répond pas à {{url}}",
+		"ok": "qBittorrent {{version}}, enregistre dans {{folder}}"
 	}
 }

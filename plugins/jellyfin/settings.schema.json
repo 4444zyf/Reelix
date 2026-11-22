@@ -5,7 +5,8 @@
 	],
 	"properties": {
 		"url": {
-			"type": "string"
+			"type": "string",
+			"x-reelix-required": true
 		},
 		"public_url": {
 			"type": "string"

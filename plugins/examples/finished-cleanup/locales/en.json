@@ -28,7 +28,10 @@
 		"schedule_manual": "When I ask",
 		"schedule_daily": "Every day",
 		"at_most": "At most per day",
-		"at_most_help": "Steps in one daily proposal."
+		"at_most_help": "Steps in one daily proposal.",
+		"kind_all": "Films and series",
+		"kind_movie": "Films only",
+		"kind_tv": "Series only"
 	},
 	"buttons": {
 		"scan": "Scan now"

@@ -69,9 +69,14 @@ export type PluginManifest = {
 	env?: Record<string, string>;
 	/**
 	 * One line about its state for the agent's prompt and `reelix config show`: `{path}` is one of its settings
-	 * (`{servers.*.url}` every entry's), `{secret:<name>}` says whether that secret is set. Never a secret's value.
+	 * (`{servers.*.url}` every entry's), `{secret:<name>}` says whether that secret is set (one declared per entry: set when every entry has it). Never a secret's value.
 	 */
 	describe?: string;
+	/**
+	 * Reelix works fully without it (a chat app, a media server). Until any of its required settings or secrets is
+	 * filled in, Settings shows it as "optional, not connected", not as something to fix.
+	 */
+	optional?: boolean;
 	uses?: {
 		provides?: (SeamId | PluginSeamId)[];
 		hooks?: HookId[];
@@ -84,7 +89,12 @@ export type PluginManifest = {
 		runs?: string[];
 		/** A host, `*.example.com`, `config:<setting>` (the hosts of the URLs in that setting), or `*` (any public host). */
 		network?: string[];
-		secrets?: string[];
+		/**
+		 * Its secrets, stored as `plugins.<id>.<name>`. A plain name, or `{ name, managed, required, per }`: `managed`, the
+		 * plugin makes and renews it itself (never shown as a field); `required`, it cannot work without it; `per`, one
+		 * secret for each entry of that list setting, stored as `plugins.<id>.<per>.<n>.<name>` (docs/plugins.md §12.2).
+		 */
+		secrets?: (string | PluginSecret)[];
 		agent?: boolean;
 		/** Inbox items and proposals. */
 		inbox?: boolean;
@@ -119,7 +129,14 @@ export const SETTINGS = {
 	showWhen: "x-reelix-show-when",
 	/** On the `config` object: buttons that run these operations of the plugin (short names), such as "test" or "link". */
 	buttons: "x-reelix-buttons",
+	/** On a field: the plugin cannot work while it is empty (a list: while it has no entry). Settings shows "needs setup" until it is filled in. */
+	required: "x-reelix-required",
+	/** On a field: rarely needed (another address for a site, a program's path); Settings shows it under Advanced. */
+	advanced: "x-reelix-advanced",
 } as const;
+
+/** A secret in `uses.secrets` with what Settings needs to know about it. */
+export type PluginSecret = { name: string; managed?: boolean; required?: boolean; per?: string };
 
 export type SettingOption = { value: string; label: string };
 
@@ -301,7 +318,31 @@ export type PluginJobRun = { id: string; payload: Record<string, unknown> };
 /** `parked`: the job's agent turn is waiting for the owner; it resumes on the answer. */
 export type PluginJobResult = { state: "succeeded" | "failed" | "parked"; summary: string };
 
-export type PluginCheckResult = { ok: boolean | null; detail: string; fix?: string };
+/**
+ * How a Doctor check came out. `skipped`: a prerequisite is missing; `not_tested`: set up, but the test
+ * that would tell has not run; `not_used`: optional and not set up; `degraded`: works, with something missing.
+ */
+export type CheckState = "passed" | "failed" | "skipped" | "not_tested" | "not_used" | "degraded";
+/** A message from the plugin's own strings (`locales/<lang>.json`): its key and values. Reelix words it in the owner's language. */
+export type PluginMessage = { key: string; values?: Record<string, string | number> };
+/**
+ * A Doctor check's result (docs/plugins.md §6). `cause`: what the check found, for a failure why;
+ * `impact`: what that stops or leaves working; `action`: the one thing to do, a setting or secret of
+ * this plugin to fill in, or one of its operations to run (default: its card in Settings); `cli`: the
+ * command for the command line; `raw`: the details (addresses, raw errors); `cause_id`: results with the
+ * same cause are shown once (`setup`: its settings are incomplete; `unreachable`: its service does not answer).
+ */
+export type PluginCheck = {
+	state: CheckState;
+	cause: PluginMessage;
+	impact?: PluginMessage;
+	action?: { label?: PluginMessage; setting?: string; secret?: string; operation?: string; input?: Record<string, unknown> };
+	cli?: string;
+	raw?: string;
+	cause_id?: string;
+};
+/** A structured result, or the earlier shape, which keeps working: its `detail` becomes the details and the cause reads "check failed". */
+export type PluginCheckResult = PluginCheck | { ok: boolean | null; detail: string; fix?: string };
 
 export type PluginFetchInit = {
 	method?: string;
@@ -416,7 +457,7 @@ export type PluginContext = {
 		set(key: string, value: unknown): Promise<void>;
 		delete(key: string): Promise<void>;
 	};
-	/** Secrets listed in `uses.secrets`; stored as `plugins.<id>.<name>` and blanked out of logs and model input. */
+	/** Secrets listed in `uses.secrets`; stored as `plugins.<id>.<name>` and blanked out of logs and model input. A secret declared `per` a list is named `<per>.<n>.<name>` (e.g. `servers.0.api_key`). */
 	secret: {
 		get(name: string): Promise<string | undefined>;
 		/** For values the plugin obtains itself (a generated key). Does not restart the plugin. */

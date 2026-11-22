@@ -79,7 +79,7 @@ Reelix's agent has a shell in Reelix's container. A magpie in the same container
 ## The Reelix image
 
 - Node 22, Chromium, ffmpeg, 7-Zip, tini (as before).
-- `pi` on PATH. `PI_CODING_AGENT_DIR=/data/pi`, the folder Reelix's agent already uses, so `docker compose exec reelix pi` can be used to sign in to a provider or try a model, and Reelix sees the result at once.
+- `pi` on PATH. `PI_CODING_AGENT_DIR=/data/pi`, the folder Reelix's agent already uses, so a provider signed in to in Settings → Models (or with `docker compose exec reelix pi`) is the one Reelix uses, and Reelix sees the result at once.
 - `HOME=/data/home`, because Reelix runs as a numeric user with no home of its own. The agent's shell has its own, `/data/workspace/.home`.
 - Three users and an entrypoint that starts as root (Users and files).
 - A health check on `/api/session`.
@@ -114,7 +114,7 @@ Reelix then sets the data folder's modes at every start, before anything runs as
 
 ```sh
 docker compose exec -u "$PUID:$PGID" reelix reelix doctor
-docker compose exec -u "$PUID:$PGID" reelix pi        # sign in to a provider; root would leave files Reelix cannot read until the next start
+docker compose exec -u "$PUID:$PGID" reelix pi        # pi itself, to try a model; signing in to a provider is done in Settings → Models
 ```
 
 As root, `reelix` works through the owner's socket, but a file root writes into `/data` belongs to root until the next start gives it back.

@@ -6,7 +6,7 @@ const J = "http://jackett.test:9117";
 
 export default {
 	settings: { servers: [{ url: J }] },
-	secrets: { api_key: KEY },
+	secrets: { "servers.0.api_key": KEY },
 	http: [
 		{ url: /torznab\/api\?t=indexers/, body: `<indexers><indexer id="alpha" configured="true"><title>Alpha &amp; Co</title><type>private</type></indexer><indexer id="beta" configured="true"><title>Beta</title></indexer></indexers>` },
 		{ url: /indexers\/alpha\/results\?/, body: JSON.stringify({ Results: [{ Title: "Sintel.2010.1080p", Link: `${J}/dl/alpha/?jackett_apikey=${KEY}&file=a`, Size: 100, Seeders: 9, InfoHash: "ABC", DownloadVolumeFactor: 0 }] }) },

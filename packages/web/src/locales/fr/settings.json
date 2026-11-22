@@ -5,25 +5,23 @@
 		"status": "État",
 		"appearance": "Apparence",
 		"doctor": "Diagnostic",
-		"paths": "Chemins",
-		"downloader": "Client de téléchargement",
-		"mediaServer": "Serveur multimédia",
 		"services": "Services",
-		"secrets": "Secrets",
 		"proxy": "Proxy",
 		"models": "Modèles",
 		"limits": "Limites",
-		"channels": "Canaux",
-		"agent": "Préférences",
-		"learned": "Acquis",
 		"account": "Compte",
 		"notifications": "Notifications",
-		"plugins": "Plugins"
+		"plugins": "Plugins",
+		"folders": "Dossiers",
+		"subtitles": "Sous-titres",
+		"playback": "Lecture",
+		"assistant": "Assistant",
+		"advanced": "Avancé"
 	},
 	"field": {
 		"notSet": "(non défini)",
 		"saved": "Enregistré",
-		"invalidJson": "JSON non valide : {{error}}"
+		"notSaved": "Non enregistré"
 	},
 	"status": {
 		"title": "État",
@@ -33,69 +31,94 @@
 		"sameAsMain": "identique au principal",
 		"spendToday": "Dépenses en arrière-plan aujourd’hui :",
 		"spendValue": "{{usd}} $ / {{capUsd}} $ · {{tokens}} / {{capTokens}} jetons",
-		"capReached": "plafond atteint",
 		"jobs": "Tâches :",
 		"jobsValue": "{{running}} en cours · {{queued}} en file · {{parked}} en attente de vous",
 		"summary": "Résumé tel que l’agent le voit"
 	},
 	"doctor": {
 		"title": "Diagnostic",
-		"description": "Vérifie les connexions, les chemins, les liens physiques, les permissions, l’espace disque et les indexeurs.",
-		"runAll": "Lancer toutes les vérifications",
-		"quick": "Vérification rapide",
-		"askFix": "Demander à l’agent de corriger",
-		"askFixPrompt_one": "Le diagnostic a trouvé {{count}} problème : {{list}}. Aidez-moi à le corriger, s’il vous plaît.",
-		"askFixPrompt_many": "Le diagnostic a trouvé {{count}} problèmes : {{list}}. Aidez-moi à les corriger, s’il vous plaît.",
-		"askFixPrompt_other": "Le diagnostic a trouvé {{count}} problèmes : {{list}}. Aidez-moi à les corriger, s’il vous plaît.",
-		"fix": "Correctif : {{fix}}"
-	},
-	"paths": {
-		"title": "Chemins",
-		"description": "L’emplacement des médias, tel que Reelix le voit. Les téléchargements et la bibliothèque doivent être sur le même système de fichiers pour les liens physiques.",
-		"mediaRoot": "Racine des médias",
-		"downloads": "Dossier des téléchargements",
-		"films": "Films",
-		"shows": "Séries",
-		"anime": "Anime"
-	},
-	"downloader": {
-		"title": "Client de téléchargement",
-		"description": "Le client torrent qu’utilise Reelix. Vous seul le choisissez ; s’il est arrêté ou en panne, les téléchargements s’arrêtent avec un message clair et Reelix n’en change jamais de lui-même. Son adresse et son mot de passe sont sur la page de son plugin.",
-		"active": "Client actif",
-		"activeHelp": "Tous les plugins de téléchargement activés et configurés sont listés.",
-		"notRunning": "Le client « {{id}} » ne tourne pas : activez et configurez son plugin dans Plugins, ou choisissez-en un autre.",
-		"pathMap": "Sa correspondance de chemins",
-		"pathMapHelp": "Comment le client nomme les mêmes dossiers : {{example}}"
-	},
-	"mediaServer": {
-		"title": "Serveur multimédia",
-		"description": "Le serveur multimédia que Reelix prévient des fichiers rangés et retirés, et dont l'historique guide les suggestions. Vous seul le choisissez ; il est facultatif. Son adresse et sa clé sont sur la page de son plugin.",
-		"active": "Serveur multimédia actif",
-		"activeHelp": "Tous les plugins de serveur multimédia activés et configurés sont listés.",
-		"notRunning": "Le serveur multimédia « {{id}} » ne tourne pas ou n'est pas configuré ; Reelix range sans lui. Configurez son plugin dans Plugins, ou choisissez-en un autre.",
-		"pathMap": "Sa correspondance de chemins",
-		"pathMapHelp": "Comment le serveur multimédia nomme les mêmes dossiers : {{example}}",
-		"players": "Lecteurs, dans l'ordre",
-		"playersHelp": "L'ordre des liens de lecture : infuse, swiftfin, jellyfin. Les lecteurs non listés viennent ensuite."
+		"description": "Vérifie les connexions, les chemins, les liens physiques, les permissions, l’espace disque et les indexeurs."
 	},
 	"services": {
 		"title": "Services",
-		"description": "Adresses des services utilisés par Reelix. Les mots de passe et clés d’API vont dans Secrets.",
-		"subtitleSources": "Sources de sous-titres",
-		"subtitleSourcesHelp": "Séparées par des virgules, par ordre de préférence : subhd, assrt, opensubtitles, subdl, gestdown, jimaku. Chacune n’est interrogée que pour les langues et types de titres qu’elle couvre.",
-		"subtitleLanguages": "Langues des sous-titres",
-		"subtitleLanguagesHelp": "Séparées par des virgules, dans l’ordre : zh, en, fr, ru, ja. Vide : suivre la langue de Reelix (en français et en russe, l’anglais est aussi accepté)."
+		"descriptionCards": "Chaque service auquel Reelix se connecte : son état, ce qu'il implique, et ses réglages et mots de passe ensemble.",
+		"test": "Tester la connexion",
+		"testAfterSetup": "Remplissez d'abord ce qui est requis, puis testez.",
+		"turnOn": "Activer",
+		"setUp": "Configurer",
+		"state": {
+			"unused": "Facultatif, non connecté",
+			"off": "Désactivé",
+			"paused": "En pause",
+			"needs_setup": "À configurer",
+			"unreachable": "Injoignable",
+			"connected": "Connecté",
+			"not_tested": "Non testé",
+			"failed": "En erreur",
+			"waiting": "En attente"
+		},
+		"downloads": {
+			"ok": "Les téléchargements démarrent et ceux terminés sont classés.",
+			"off": "Aucun téléchargement ne peut démarrer, ni être classé, tant qu'un client n'est pas configuré.",
+			"broken": "Les nouveaux téléchargements ne démarrent pas et ceux terminés attendent d'être classés. La bibliothèque n'est pas touchée."
+		},
+		"mediaServer": {
+			"ok": "Liens de lecture, historique et suggestions « Pour vous » l'utilisent ; la bibliothèque est rafraîchie après classement.",
+			"off": "Facultatif. Le classement continue ; les liens de lecture qui en dépendent, l'historique, les suggestions et le rafraîchissement sont arrêtés.",
+			"broken": "Le classement continue ; les liens de lecture qui en dépendent, l'historique, les suggestions « Pour vous » et le rafraîchissement sont arrêtés."
+		},
+		"indexers": {
+			"title": "Indexeurs (Jackett)",
+			"what": "Là où les releases sont cherchées. Sans lui, rien de nouveau ne peut être trouvé.",
+			"notEachTested": "Connecté. Ses indexeurs ne sont pas testés un par un ; demandez-le à l'assistant."
+		},
+		"tmdb": {
+			"title": "Métadonnées (TMDB)",
+			"what": "Titres, affiches, résumés et listes d'épisodes viennent de TMDB.",
+			"missing": "Sans clé, titres, affiches et résumés ne peuvent pas être recherchés.",
+			"key": "Clé API TMDB",
+			"keyHelp": "Gratuite sur themoviedb.org → Paramètres → API (clé v3 ou jeton d'accès en lecture). Envoyée uniquement à TMDB."
+		},
+		"subtitles": {
+			"title": "Sites de sous-titres",
+			"what": "D'où viennent les sous-titres. Les sites sans compte fonctionnent tels quels ; un compte ajoute des téléchargements par jour.",
+			"off": "Aucun sous-titre n'est cherché tant qu'il n'est pas activé.",
+			"ready": "prêt",
+			"needsKey": "compte requis",
+			"notUsed": "pas dans votre liste",
+			"limit": "Limite du jour atteinte jusqu'à {{until}}",
+			"site": {
+				"subhd": "Sous-titres chinois ; sans compte.",
+				"assrt": "Sous-titres chinois ; jeton API gratuit requis.",
+				"opensubtitles": "Nombreuses langues ; clé API requise. Un identifiant et un mot de passe ajoutent des téléchargements par jour.",
+				"subdl": "Nombreuses langues ; clé API gratuite requise.",
+				"gestdown": "Sous-titres anglais pour les séries ; sans compte.",
+				"jimaku": "Sous-titres japonais pour l'anime ; clé API gratuite requise."
+			}
+		},
+		"telegram": {
+			"what": "Notifications avec boutons, et discussion avec l'assistant. La boîte de réception de l'application fonctionne sans.",
+			"unused": "Facultatif. La boîte de réception de l'application fonctionne sans.",
+			"step1": "Enregistrer le jeton du bot",
+			"step2": "Vérifier le bot",
+			"step3": "Lier votre compte Telegram",
+			"step4": "Envoyer un message de test",
+			"after": "Après : {{step}}.",
+			"refresh": "Rafraîchir l'état"
+		},
+		"magpie": {
+			"title": "magpie (passerelle de modèles)",
+			"unused": "Facultatif. Une passerelle qui répartit les appels de modèles entre fournisseurs et tient les plafonds de dépense.",
+			"what": "Adresse et clé enregistrées ; rechargez la page pour tester.",
+			"urlHelp": "Son adresse telle que Reelix l'atteint, par exemple http://magpie:3425.",
+			"key": "Clé de passerelle",
+			"keyHelp": "Une clé magpie dont le plafond de dépense est réglé dans magpie.",
+			"adminKey": "Clé d'administration",
+			"adminKeyHelp": "Seulement pour laisser Reelix gérer magpie (groupes de routage et fournisseurs). Elle peut changer ce que chaque clé peut dépenser ; laissez-la vide sinon."
+		}
 	},
 	"secrets": {
-		"title": "Secrets",
-		"intro": "Les valeurs vont directement dans le fichier de secrets du serveur. Elles ne sont plus jamais affichées et l’agent ne les voit jamais.",
-		"set": "défini",
-		"missing": "manquant",
-		"placeholderReplace": "Saisissez une nouvelle valeur pour la remplacer",
-		"placeholder": "Saisissez la valeur",
-		"clear": "Effacer",
 		"stored": "Enregistré",
-		"removed": "Supprimé",
 		"notStored": "Non enregistré"
 	},
 	"proxy": {
@@ -104,13 +127,11 @@
 		"url": "URL du proxy",
 		"urlPlaceholder": "http://192.168.1.2:7890 ou socks5://…",
 		"useFor": "L’utiliser pour",
-		"useForHelp": "Services séparés par des virgules, par ex. tmdb, telegram, subhd, models.",
-		"perService": "Par service"
+		"perService": "Par service",
+		"useForHelpNamed": "Les services dont les requêtes passent par le proxy."
 	},
 	"models": {
 		"title": "Modèles",
-		"description": "Chaque type de travail a une liste de modèles, essayés dans l’ordre : si le premier ne répond pas, le suivant est utilisé. Les modèles viennent de la connexion et du fichier de modèles de pi, et de magpie s’il est configuré.",
-		"thinking": "Réflexion",
 		"thinkingLevel": {
 			"off": "désactivée",
 			"minimal": "minimale",
@@ -118,7 +139,6 @@
 			"medium": "moyenne",
 			"high": "élevée"
 		},
-		"readsImages": "Le modèle principal lit les images",
 		"role": {
 			"chat": "Conversation",
 			"background": "Tâches de fond",
@@ -133,11 +153,8 @@
 			"translate": "L’essentiel d’une traduction de sous-titres ; un modèle rapide et bon marché convient. Vide : comme Tâches de fond.",
 			"review": "Vérifie une traduction. Un modèle différent du traducteur repère plus d’erreurs. Vide : comme Traduction : lignes."
 		},
-		"inherits": "comme {{role}}",
 		"resting": "Ignorés pour l’instant après une erreur : {{models}}.",
-		"listHelp": "Séparés par des virgules, dans l’ordre. Disponibles : {{models}}",
 		"magpieUrl": "Adresse de la passerelle magpie",
-		"magpieHelp": "Facultatif. Une passerelle magpie répartit entre fournisseurs et gère les limites de dépense ; ses modèles et groupes apparaissent ici sous magpie/… . La clé de passerelle se saisit dans Secrets (magpie.api_key).",
 		"magpieOk_one": "magpie répond : {{count}} modèle ou groupe.",
 		"magpieOk_many": "magpie répond : {{count}} modèles et groupes.",
 		"magpieOk_other": "magpie répond : {{count}} modèles et groupes.",
@@ -154,8 +171,18 @@
 			"other": "sur cette période"
 		},
 		"translator": "Traducteur",
-		"translatorHelp": "Écrit les répliques d'une traduction de sous-titres ; le glossaire et la relecture restent aux modèles ci-dessus. Chaque extension de traduction activée est listée.",
-		"translatorNotRunning": "Le traducteur « {{id}} » ne tourne pas ; les traductions attendent qu'il reprenne. Activez son extension ou choisissez-en un autre."
+		"translatorNotRunning": "Le traducteur « {{id}} » ne tourne pas ; les traductions attendent qu'il reprenne. Activez son extension ou choisissez-en un autre.",
+		"descriptionShort": "Quel modèle fait quel travail. Chaque liste est essayée dans l'ordre : quand l'un ne peut pas répondre, le suivant est utilisé.",
+		"uses": "Utilise : {{models}}.",
+		"usesInherited": "Utilise : {{models}} (de {{role}}).",
+		"notAvailable": "indisponible pour l'instant",
+		"reasoning": "Effort de raisonnement",
+		"reasoningHelp": "Combien de temps un modèle de raisonnement réfléchit avant de répondre. Plus haut est plus lent et coûte plus.",
+		"translatorHelpShort": "Écrit les lignes d'une traduction de sous-titres. Chercher et télécharger des sous-titres fonctionne sans.",
+		"testRole": "Tester le modèle de chat",
+		"testRoleHelp": "Une courte question par le rôle chat : la réponse, le modèle qui l'a donnée et le temps qu'il a pris.",
+		"providers": "Fournisseurs",
+		"providersHelp": "D'où viennent les modèles. Connectez-vous ou saisissez une clé ici ; se déconnecter arrête ses modèles."
 	},
 	"limits": {
 		"title": "Limites et planification",
@@ -170,21 +197,19 @@
 		"timezone": "Fuseau horaire",
 		"pluginDailyUsd": "Budget quotidien de modèle par extension (USD)",
 		"pluginDailyUsdHelp": "Pour chaque extension qui utilise vos modèles, sauf si vous lui en fixez un sur sa page. Repart à minuit.",
-		"suggestionsDailyUsd": "Budget quotidien de modèle de « Pour vous » (USD)"
+		"suggestionsDailyUsd": "Budget quotidien de modèle de « Pour vous » (USD)",
+		"dailyHelp": "Une fois atteint, les tâches de fond s'arrêtent et reprennent le lendemain. Le chat n'est pas limité.",
+		"suggestionsHelp": "Pour les suggestions « Pour vous », dans la limite de fond.",
+		"stalledHelp": "Un téléchargement sans progrès pendant cette durée est signalé comme bloqué.",
+		"trashHelp": "Les fichiers supprimés attendent ce délai dans la corbeille avant d'être effacés.",
+		"nightlyHelp": "Quand le rangement et le résumé nocturnes ont lieu."
 	},
 	"agent": {
-		"title": "Préférences et acquis de l’agent",
-		"description": "Vos goûts en matière de versions et de sous-titres, ainsi que ce que l’agent a appris, sont dans des notes que l’agent tient à jour. Modifiez-les en lui parlant.",
-		"editPrefs": "Modifier les préférences dans le chat",
-		"editPrefsPrompt": "Montre-moi ma note de préférences, puis modifions-la : ",
-		"whatLearned": "Qu’a-t-il appris ?",
-		"whatLearnedPrompt": "Qu’as-tu appris jusqu’ici sur mon installation et mes goûts ? Liste tes notes."
+		"editPrefsPrompt": "Montre-moi ma note de préférences, puis modifions-la : "
 	},
 	"learned": {
-		"title": "Ce que j’ai appris",
 		"description": "Compétences que l’agent a écrites pour lui-même.",
 		"empty": "Rien pour l’instant. Quand l’agent comprend quelque chose sur votre installation (les particularités d’un site, une habitude de nommage), il le note sous forme de compétence et elle apparaît ici.",
-		"read": "Lire",
 		"changeInChat": "Modifier dans le chat",
 		"changePrompt": "À propos de la compétence « {{name}} » que tu as écrite, modifie ceci : ",
 		"delete": "Supprimer",
@@ -214,12 +239,14 @@
 		"lastSent": "dernier envoi reçu {{ago}}",
 		"notSentYet": "rien d'envoyé pour l'instant",
 		"remove": "Retirer cet appareil",
-		"needsHttps": "Les notifications exigent d'ouvrir Reelix en HTTPS avec un certificat reconnu. Sur un NAS, le plus simple est Tailscale : lancez « tailscale serve --bg 7878 » puis ouvrez l'adresse https://….ts.net affichée.",
 		"needsInstall": "Sur iPhone et iPad, ajoutez d'abord Reelix à l'écran d'accueil : Partager → Sur l'écran d'accueil. Ouvrez-le depuis là, connectez-vous, puis revenez ici.",
 		"unsupportedIos": "iOS 16.4 ou plus récent est nécessaire.",
 		"unsupported": "Ce navigateur ne prend pas en charge les notifications des applications web.",
 		"denied": "Les notifications de Reelix sont bloquées. Autorisez-les dans les réglages du système ou du navigateur, puis revenez.",
-		"pluginOff": "Le plugin de notifications est désactivé. Activez-le dans Plugins."
+		"pluginOff": "Le plugin de notifications est désactivé. Activez-le dans Plugins.",
+		"thisDevice": "Cet appareil",
+		"needsHttpsInbox": "Les notifications du navigateur nécessitent HTTPS (voir docs/deployment.md, « HTTPS »). La boîte de réception fonctionne sans.",
+		"inboxWorks": "La boîte de réception fonctionne sans notifications."
 	},
 	"plugins": {
 		"title": "Plugins",
@@ -254,7 +281,6 @@
 		"notSaved": "{{id}} : réglages non enregistrés",
 		"addEntry": "Ajouter",
 		"removeEntry": "Retirer",
-		"secrets": "Secrets",
 		"buttonFailed": "{{label}} a échoué",
 		"trial": "Mode essai",
 		"trialHelp": "Ses hooks tournent et Reelix note ce qu’ils changeraient ; rien n’est appliqué. Son code tourne quand même, avec ses appels réseau.",
@@ -285,7 +311,7 @@
 		"restarting": "Redémarrage",
 		"restartFailed": "Redémarrage impossible",
 		"installTitle": "Installer un plugin ou un pack de compétences",
-		"installHelp": "Une URL git fixée sur un identifiant de commit complet (…/repo.git#<commit>), npm:<nom>@<version exacte>, ou le chemin complet d'un dossier. Rien ne s'exécute avant que vous approuviez ce qu'il déclare.",
+		"installHelp": "Une URL git fixée sur un identifiant de commit complet (…/repo.git#<commit>), npm:<nom>@<version exacte>, ou le chemin complet d'un dossier.",
 		"install": "Installer",
 		"installing": "Récupération du paquet et de ses dépendances ; les scripts d'installation ne sont jamais exécutés. Cela peut prendre une minute.",
 		"yes": "oui",
@@ -406,13 +432,24 @@
 		"runtimeNoProcess": "dans Reelix seulement (extension pi brute ou code compilé)",
 		"runtime": "Tourner dans un processus à lui",
 		"runtimeHelp": "Son code n'a que son contexte. Node l'empêche d'accéder aux fichiers, aux secrets et à la base de données de Reelix et de lancer des programmes ; le code de Reelix dans ce processus limite son réseau au fetch de Reelix, vers les hôtes qu'il déclare. Cela retient un plugin négligent, pas encore un plugin hostile. Désactivé : il tourne dans Reelix, où il peut tout faire. Choix de son auteur : {{default}}.",
-		"runtimeNotPossible": "Il ne peut pas tourner dans un processus à lui : il a une extension pi brute ou des dépendances compilées."
+		"runtimeNotPossible": "Il ne peut pas tourner dans un processus à lui : il a une extension pi brute ou des dépendances compilées.",
+		"show": "Afficher",
+		"showWhich": {
+			"all": "Tous ({{count}})",
+			"on": "Activés ({{count}})",
+			"off": "Désactivés ({{count}})"
+		},
+		"needsSetup": "Requis : {{what}}",
+		"howItRuns": "Fonctionnement",
+		"idVersion": "Identifiant et version",
+		"hooksLabel": "Participe à",
+		"installIntro": "Rien ne s'exécute avant que vous n'approuviez ce qu'il déclare.",
+		"installHow": "Comment désigner un plugin",
+		"installPlaceholder": "D'où vient le plugin"
 	},
 	"channels": {
 		"title": "Canaux de discussion",
-		"description": "Les applications de messagerie depuis lesquelles vous parlez à Reelix.",
 		"empty": "Aucun canal de discussion n’est configuré. Une messagerie se configure sur la page de son extension, dans Plugins (pour Telegram : telegram).",
-		"setUp": "La liaison et le test d’une messagerie se font sur la page de son extension, dans Plugins.",
 		"linked": "lié à vous",
 		"notLinked": "non lié",
 		"mayApprove": "Peut approuver les actions destructives",
@@ -421,7 +458,9 @@
 		"unlinkTitle": "Délier {{channel}} ?",
 		"unlinkBody": "Le bot ne vous répondra plus tant que vous ne l’aurez pas lié à nouveau avec un nouveau code.",
 		"notChanged": "Non modifié",
-		"sendFailed": "Le dernier message n’a pas pu être envoyé ({{ago}}) : {{error}}"
+		"sendFailed": "Le dernier message n’a pas pu être envoyé ({{ago}}) : {{error}}",
+		"link": "Lier",
+		"setUpHere": "Les applications de discussion se configurent dans Services (Telegram)."
 	},
 	"folderPicker": {
 		"browse": "Parcourir",
@@ -462,5 +501,148 @@
 		},
 		"learn": "Demander à l'assistant d'apprendre les règles",
 		"learnPrompt": "Regarde ce que contient déjà chacun de mes dossiers de bibliothèque pour « {{type}} » et propose des règles sur quel titre va où (compétence library-folders)."
+	},
+	"search": {
+		"label": "Rechercher dans les réglages",
+		"placeholder": "Rechercher réglages, services et plugins",
+		"attention": "À traiter",
+		"technical": "Détails techniques",
+		"sections": "Sections",
+		"nothing": "Aucun réglage ne correspond. Essayez un autre mot, ou désactivez « À traiter »."
+	},
+	"form": {
+		"unsaved": "Modifications non enregistrées",
+		"discard": "Annuler les modifications",
+		"advanced": "Avancé",
+		"technical": "Détails techniques",
+		"copy": "Copier",
+		"loading": "Chargement…",
+		"optionsWhenOn": "Les choix apparaissent quand le plugin est activé",
+		"needed": "requis",
+		"optional": "facultatif",
+		"secretSaved": "Enregistré",
+		"secretRemoved": "Supprimé à l'enregistrement",
+		"secretNew": "Saisissez la nouvelle valeur",
+		"secretNeeded": "Requis : saisissez-le ici",
+		"secretOptional": "Facultatif",
+		"replace": "Remplacer",
+		"remove": "Supprimer",
+		"cancel": "Annuler",
+		"undo": "Rétablir",
+		"managedSet": "Créé par Reelix ; rien à saisir ici.",
+		"managedNotYet": "Reelix le crée au premier besoin ; rien à saisir ici.",
+		"moveUp": "Monter {{name}}",
+		"moveDown": "Descendre {{name}}",
+		"nothingToChoose": "Rien à choisir pour l'instant."
+	},
+	"attention": {
+		"title": "À traiter",
+		"none": "Rien ne demande votre attention.",
+		"configEffect": "Reelix garde ses réglages précédents ; la modification de config.yaml n'est pas utilisée.",
+		"openDoctor": "Lancer les vérifications",
+		"noModel": "Aucun modèle connecté",
+		"noModelEffect": "Le chat, les tâches de fond, la traduction des sous-titres et la lecture d'images sont arrêtés. Les téléchargements prévus et le classement continuent.",
+		"connectModel": "Connecter un modèle",
+		"noTmdb": "Pas de clé TMDB",
+		"noTmdbEffect": "Titres, affiches et résumés ne peuvent pas être recherchés : aucun nouveau titre ne peut être trouvé.",
+		"addKey": "Ajouter la clé",
+		"needsSetup": "{{name}} doit être configuré",
+		"waiting": "{{name}} attend quelque chose dont il a besoin",
+		"failed": "{{name}} s'est arrêté sur une erreur",
+		"setUp": "Le configurer",
+		"look": "Voir",
+		"capReached": "Le budget de fond du jour est épuisé",
+		"capReachedEffect": "Les tâches de fond attendent demain ; le chat continue.",
+		"openLimits": "Voir les limites"
+	},
+	"folders": {
+		"title": "Dossiers",
+		"description": "Où sont les téléchargements et la bibliothèque, tels que Reelix les voit (dans son conteneur). Les deux doivent être dans un même dossier pour les liens physiques.",
+		"mediaRoot": "Dossier des médias",
+		"mediaRootHelp": "Le dossier qui contient téléchargements et bibliothèque, tel que Reelix le voit. Les sélecteurs ci-dessous naviguent à l'intérieur.",
+		"downloads": "Téléchargements (source)",
+		"downloadsHelp": "Où votre client enregistre. Les fichiers restent ici et continuent d'être partagés.",
+		"libraryIntro": "Dossiers de bibliothèque (destinations des liens physiques) : les dossiers que Jellyfin analyse. Reelix y place des liens physiques.",
+		"movies": "Films",
+		"shows": "Séries",
+		"anime": "Anime"
+	},
+	"pathMap": {
+		"title": "Comment il nomme les dossiers",
+		"help": "{{service}} peut tourner dans un autre conteneur et voir les mêmes dossiers sous d'autres chemins. Une ligne par dossier différent.",
+		"theirs": "{{service}} voit",
+		"ours": "Reelix voit",
+		"add": "Ajouter un dossier",
+		"remove": "Supprimer",
+		"none": "Aucune ligne : {{service}} voit les dossiers au même endroit que Reelix. Sinon, ajoutez-en une, par exemple {{theirs}} → {{ours}}.",
+		"check": {
+			"missing": "Ce dossier n'existe pas pour Reelix.",
+			"case": "Introuvable ; vouliez-vous dire {{path}} ? La casse compte.",
+			"outside": "Ce n'est pas dans le dossier des médias."
+		}
+	},
+	"downloader": {
+		"title": "Client de téléchargement",
+		"cardTitle": "Client de téléchargement : {{name}}",
+		"switchTo": "Passer à",
+		"switchHelp": "Un autre client est activé et configuré. Les téléchargements déjà ajoutés restent à celui qui les a ajoutés.",
+		"switchTitle": "Utiliser {{name}} pour les nouveaux téléchargements ?",
+		"switchBody": "Les téléchargements déjà ajoutés restent au client qui les a ajoutés. Ses dossiers peuvent différer : vérifiez sa correspondance de chemins après le changement.",
+		"switchConfirm": "Changer"
+	},
+	"mediaServer": {
+		"title": "Serveur multimédia",
+		"cardTitle": "Serveur multimédia : {{name}}",
+		"switchTo": "Passer à",
+		"switchHelp": "Un autre serveur multimédia est activé et configuré.",
+		"switchTitle": "Utiliser {{name}} comme serveur multimédia ?",
+		"switchBody": "Liens de lecture, historique et suggestions viendront de lui. Ses dossiers peuvent différer : vérifiez sa correspondance de chemins après le changement.",
+		"switchConfirm": "Changer"
+	},
+	"subtitles": {
+		"title": "Sous-titres",
+		"description": "Quels sites interroger, dans quel ordre, et quelles langues vous voulez.",
+		"sources": "Sites, dans l'ordre",
+		"sourcesHelp": "Le premier site qui a un bon sous-titre l'emporte. Chaque site n'est interrogé que pour les langues et types de titre qu'il couvre.",
+		"needsAccount": "compte requis (Services → Sites de sous-titres)",
+		"notRunning": "non lancé",
+		"sitesOff": "Le plugin des sites de sous-titres est désactivé (Plugins).",
+		"languages": "Langues, dans l'ordre",
+		"languagesHelp": "Aucune choisie : suivre la langue de Reelix (le français et le russe acceptent aussi l'anglais).",
+		"lang": {
+			"zh": "Chinois (simplifié, traditionnel, bilingue)",
+			"en": "Anglais",
+			"fr": "Français",
+			"ru": "Russe",
+			"ja": "Japonais"
+		}
+	},
+	"playback": {
+		"title": "Lecture",
+		"description": "Les applications proposées pour lire un titre, dans l'ordre.",
+		"players": "Lecteurs, dans l'ordre",
+		"playersHelp": "Les lecteurs non cochés viennent après.",
+		"needsServer": "nécessite le serveur multimédia",
+		"needsServerMissing": "nécessite le serveur multimédia, qui n'est pas connecté",
+		"notRunning": "non lancé"
+	},
+	"assistant": {
+		"title": "Assistant",
+		"description": "Ce que l'assistant sait de vous, et ce qu'il a écrit pour lui-même.",
+		"preferences": "Vos préférences",
+		"preferencesHelp": "La note que l'assistant lit à chaque conversation : qualités, sous-titres, ce qu'il faut éviter.",
+		"preferencesEmpty": "Par exemple : films en 1080p ; 4K seulement si je le demande. Sous-titres : français et anglais.",
+		"editInChat": "Modifier dans le chat",
+		"learned": "Compétences qu'il a écrites"
+	},
+	"advanced": {
+		"title": "Avancé",
+		"description": "Rarement utile : durée des commandes, proxys par service, ordre des étapes des plugins.",
+		"shellHelp": "Durée maximale par défaut d'une commande lancée par l'assistant.",
+		"perServiceHelp": "Un autre proxy, ou aucun, pour un service.",
+		"service": "Service",
+		"chooseService": "Choisir un service",
+		"noProxy": "Vide : pas de proxy",
+		"addService": "Ajouter un service"
 	}
 }

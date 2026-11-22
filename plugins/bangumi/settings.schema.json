@@ -6,7 +6,8 @@
 	"properties": {
 		"base_url": {
 			"type": "string",
-			"default": "https://api.bgm.tv"
+			"default": "https://api.bgm.tv",
+			"x-reelix-advanced": true
 		}
 	}
 }

@@ -2,7 +2,7 @@
 	"description": "Tells Jellyfin about new and removed files, and reads what you watched there for suggestions and play links.",
 	"settings": {
 		"url": "Jellyfin address",
-		"url_help": "For example http://jellyfin:8096. How its folders look to Reelix is the path map under Settings → Media server.",
+		"url_help": "For example http://jellyfin:8096. How its folders look to Reelix is set in \"How it names the folders\" in this card.",
 		"public_url": "Jellyfin address for your devices",
 		"public_url_help": "The address your phone and browser use for Jellyfin, if different from the one above (for example when it is a Docker name). Used for “Open in Jellyfin”.",
 		"watch_users": "Whose watch history shapes suggestions",
@@ -10,5 +10,15 @@
 	},
 	"secrets": {
 		"api_key": "API key (Jellyfin → Dashboard → API keys)"
+	},
+	"checks": {
+		"not_set_up": "Jellyfin is not set up",
+		"set_up": "Set up Jellyfin",
+		"no_key": "Jellyfin API key missing",
+		"key_refused": "Jellyfin refused the API key",
+		"add_key": "Add the key",
+		"unreachable": "Jellyfin does not answer at {{url}}",
+		"off": "Filing into the library continues; play links, watch history, “For you” suggestions and the library refresh are off.",
+		"ok": "{{name}}, Jellyfin {{version}}"
 	}
 }

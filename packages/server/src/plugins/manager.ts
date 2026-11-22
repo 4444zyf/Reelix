@@ -50,11 +50,11 @@ import {
 import { ChatBridge, type ChatHost } from "../chat.ts";
 import { ISOLATION, pluginFolderAccess } from "../isolation.ts";
 import type { JobRunner } from "../jobs.ts";
-import { CONTEXT_CALLS, type ModelAccess, type Registered, createContext, jobKind, scheduleId } from "./context.ts";
+import { CONTEXT_CALLS, type ModelAccess, type Registered, createContext, jobKind, readsProxy, scheduleId } from "./context.ts";
 import { type HttpTransport, realTransport } from "./http.ts";
 import { type InstallRecord, Installer } from "./install.ts";
 import { loadPlugin } from "./loader.ts";
-import { type Manifest, type OwnedEventDeclaration, PLUGIN_API, REELIX_VERSION, declarations, incompatibility, loadMessages, processAllowed, readManifest, skillNames } from "./manifest.ts";
+import { type Manifest, type OwnedEventDeclaration, PLUGIN_API, REELIX_VERSION, declaredSecret, declarations, incompatibility, loadMessages, processAllowed, readManifest, skillNames } from "./manifest.ts";
 import { type PluginProcess, startProcess } from "./process.ts";
 import { ProposalStore } from "./proposed.ts";
 import { PiExtensions } from "./pi.ts";
@@ -258,7 +258,10 @@ export class PluginManager implements PluginControl {
 					jobs: p.manifest?.uses.jobs ?? [],
 					events: p.manifest?.uses.events ?? [],
 					runs: p.manifest?.uses.runs ?? [],
-					secrets: (p.manifest?.uses.secrets ?? []).map((s) => `plugins.${p.id}.${s}`),
+					secrets: this.secretRows(p).filter((s) => !s.managed).map((s) => s.key),
+					managedSecrets: this.secretRows(p).filter((s) => s.managed).map((s) => s.key),
+					network: (p.manifest?.uses.network.length ?? 0) > 0 || readsProxy.has(p.id),
+					...this.setupState(p),
 					tools: (p.manifest?.uses.tools ?? []).map((t) => `${p.id}_${t}`),
 					toolsOn: !typedToolsOff(this.app).includes(p.id),
 					trial: trialPlugins(this.app).includes(p.id),
@@ -275,6 +278,7 @@ export class PluginManager implements PluginControl {
 					runtimeDefault: p.manifest?.runtime ?? "in-process",
 					processAllowed: !!p.manifest && processAllowed(p.manifest),
 					screen: p.manifest?.screen && { title: messageFrom(p.messages, ownerLanguage(this.app), "screen.title") ?? p.manifest.screen.title },
+					lastCheck: this.app.lastChecks.get(p.id),
 				};
 			})
 			.sort((a, b) => a.id.localeCompare(b.id));
@@ -303,22 +307,101 @@ export class PluginManager implements PluginControl {
 		const raw = structuredClone((this.app.config.plugins[id] ?? {}) as Record<string, unknown>);
 		const roots = ["settings", "secrets", "buttons"];
 		const strings = { ...stringsUnder(p.messages.en, roots), ...stringsUnder(p.messages[lang], roots) };
-		const secrets = (p.manifest?.uses.secrets ?? []).map((name) => ({ name, key: `plugins.${id}.${name}`, set: !!this.app.secrets[`plugins.${id}.${name}`] }));
+		const secrets = this.secretRows(p);
 		const buttons = ((schema?.[SETTINGS.buttons] as string[] | undefined) ?? []).map((b) => `${id}.${b}`);
 		const note = schema ? undefined : tr(this.app, p.state === "active" ? "plugins.noSettings" : "plugins.settingsLater");
-		return { id, state: p.state, schema, values: schema ? (withSchemaDefaults(schema, raw) as Record<string, unknown>) : raw, strings, secrets, buttons, note };
+		const perEntry = (p.manifest?.uses.secrets ?? []).flatMap((d) => (d.per ? [{ per: d.per, name: d.name, required: d.required }] : []));
+		return { id, state: p.state, schema, values: schema ? (withSchemaDefaults(schema, raw) as Record<string, unknown>) : raw, strings, secrets, perEntry, buttons, note };
 	}
 
-	/** Replace a plugin's settings after checking them against its schema; a running plugin starts again with them (§5.3). */
-	async configure(id: string, settings: unknown): Promise<PluginConfigureResult> {
+	/** Its secrets as rows: one per declared secret, and for one declared per list entry, one per entry of the list now. */
+	private secretRows(p: Plugin, settings?: Record<string, unknown>): PluginSettingsView["secrets"] {
+		const values = settings ?? ((this.app.config.plugins[p.id] ?? {}) as Record<string, unknown>);
+		return (p.manifest?.uses.secrets ?? []).flatMap((d) => {
+			const row = (name: string, entry?: number) => {
+				const key = `plugins.${p.id}.${name}`;
+				return { name: d.name, key, set: !!this.app.secrets[key], managed: d.managed, required: d.required, ...(d.per ? { per: d.per, entry } : {}) };
+			};
+			if (!d.per) return [row(d.name)];
+			const list = Array.isArray(values[d.per]) ? (values[d.per] as unknown[]) : [];
+			return list.map((_, i) => row(`${d.per}.${i}.${d.name}`, i));
+		});
+	}
+
+	/** What a plugin that is on still needs; an optional one with nothing set up is unused instead (docs/settings.md, "States"). */
+	private setupState(p: Plugin): { needsSetup: string[]; unused: boolean } {
+		if (p.state === "disabled") return { needsSetup: [], unused: false };
+		const { missing, required } = this.requiredSetup(p);
+		return p.manifest?.optional && required > 0 && missing.length === required ? { needsSetup: [], unused: true } : { needsSetup: missing, unused: false };
+	}
+
+	/** Required settings (`x-reelix-required`) that are empty and required secrets that are missing, by name, and how many are required. */
+	private requiredSetup(p: Plugin): { missing: string[]; required: number } {
+		let schema: Schema | undefined;
+		try {
+			schema = this.schemaOf(p);
+		} catch {
+			return { missing: [], required: 0 };
+		}
+		const empty = (v: unknown) => v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length);
+		const missing: string[] = [];
+		let required = 0;
+		const walk = (s: Schema | undefined, value: unknown, path: string[]) => {
+			for (const [k, f] of Object.entries((s?.properties ?? {}) as Record<string, Schema>)) {
+				const v = (value as Record<string, unknown> | undefined)?.[k];
+				if (f[SETTINGS.required]) required++;
+				if (f[SETTINGS.required] && empty(v)) missing.push([...path, k].join("."));
+				if (f.type === "array" && Array.isArray(v)) v.forEach((entry, i) => walk(f.items as Schema | undefined, entry, [...path, k, String(i)]));
+			}
+		};
+		const values = schema ? withSchemaDefaults(schema, structuredClone(this.app.config.plugins[p.id] ?? {})) : {};
+		walk(schema, values, []);
+		for (const r of this.secretRows(p, values as Record<string, unknown>).filter((x) => x.required)) {
+			required++;
+			if (!r.set) missing.push(r.key.slice(`plugins.${p.id}.`.length));
+		}
+		return { missing, required };
+	}
+
+	/**
+	 * Replace a plugin's settings after checking them against its schema, and store its secrets with them; a running
+	 * plugin starts again once (§5.3). `secrets`: by name as the plugin asks for it (`password`, `servers.1.api_key`),
+	 * a value to store or null to remove. `origins`: for a list whose entries have their own secrets, where each entry
+	 * was before the change (null: new), so a key follows its entry when one above it is removed.
+	 */
+	async configure(id: string, settings: unknown, secrets: Record<string, string | null> = {}, origins: Record<string, (number | null)[]> = {}): Promise<PluginConfigureResult> {
 		const p = this.get(id);
 		const schema = this.schemaOf(p);
-		if (!schema) return this.result(p, "failed", p.state === "active" ? "plugins.noSettings" : "plugins.settingsLater");
-		if (typeof settings !== "object" || settings === null || Array.isArray(settings)) return { ...this.result(p, "failed", "plugins.invalidSettings"), errors: [{ path: "/", message: "must be an object" }] };
-		const value = withSchemaDefaults(schema, structuredClone(settings));
-		const errors = [...Value.Errors(schema, value)].map((e) => ({ path: (e as { instancePath?: string }).instancePath || "/", message: e.message }));
-		if (errors.length) return { ...this.result(p, "failed", "plugins.invalidSettings"), errors };
-		this.app.setConfig(`plugins.${id}`, value);
+		const declared = p.manifest?.uses.secrets ?? [];
+		for (const name of Object.keys(secrets)) {
+			const d = declaredSecret(declared, name);
+			if (!d || d.managed) return { ...this.result(p, "failed", "plugins.invalidSettings"), errors: [{ path: `/secrets/${name}`, message: d ? "made by the plugin itself" : "not a secret of this plugin" }] };
+		}
+		let value: Record<string, unknown> | undefined;
+		if (settings !== undefined) {
+			if (!schema) return this.result(p, "failed", p.state === "active" ? "plugins.noSettings" : "plugins.settingsLater");
+			if (typeof settings !== "object" || settings === null || Array.isArray(settings)) return { ...this.result(p, "failed", "plugins.invalidSettings"), errors: [{ path: "/", message: "must be an object" }] };
+			value = withSchemaDefaults(schema, structuredClone(settings)) as Record<string, unknown>;
+			const errors = [...Value.Errors(schema, value)].map((e) => ({ path: (e as { instancePath?: string }).instancePath || "/", message: e.message }));
+			if (errors.length) return { ...this.result(p, "failed", "plugins.invalidSettings"), errors };
+		}
+		// The keys of entries that moved go with them; those of removed entries go.
+		const changes: Record<string, string | undefined> = {};
+		for (const d of declared.filter((x) => x.per && origins[x.per])) {
+			const key = (i: number) => `plugins.${id}.${d.per}.${i}.${d.name}`;
+			const before = Object.keys(this.app.secrets).filter((k) => new RegExp(`^plugins\\.${id}\\.${d.per}\\.\\d+\\.${d.name}$`).test(k));
+			for (const k of before) changes[k] = undefined;
+			origins[d.per!]!.forEach((from, to) => {
+				if (from !== null && this.app.secrets[key(from)]) changes[key(to)] = this.app.secrets[key(from)];
+			});
+		}
+		for (const [name, v] of Object.entries(secrets)) changes[`plugins.${id}.${name}`] = v || undefined;
+		const secretsChanged = Object.entries(changes).some(([k, v]) => this.app.secrets[k] !== v);
+		// Stored without a restart of their own: the settings below restart the plugin, or the line after them does.
+		if (secretsChanged) this.app.setSecrets(changes, id);
+		const before = structuredClone(this.app.config.plugins[id] ?? null);
+		if (value !== undefined) this.app.setConfig(`plugins.${id}`, value);
+		if (secretsChanged && sameData(before, this.app.config.plugins[id] ?? null)) this.settingsChanged([id]);
 		await this.serial(async () => undefined); // the restart the change started
 		if (p.state === "disabled") return this.result(p, "applied", "plugins.configuredOff");
 		if (p.state === "failed") return { ...this.result(p, "failed", "plugins.failedNext"), next: p.error ?? tr(this.app, "plugins.failedNext") };
@@ -327,8 +410,8 @@ export class PluginManager implements PluginControl {
 
 	secretLabel(key: string): string | undefined {
 		for (const p of this.plugins.values()) {
-			const name = p.manifest?.uses.secrets.find((s) => `plugins.${p.id}.${s}` === key);
-			if (name) return messageFrom(p.messages, ownerLanguage(this.app), `secrets.${name}`) ?? `${p.id}: ${name}`;
+			const row = this.secretRows(p).find((s) => s.key === key);
+			if (row) return messageFrom(p.messages, ownerLanguage(this.app), `secrets.${row.name}`) ?? `${p.id}: ${row.name}`;
 		}
 		return undefined;
 	}
@@ -406,7 +489,13 @@ export class PluginManager implements PluginControl {
 		return template.replace(/\{([^{}]+)\}/g, (_m, key: string) => {
 			if (key.startsWith("secret:")) {
 				const name = key.slice(7);
-				return p.manifest!.uses.secrets.includes(name) ? (this.app.secrets[`plugins.${p.id}.${name}`] ? "set" : "missing") : "(not declared)";
+				// A secret declared per entry is "set" when every entry has it.
+				const per = p.manifest!.uses.secrets.find((s) => s.per && s.name === name);
+				if (per) {
+					const rows = this.secretRows(p).filter((r) => r.name === name);
+					return rows.length && rows.every((r) => r.set) ? "set" : "missing";
+				}
+				return declaredSecret(p.manifest!.uses.secrets, name) ? (this.app.secrets[`plugins.${p.id}.${name}`] ? "set" : "missing") : "(not declared)";
 			}
 			const values = at(settings, key.split(".")).filter((v) => v !== undefined && v !== null && v !== "");
 			return values.length ? values.map((v) => (typeof v === "string" ? v : JSON.stringify(v))).join(", ") : "(not set)";

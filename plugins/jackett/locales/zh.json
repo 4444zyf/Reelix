@@ -2,13 +2,26 @@
 	"description": "通过一个或多个 Jackett 服务器查找资源。",
 	"settings": {
 		"servers": "Jackett 服务器",
-		"servers_help": "最多三个。每个服务器的 API 密钥是下面单独的一项密钥。",
+		"servers_help": "最多三个，每个服务器有自己的 API 密钥（Jackett 页面右上角的密钥）。",
 		"servers.url": "地址",
 		"servers.url_help": "例如 http://jackett:9117"
 	},
 	"secrets": {
-		"api_key": "第一个服务器的 API 密钥",
-		"api_key_2": "第二个服务器的 API 密钥",
-		"api_key_3": "第三个服务器的 API 密钥"
+		"api_key": "API 密钥"
+	},
+	"checks": {
+		"not_set_up": "尚未设置 Jackett 服务器",
+		"no_search": "无法搜索资源。",
+		"add_server": "检查服务器",
+		"no_key": "{{server}}：缺少 API 密钥",
+		"add_key": "添加密钥",
+		"unreachable": "{{server}} 没有响应",
+		"no_indexers": "{{server}} 在 Jackett 中没有设置索引器",
+		"not_tested_other": "{{count}} 个索引器，尚未逐个测试",
+		"test_each": "逐个测试索引器",
+		"all_answer_other": "全部 {{count}} 个索引器均有响应",
+		"some_fail_other": "{{count}} 个索引器中有 {{failed}} 个没有响应",
+		"some_fail_impact": "搜索结果中缺少没有响应的索引器的资源。",
+		"none_answer": "没有索引器响应"
 	}
 }

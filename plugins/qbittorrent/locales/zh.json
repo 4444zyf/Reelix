@@ -2,10 +2,22 @@
 	"description": "通过 qBittorrent 的 Web API 下载（4.x 和 5.x）。",
 	"settings": {
 		"url": "qBittorrent Web UI 地址",
-		"url_help": "例如 http://qbittorrent:8080。它的文件夹在 Reelix 这边对应哪里，见“设置 → 下载”中的路径映射。",
+		"url_help": "例如 http://qbittorrent:8080。它的文件夹在 Reelix 这边对应哪里，在本卡片的“它如何称呼这些文件夹”中设置。",
 		"username": "用户名"
 	},
 	"secrets": {
 		"password": "Web UI 密码"
+	},
+	"checks": {
+		"not_set_up": "尚未设置 qBittorrent 的地址",
+		"off": "连接 qBittorrent 之前无法下载任何内容。",
+		"set_address": "设置地址",
+		"login_refused": "qBittorrent 拒绝了用户名或密码",
+		"paused": "下载已暂停：在密码更改或你测试连接之前，Reelix 不会再尝试登录。",
+		"change_password": "修改密码",
+		"banned": "多次登录失败后，qBittorrent 封禁了 Reelix 的地址",
+		"banned_impact": "下载已暂停。请稍候或重启 qBittorrent，然后测试连接。",
+		"unreachable": "qBittorrent 在 {{url}} 没有响应",
+		"ok": "qBittorrent {{version}}，保存到 {{folder}}"
 	}
 }

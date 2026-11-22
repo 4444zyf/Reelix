@@ -2,13 +2,29 @@
 	"description": "Trouve des releases via un ou plusieurs serveurs Jackett.",
 	"settings": {
 		"servers": "Serveurs Jackett",
-		"servers_help": "Trois au plus. La clé API de chaque serveur est un secret à part, ci-dessous.",
+		"servers_help": "Trois au plus, chacun avec sa clé API (en haut à droite de la page de Jackett).",
 		"servers.url": "Adresse",
 		"servers.url_help": "Par exemple http://jackett:9117"
 	},
 	"secrets": {
-		"api_key": "Clé API du premier serveur",
-		"api_key_2": "Clé API du deuxième serveur",
-		"api_key_3": "Clé API du troisième serveur"
+		"api_key": "Clé API"
+	},
+	"checks": {
+		"not_set_up": "Aucun serveur Jackett n'est configuré",
+		"no_search": "Impossible de chercher des sorties.",
+		"add_server": "Vérifier les serveurs",
+		"no_key": "{{server}} : clé API manquante",
+		"add_key": "Ajouter la clé",
+		"unreachable": "{{server}} ne répond pas",
+		"no_indexers": "{{server}} n'a aucun indexeur configuré dans Jackett",
+		"not_tested_one": "{{count}} indexeur, pas encore testé",
+		"not_tested_other": "{{count}} indexeurs, pas testés un par un",
+		"test_each": "Tester chaque indexeur",
+		"all_answer_one": "L'indexeur répond",
+		"all_answer_other": "Les {{count}} indexeurs répondent",
+		"some_fail_one": "{{failed}} indexeur sur {{count}} ne répond pas",
+		"some_fail_other": "{{failed}} indexeurs sur {{count}} ne répondent pas",
+		"some_fail_impact": "Les recherches n'incluent pas les sorties des indexeurs qui ne répondent pas.",
+		"none_answer": "Aucun indexeur ne répond"
 	}
 }

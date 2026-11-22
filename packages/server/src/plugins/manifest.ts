@@ -27,6 +27,8 @@ export type Manifest = Omit<PluginManifest, "uses" | "requires" | "settings" | "
 	/** Environment variable to the path of the setting it fills, inside the plugin's settings. */
 	env: Record<string, string>;
 	describe?: string;
+	/** Reelix works fully without it: "not used" until any of its required setup is filled in. */
+	optional: boolean;
 	/** Its screen: the HTML file inside the folder, and its English title. */
 	screen?: { entry: string; title: string };
 	uses: {
@@ -41,7 +43,7 @@ export type Manifest = Omit<PluginManifest, "uses" | "requires" | "settings" | "
 		events: string[];
 		runs: string[];
 		network: string[];
-		secrets: string[];
+		secrets: SecretDeclaration[];
 		agent: boolean;
 		inbox: boolean;
 		skills: boolean;
@@ -72,6 +74,31 @@ function stringList(value: unknown, key: string): string[] {
 	if (value === undefined) return [];
 	if (!Array.isArray(value) || value.some((v) => typeof v !== "string")) throw new Error(`reelix.${key} must be a list of names`);
 	return value;
+}
+
+/** A secret in `uses.secrets`, with its flags filled in. */
+export type SecretDeclaration = { name: string; managed: boolean; required: boolean; per?: string };
+
+const SECRET_NAME = /^[a-z][a-z0-9_]{0,39}$/;
+
+function secretList(value: unknown): SecretDeclaration[] {
+	if (value === undefined) return [];
+	if (!Array.isArray(value)) throw new Error("reelix.uses.secrets must be a list");
+	const out = value.map((v): SecretDeclaration => {
+		if (typeof v === "string") v = { name: v };
+		if (!isObject(v) || typeof v.name !== "string" || !SECRET_NAME.test(v.name)) throw new Error("reelix.uses.secrets: each entry is a name (lowercase letters, digits, _) or { name, managed, required, per }");
+		if (v.per !== undefined && (typeof v.per !== "string" || !SECRET_NAME.test(v.per))) throw new Error(`reelix.uses.secrets: "per" of ${v.name} must name a list setting`);
+		if (v.managed === true && v.required === true) throw new Error(`reelix.uses.secrets: ${v.name} cannot be both managed and required`);
+		return { name: v.name, managed: v.managed === true, required: v.required === true, ...(v.per ? { per: v.per as string } : {}) };
+	});
+	const names = out.map((s) => s.name);
+	if (new Set(names).size !== names.length) throw new Error("reelix.uses.secrets: a name appears twice");
+	return out;
+}
+
+/** The secret's name as the plugin asks for it (`api_key`, or `servers.0.api_key` for one declared per entry), if it is declared. */
+export function declaredSecret(secrets: SecretDeclaration[], asked: string): SecretDeclaration | undefined {
+	return secrets.find((s) => (s.per ? new RegExp(`^${s.per}\\.\\d+\\.${s.name}$`).test(asked) : s.name === asked));
 }
 
 function seamList(value: unknown, key: string): SeamId[] {
@@ -301,6 +328,7 @@ export function readManifest(dir: string, reservedWords: ReadonlySet<string>): M
 		owns: owned(r.owns, r.id),
 		env: envMap(r.env),
 		describe: describeLine(r.describe),
+		optional: r.optional === true,
 		screen: screenOf(dir, r.screen),
 		uses: {
 			provides: foreignNames(stringList(uses.provides, "uses.provides"), "uses.provides", r.id, plugins, SEAM_IDS, PLUGIN_SEAM, "seam"),
@@ -312,7 +340,7 @@ export function readManifest(dir: string, reservedWords: ReadonlySet<string>): M
 			events: foreignNames(stringList(uses.events, "uses.events"), "uses.events", r.id, plugins, PLUGIN_EVENTS, PLUGIN_EVENT, "event"),
 			runs: stringList(uses.runs, "uses.runs"),
 			network,
-			secrets: stringList(uses.secrets, "uses.secrets"),
+			secrets: secretList(uses.secrets),
 			agent: uses.agent === true,
 			inbox: uses.inbox === true,
 			skills: entry === undefined || uses.skills === true,
@@ -343,7 +371,7 @@ export function declarations(dir: string, m: Manifest): PluginDeclarations {
 		runs: m.uses.runs,
 		network: m.uses.network,
 		anyHost: m.uses.network.includes("*"),
-		secrets: m.uses.secrets.map((s) => `plugins.${m.id}.${s}`),
+		secrets: m.uses.secrets.map((s) => `plugins.${m.id}.${s.per ? `${s.per}.<n>.` : ""}${s.name}`),
 		skills: m.uses.skills ? skillNames(dir) : [],
 		scripts: m.uses.skills ? skillScripts(dir) : [],
 		agent: m.uses.agent,

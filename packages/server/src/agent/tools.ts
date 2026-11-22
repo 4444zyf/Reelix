@@ -169,7 +169,7 @@ export function buildTools(tc: ToolContext): AnyTool[] {
 			const name = p.command.trim().replace(/\s+/g, ".");
 			const op = tc.app.operations.get(name);
 			if (!op) throw new Error(`No operation "${name}". Use command=help.`);
-			if (name === "secret.set") throw new Error("Secrets are entered by the owner through the secret field (ask with kind=secret), not by you.");
+			if (name === "secret.set" || (name === "plugin.configure" && p.input?.secrets)) throw new Error("Secrets are entered by the owner through the secret field (ask with kind=secret), not by you.");
 			if (p.input === undefined && Object.keys((op.input as any).properties ?? {}).length) {
 				return textResult(`${op.name}: ${op.summary}\ninput schema: ${JSON.stringify((op.input as any).properties)}`);
 			}
@@ -251,7 +251,7 @@ export function buildTools(tc: ToolContext): AnyTool[] {
 				question: Type.String(),
 				kind: Type.Optional(Type.Union([Type.Literal("choice"), Type.Literal("confirm"), Type.Literal("text"), Type.Literal("secret")])),
 				options: Type.Optional(Type.Array(Type.String())),
-				secret_key: Type.Optional(Type.String({ description: "for kind=secret, e.g. plugins.jackett.api_key" })),
+				secret_key: Type.Optional(Type.String({ description: "for kind=secret, e.g. plugins.jackett.servers.0.api_key" })),
 			}),
 			async execute(_id: string, p: { question: string; kind?: AskRequest["kind"]; options?: string[]; secret_key?: string }, signal?: AbortSignal) {
 				const kind = p.kind ?? (p.options?.length ? "choice" : "text");

@@ -37,7 +37,7 @@ async function world() {
 	app.setConfig("plugins.qbittorrent.url", qb.url);
 	app.setSecret("plugins.qbittorrent.password", "pw");
 	app.setConfig("plugins.jackett.servers", [{ url: jackett.url }]);
-	app.setSecret("plugins.jackett.api_key", "jk");
+	app.setSecret("plugins.jackett.servers.0.api_key", "jk");
 	const stopPlugins = await withPlugins(app, ["jackett", "qbittorrent"]);
 	app.setConfig("tmdb.base_url", tmdb.url);
 	app.setSecret("tmdb.api_key", tmdb.apiKey);

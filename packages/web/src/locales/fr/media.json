@@ -97,7 +97,7 @@
 		"machine": "traduction automatique",
 		"hearingImpaired": "malentendants",
 		"wanted": "Souhaité : {{languages}}",
-		"needsKey": "{{source}} non interrogé : il faut {{keys}} (Réglages → Secrets).",
+		"needsKey": "{{source}} non interrogé : il faut {{keys}} (Réglages → Services → Sites de sous-titres).",
 		"lang": {
 			"zh": "chinois",
 			"en": "anglais",

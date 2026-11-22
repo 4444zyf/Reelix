@@ -14,6 +14,7 @@
   "reelix": {
     "api": 0,
     "id": "telegram",
+    "optional": true,
     "entry": "./src/index.ts",
     "runtime": "in-process",
     "settings": "./settings.schema.json",
@@ -36,7 +37,10 @@
         "config:api_url"
       ],
       "secrets": [
-        "bot_token"
+        {
+          "name": "bot_token",
+          "required": true
+        }
       ]
     }
   }

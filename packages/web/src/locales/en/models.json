@@ -1,0 +1,84 @@
+{
+	"failure": {
+		"reason": {
+			"signed_out": "signed out, or its key expired",
+			"timeout": "no answer in time",
+			"rate_limited": "too many requests for now",
+			"budget": "its spending limit is reached",
+			"capability_images": "it cannot read images",
+			"capability_context": "the conversation is too long for it",
+			"other": "it answered with an error"
+		},
+		"failed": "{{model}} failed: {{reason}}.",
+		"failedUnnamed": "The model failed: {{reason}}.",
+		"action": {
+			"reconnect": "Reconnect its provider",
+			"retry": "Send your message again",
+			"wait": "Wait a little, then try again",
+			"waitUntil": "Usable again from {{time}}",
+			"choose_model": "Choose a model that can"
+		},
+		"fallback": "{{from}} could not answer ({{reason}}), so {{to}}, the next model in your list, answered.",
+		"fallbackJob": "{{from}} could not answer ({{reason}}); the next model in your list took over.",
+		"details": "What the provider said"
+	},
+	"job": {
+		"model": "Done by {{model}}"
+	},
+	"test": {
+		"button": "Test",
+		"running": "Testing…",
+		"answered": "{{model}} answered in {{seconds}} s:",
+		"noAnswer": "No model answered ({{seconds}} s).",
+		"failed": "The test could not run"
+	},
+	"setup": {
+		"title": "No model connected",
+		"effect": "Chat, background jobs, subtitle translation and image reading are off until a model is connected.",
+		"step1": "Connect a model provider",
+		"step1Help": "There are two ways. Use either.",
+		"magpieTitle": "Use a magpie gateway",
+		"magpieHelp": "If you run magpie, connect it here and its models become available.",
+		"magpieButton": "Connect magpie",
+		"waiting": "Waiting for a model provider…",
+		"connected_one": "Connected: {{count}} model available.",
+		"connected_other": "Connected: {{count}} models available.",
+		"step2": "Choose a chat model",
+		"step2Help": "The model you talk to. Other work uses it too, until you choose otherwise.",
+		"needsStep1": "Connect a model provider first.",
+		"choose": "Choose a model",
+		"save": "Use this model",
+		"saved": "Chat model saved",
+		"notSaved": "Could not save the chat model",
+		"current": "Chat uses {{model}}.",
+		"step3": "Test it",
+		"step3Help": "One short question to the chat model: you see its answer and how long it took.",
+		"needsStep2": "Choose a chat model first.",
+		"done": "Done",
+		"ready": "Your model answers. Chat and background work are on.",
+		"providerTitle": "Sign in to a provider",
+		"providerHelp": "With the provider's own sign-in, or its API key. Nothing to run on the NAS."
+	},
+	"providers": {
+		"signedIn": "signed in",
+		"models_one": "{{count}} model",
+		"models_other": "{{count}} models",
+		"signIn": "Sign in",
+		"enterKey": "Enter an API key",
+		"signOut": "Sign out",
+		"signOutTitle": "Sign out of {{name}}?",
+		"signOutBody": "Its models stop working here until you sign in again. Roles that list them use their next model.",
+		"loginTitle": "Connect {{name}}",
+		"openSignIn": "Open the sign-in page",
+		"afterSignIn": "Sign in there; if it shows a code, paste it below.",
+		"deviceCode": "Enter this code on the page below:",
+		"continue": "Continue",
+		"keyStays": "The key goes straight to this NAS; the assistant never sees it.",
+		"working": "Connecting…",
+		"done": "{{name}} is connected. Its models are listed now.",
+		"failed": "Not connected: {{error}}",
+		"close": "Close",
+		"find": "Find a provider ({{count}})",
+		"none": "No provider by that name."
+	}
+}

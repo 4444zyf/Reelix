@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import { AskAbout } from "../components/common/AskAbout";
+import { JobModels } from "../components/common/ModelFailure";
 import { StateBadge } from "../components/common/Badge";
 import { Screen } from "../components/common/Screen";
 import { Empty, ErrorState, Loading, Spinner } from "../components/common/States";
@@ -159,6 +160,7 @@ function Jobs() {
 									</span>
 								</div>
 								{r.summary && <p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{r.summary}</p>}
+								{r.models_json && <JobModels json={r.models_json} />}
 								<div className="mt-1 flex flex-wrap gap-1">
 									{r.thread_id && (
 										<Button

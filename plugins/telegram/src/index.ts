@@ -80,7 +80,7 @@ export default definePlugin({
 	config: Type.Object(
 		{
 			/** Another Bot API server, or a stand-in for tests. */
-			api_url: Type.String({ default: "https://api.telegram.org" }),
+			api_url: Type.String({ default: "https://api.telegram.org", [SETTINGS.advanced]: true }),
 		},
 		{ [SETTINGS.buttons]: ["status", "link", "test"] },
 	),
@@ -195,13 +195,15 @@ export default definePlugin({
 		});
 
 		await ctx.check("telegram", async () => {
-			if (!tg) return { ok: null, detail: "not configured (optional)" };
+			if (!tg) return { state: "not_used", cause: { key: "checks.not_used" }, action: { label: { key: "checks.set_up" }, secret: "bot_token" }, raw: "not configured (optional)" };
 			const linked = !!(await ctx.owner.of(CHANNEL));
 			try {
 				const me = await tg.getMe();
-				return { ok: linked, detail: `bot @${me.username}${linked ? ", owner linked" : ", owner not linked yet"}` };
+				const raw = `bot @${me.username}${linked ? ", owner linked" : ", owner not linked yet"}`;
+				if (!linked) return { state: "failed", cause: { key: "checks.not_linked", values: { bot: me.username } }, impact: { key: "checks.not_linked_impact" }, action: { label: { key: "checks.link" } }, raw };
+				return { state: "passed", cause: { key: "checks.ok", values: { bot: me.username } }, raw };
 			} catch (e) {
-				return { ok: false, detail: shown(e) };
+				return { state: "failed", cause: { key: "checks.unreachable" }, impact: { key: "checks.unreachable_impact" }, raw: shown(e) };
 			}
 		});
 

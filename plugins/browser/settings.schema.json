@@ -7,11 +7,13 @@
 	"properties": {
 		"chromium": {
 			"type": "string",
-			"default": ""
+			"default": "",
+			"x-reelix-advanced": true
 		},
 		"headed": {
 			"type": "boolean",
-			"default": false
+			"default": false,
+			"x-reelix-advanced": true
 		}
 	}
 }

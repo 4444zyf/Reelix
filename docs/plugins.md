@@ -239,6 +239,15 @@ Deliberately absent: the database, the `Reelix` object, the HTTP server, other p
 
 Strings: English is required; zh, fr and ru are optional and fall back to English. Built-in plugins keep all four (Q32).
 
+**Checks** (`ctx.check`, docs/settings.md "Status and Doctor"). The handler returns nothing (left out of this run) or a result:
+- `state`: `passed`, `failed`, `skipped` (a prerequisite is missing), `not_tested`, `not_used` (optional, not set up) or `degraded`;
+- `cause`, and optionally `impact`: `{ key, values? }`, keys in the plugin's own strings (the built-in plugins keep them under `checks.`). Reelix words them in the owner's language, so the web UI shows no English and no command line by default;
+- `action` (optional): what to do, as `{ label?, setting }` or `{ label?, secret }` (one of its own settings or secrets: the button jumps to that field), or `{ label?, operation, input? }` (one of its own operations, which must be in `uses.operations`); with neither, its card;
+- `cli`: the command for the command line's output; `raw`: the details (addresses, raw errors), behind the check's Details;
+- `cause_id`: results with the same cause are shown once. Reelix prefixes it with the plugin's id. `setup` (its settings are incomplete) and `unreachable` (its service does not answer) are the causes Reelix's own downloader and media server checks report for the active provider's plugin, so a downloader or media server plugin uses them for the same findings.
+
+The earlier shape `{ ok: true|false|null, detail, fix? }` keeps working: `detail` becomes the details, `fix` the command, and the cause reads "check failed" (or "check passed", "not checked"). A result that is neither is a failure of the check. Texts are cut to their limits: they are data (§10.7). `plugin.check { plugin }` runs one plugin's checks alone, in full; a plugin's last results are kept until it restarts (docs/api.md).
+
 ### 6.1 Operations
 
 `ctx.operation` takes what core operations take today: `name`, `summary`, `description`, `effect`, `input` (a TypeBox schema), `run`, and optionally `toText`, `positional`, `titleOf`, `reconcile`. `preview` is new and enters in phase 3 with proposals, for core operations too.
@@ -874,10 +883,15 @@ One list for built-in and third-party plugins: state, version, what each provide
 ### 12.2 Settings and secrets
 
 - The form is generated from the plugin's TypeBox schema (Q18): text, number, switch, choice, a list of entries (two Jackett servers), a field shown only when another has a given value, a choice whose options come from one of the plugin's operations, and a button that runs one (for "test" and "pair"). No plugin code or HTML runs in the page.
-- Secrets are declared by name, entered through the existing secret field, stored as `plugins.<id>.<name>`, and redacted automatically.
-- **Where settings live.** A plugin's settings are under `plugins.<id>` in `config.yaml`. When a built-in moves, its keys move once (`jackett.url` becomes `plugins.jackett.servers[0].url`, and in `secrets.yaml` `jackett.api_key` becomes `plugins.jackett.api_key`) through the existing one-time migration at start, and the old keys are removed.
+- Secrets are declared in `uses.secrets`, stored as `plugins.<id>.<name>`, and redacted automatically. An entry is a name, or `{ name, managed?, required?, per? }` (docs/settings.md, "Credentials"):
+  - `managed`: the plugin makes and renews it itself (push's signing key, the OpenSubtitles login token). Settings shows it as a state, never as a field; `plugin.configure` and the agent's `ask kind=secret` refuse it.
+  - `required`: the plugin cannot work without it.
+  - `per: "<list setting>"`: one secret for each entry of that list, stored as `plugins.<id>.<list>.<n>.<name>` and asked for with that name (`servers.0.api_key`). First user: Jackett's key per server.
+- **The form and its secrets are saved together.** `plugin.configure { id, settings?, secrets?, origins? }` stores the settings and the secrets typed into the form (by name, a value or null to remove) in one change, so the plugin starts again once. `origins` says, for a list with a secret per entry, where each entry was before the change, so a key follows its server when one above it is removed, and a removed server's key goes. Only the owner passes `secrets`; the agent asks with the secret field.
+- **What a plugin needs, without running it.** The annotation `SETTINGS.required` (`x-reelix-required`) marks a setting it cannot work without (a list: without an entry); with the required secrets this gives `needsSetup` in `plugin.list`, which Settings shows as "needs setup" with the missing fields named. A manifest's `optional: true` (Telegram, Jellyfin) says Reelix works fully without the plugin: until any of its required setup is filled in it is `unused` ("optional, not connected"), not something to fix. `SETTINGS.advanced` (`x-reelix-advanced`) puts a rarely needed field (another address for a site, a program's path) under Advanced.
+- **Where settings live.** A plugin's settings are under `plugins.<id>` in `config.yaml`. When a built-in moves, its keys move once (`jackett.url` becomes `plugins.jackett.servers[0].url`, and in `secrets.yaml` `jackett.api_key` becomes `plugins.jackett.servers.0.api_key`, one key per server) through the existing one-time migration at start, and the old keys are removed.
 - **Stored data moves in the same migration:** the core store's keys `push.devices`, `telegram.offset`, `telegram.thread` and `metadata.locale` move into the plugins' stores, `telegram.owner_id` moves to core's pairing, and the `site_state` table is replaced by recorded outcomes, which core's `site.status` then reads.
-- The Settings page is hand-written today. Phase 3 builds the generated form; the hand-written fields of every plugin moved by then are deleted in that phase. In phases 1 and 2 the moved plugins keep their existing fields, pointed at the new keys.
+- The generated form is shown on the plugin's card under Plugins, and for a connection (qBittorrent, Jackett, Jellyfin, subtitle sites, Telegram) on its card under Services, with "Test connection" (`plugin.check`).
 
 ### 12.3 Cards
 
