@@ -193,6 +193,10 @@ test("a model that failed is said in the chat app: which, why, and the model tha
 		t.conversation.emit(thread, { type: "assistant_end", failure: { model: "acme/small", class: "signed_out", action: "reconnect", message: "401" } });
 		await until("the failure", () => tg.sent("sendMessage").some((c) => /acme\/small could not answer/.test(c.body.text)));
 		assert.match(tg.sent("sendMessage").at(-1)!.body.text, /signed out, or its key expired\. Sign in to its provider again in Settings → Models\./);
+		// Refused before any answer (no key): the same words, not the provider's text.
+		t.conversation.emit(thread, { type: "error", message: "No API key found for acme. Use /login to log into a provider", failure: { model: "acme/none", class: "signed_out", action: "reconnect", message: "No API key found" } });
+		await until("the refusal", () => tg.sent("sendMessage").some((c) => /acme\/none could not answer/.test(c.body.text)));
+		assert.ok(!tg.sent("sendMessage").some((c) => /\/login/.test(c.body.text)), "pi's own hint never reaches the chat app");
 	} finally {
 		await stop();
 	}

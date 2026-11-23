@@ -181,7 +181,8 @@ export class ChatBridge {
 				else this.say(channel, { type: "ask", id: String(e.id), question: String(e.question), options: ((e.options as string[] | undefined) ?? []).map((label, i) => ({ id: String(i), label })) });
 				break;
 			case "error":
-				this.say(channel, { type: "text", text: tr(this.app, "chat.error", { message: e.message }) });
+				// A model refused before any answer: said in words with its action, not the provider's own text.
+				this.say(channel, { type: "text", text: e.failure ? this.failed(e.failure as ModelFailure) : tr(this.app, "chat.error", { message: e.message }) });
 				break;
 		}
 	};
